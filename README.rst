@@ -1,2 +1,2 @@
 # GEDFReader
-Tool to read *.gdf files (AFM)
+Tool to read *.gdf files (DME AFM)

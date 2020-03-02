@@ -1,83 +1,65 @@
 from typing import Optional, List
 
-from gdef_reader.gdef_importer import GDEFHeader, GDEFControlBlock
+# from gdef_reader.gdef_importer import GDEFHeader, GDEFControlBlock
+from gdef_reader.gdef_data_strucutres import GDEFHeader
 
 
 class GDEFMeasurement:
     def _init_(self):
         self.header: Optional[GDEFHeader] = None
+        self.spm_image_file_vesion = None
 
-        self.Lines = None
-        self.Columns = None
-        self.MissingLines = None
-        self.LineMean = None
-        self.LineMeanOrder = None
-        self.InvertLineMean = None
-        self.PlaneCorr = None
-        self.InvertPlaneCorr = None
-        self.MaxWidth = None
-        self.MaxHeight = None
-        self.OffsetX = None
-        self.OffsetY = None
-        self.ZUnit = None
-        self.Retrace = None
-        self.ZLinearized = None
-        self.ScanMode = None
-        self.ZCalib = None
-        self.XCalib = None
-        self.YCalib = None
-        self.ScanSpeed = None
-        self.SetPoint = None
-        self.BiasVoltage = None
-        self.LoopGain = None
-        self.LoopInt = None
-        self.PhaseShift = None
-        self.ScanDirection = None
-        self.DigitalLoop = None
-        self.LoopFilter = None
-        self.FFTType = None
-        self.XYLinearized = None
-        self.RetraceType = None
-        self.Calculated = None
-        self.ScannerRange = None
-        self.PixelBlend = None
-        self.SourceChannel = None
-        self.DirectAC = None
-        self.ID = None
-        self.QFactor = None
-        self.AuxGain = None
-        self.FixedPalette = None
-        self.FixedMin = None
-        self.FixedMax = None
-        self.ZeroScan = None
-        self.MeasuredAmplitude = None
-        self.FrequencyOffset = None
-        self.QBoost = None
-        self.OffsetPos = None
-        self.Data = None
+        self.value = None
+        self.preview = None
+        self.comment = ''
 
-    def read_blocks(self, blocks: List[GDEFControlBlock]):
-        pass
 
-        #     read_variable_lists(depth=1)
-        #         read block: 3 - block.mark=b'CB')
-        #             block variable 0 - Value
-        #         read block: 4 - block.mark=b'CB')
-        #             block variable 0 - Comment
-        #         read block: 5 - block.mark=b'CB')
-        #             block variable 0 - Preview
-        #     return from read_variable_lists(depth=1)
-        #         block variable 48 - TimeInfo
-        #     read_variable_lists(depth=1)
-        #         read block: 6 - block.mark=b'CB')
-        #             block variable 0 - Hour
-        #             block variable 1 - Minute
-        #             block variable 2 - Second
-        #             block variable 3 - Year
-        #             block variable 4 - Month
-        #             block variable 5 - Day
-        #     return from read_variable_lists(depth=1)
-        #         block variable 49 - Attributes
-        #     read_variable_lists(depth=1)
-        #         read block: 7 - block.mark=b'CB')
-        #     return from read_variable_lists(depth=1)
+        # Settings:
+        self.lines = None
+        self.columns = None
+        self.missing_lines = None
+        self.line_mean = None
+        self.line_mean_order = None
+        self.invert_line_mean = None
+        self._plane_corr = None
+        self.invert_plane_corr = None
+        self.max_width = None
+        self.max_height = None
+        self.offset_x = None
+        self.offset_y = None
+        self.z_unit = None
+        self.retrace = None
+        self.z_linearized = None
+        self.scan_mode = None
+        self.z_calib = None
+        self.x_calib = None
+        self.y_calib = None
+        self.scan_speed = None
+        self.set_point = None
+        self.bias_voltage = None
+        self.loop_gain = None
+        self.loop_int = None
+        self.phase_shift = None
+        self.scan_direction = None
+        self.digital_loop = None
+        self.loop_filter = None
+        self.fft_type = None
+        self.xy_linearized = None
+        self.retrace_type = None
+        self.calculated = None
+        self.scanner_range = None
+        self.pixel_blend = None
+        self.source_channel = None
+        self.direct_ac = None
+        self.id = None
+        self.q_factor = None
+        self.aux_gain = None
+        self.fixed_palette = None
+        self.fixed_min = None
+        self.fixed_max = None
+        self.zero_scan = None
+        self.measured_amplitude = None
+        self.frequency_offset = None
+        self.q_boost = None
+        self.offset_pos = None
+

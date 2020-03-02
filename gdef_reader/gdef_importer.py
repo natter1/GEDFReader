@@ -2,59 +2,17 @@ import io
 from enum import Enum
 from typing import Optional, BinaryIO, List
 import struct
+import numpy as np
 
 
 # HEADER_SIZE = 4 + 2 + 2 + 4 + 4
 # CONTROL_BLOCK_SIZE = 2 + 2 + 4 + 4 + 1 + 3
 # VAR_NAME_SIZE = 50
 # VARIABLE_SIZE = 50 + 4
+from gdef_reader.gdef_data_strucutres import GDEFHeader, GDEFControlBlock, GDEFVariableType, GDEFVariable, type_sizes
+from gdef_reader.gdef_measurement import GDEFMeasurement
 
-
-class GDEFVariableType(Enum):
-    VAR_INTEGER = 0
-    VAR_FLOAT = 1
-    VAR_DOUBLE = 2
-    VAR_WORD = 3
-    VAR_DWORD = 4
-    VAR_CHAR = 5
-    VAR_STRING = 6
-    VAR_DATABLOCK = 7
-    VAR_NVARS = 8  # number of known GDEF types
-
-
-type_sizes = [4, 4, 8, 2, 4, 1, 0, 0]
-
-
-class GDEFHeader:
-    def __init__(self):
-        self.magic = None
-        self.version = None
-        self.creation_time = None
-        self.description_length = None
-        self.description = None
-
-
-class GDEFControlBlock:
-    _counter = 0
-
-    def __init__(self):
-        GDEFControlBlock._counter += 1
-        self.id = GDEFControlBlock._counter
-        self.mark = None
-        self.n_variables = None
-        self.n_data = None
-
-        self.variables: List[GDEFVariable] = []
-        self.next_byte = None
-
-
-class GDEFVariable:
-    def __init__(self):
-        self.name: str = ''
-        self.type: Optional[GDEFVariableType] = None
-        self.size = None
-        self.data = None
-
+from skimage.io import imsave
 
 class GDEFImporter:
     def __init__(self, filename: str):
@@ -149,7 +107,7 @@ class GDEFImporter:
                 self.base_blocks.append(block)
             blocks.append(block)
         self.flow_summary.append(self.flow_offset + f'return from read_variable_lists(depth={depth})')
-        return blocks  # self.blocks
+        return blocks  # measurement.blocks
 
     def read_variable_data(self, block: GDEFControlBlock, depth: int):
         self.flow_offset = '        ' +  ' ' * 4 * depth
@@ -205,9 +163,83 @@ class GDEFImporter:
         self.flow_offset = '        ' + ' ' * 4 * depth
         self.flow_summary.append(self.flow_offset + f'return from read_variable_data(block={block.id}, depth={depth})')
 
+    def export_measurements(self) -> List[GDEFMeasurement]:
+        """Create a list of GDEFMeasurement-Objects from imported data."""
+        result = []
+        for i, block in enumerate(self.blocks):
+            if block.n_data!=1 or block.n_variables != 50:
+                continue
+            result.append(self._get_measurement_from_block(block))
+        return result
+
+    def _get_measurement_from_block(self, block: GDEFControlBlock)-> GDEFMeasurement:
+        result = GDEFMeasurement()
+
+        result.lines = block.variables[0].data
+        result.columns = block.variables[1].data
+        result.missing_lines = block.variables[2].data
+        result.line_mean = block.variables[3].data
+        result.line_mean_order = block.variables[4].data
+        result.invert_line_mean = block.variables[5].data
+        result._plane_corr = block.variables[6].data
+        result.invert_plane_corr = block.variables[7].data
+        result.max_width = block.variables[8].data
+        result.max_height = block.variables[9].data
+        result.offset_x = block.variables[10].data
+        result.offset_y = block.variables[11].data
+        result.z_unit = block.variables[12].data
+        result.retrace = block.variables[13].data
+        result.z_linearized = block.variables[14].data
+        result.scan_mode = block.variables[15].data
+        result.z_calib = block.variables[16].data
+        result.x_calib = block.variables[17].data
+        result.y_calib = block.variables[18].data
+        result.scan_speed = block.variables[19].data
+        result.set_point = block.variables[20].data
+        result.bias_voltage = block.variables[21].data
+        result.loop_gain = block.variables[22].data
+        result.loop_int = block.variables[23].data
+        result.phase_shift = block.variables[24].data
+        result.scan_direction = block.variables[25].data
+        result.digital_loop = block.variables[26].data
+        result.loop_filter = block.variables[27].data
+        result.fft_type = block.variables[28].data
+        result.xy_linearized = block.variables[29].data
+        result.retrace_type = block.variables[30].data
+        result.calculated = block.variables[31].data
+        result.scanner_range = block.variables[32].data
+        result.pixel_blend = block.variables[33].data
+        result.source_channel = block.variables[34].data
+        result.direct_ac = block.variables[35].data
+        result.id = block.variables[36].data
+        result.q_factor = block.variables[37].data
+        result.aux_gain = block.variables[38].data
+        result.fixed_palette = block.variables[39].data
+        result.fixed_min = block.variables[40].data
+        result.fixed_max = block.variables[41].data
+        result.zero_scan = block.variables[42].data
+        result.measured_amplitude = block.variables[43].data
+        result.frequency_offset = block.variables[44].data
+        result.q_boost = block.variables[45].data
+        result.offset_pos = block.variables[46].data
+
+        value_data = block.variables[47].data[0].variables[0].data
+        shape = (result.columns-result.missing_lines, result.lines)
+        try:
+            result.value = np.reshape(value_data, shape)
+            imsave(f"measurment_blockID{block.id}.png", result.value)
+        except:
+            pass
+        result.comment = block.variables[47].data[1].variables[0].data.decode("utf-8").strip('\x00')
+        result.preview = block.variables[47].data[2].variables[0].data
+
+        return result
+
 
 if __name__ == '__main__':
     dummy = GDEFImporter("AFM.gdf")
     file2 = open("flow_summary.txt", "w")
     file2.write("\n".join(dummy.flow_summary))
     print(dummy)
+    measurements = dummy.export_measurements()
+    print(measurements)

@@ -1,18 +1,22 @@
 from typing import Optional, List
 
 # from gdef_reader.gdef_importer import GDEFHeader, GDEFControlBlock
+from matplotlib.figure import Figure
+
 from gdef_reader.gdef_data_strucutres import GDEFHeader
 
+from skimage.io import imsave
+import matplotlib.pyplot as plt
+import numpy as np
 
 class GDEFMeasurement:
-    def _init_(self):
+    def __init__(self):
         self.header: Optional[GDEFHeader] = None
         self.spm_image_file_vesion = None
 
         self.value = None
         self.preview = None
         self.comment = ''
-
 
         # Settings:
         self.lines = None
@@ -63,3 +67,50 @@ class GDEFMeasurement:
         self.q_boost = None
         self.offset_pos = None
 
+    def export_png(self):
+        if self.value:
+            imsave(f"measurment.png", self.value)
+
+    def create_plot(self, max_figure_size=(6, 6)):
+        def create_figure(data, extent, figure_size):
+            fig, ax = plt.subplots(figsize=figure_size)
+            im = ax.imshow(data, cmap=plt.cm.Reds, interpolation='none', extent=extent)
+            ax.set_xlabel("µm")
+            ax.set_ylabel("µm")
+            return fig, ax, im
+
+        if self.value is None:
+            return
+
+        if self.source_channel != 11:
+            return  # for now, only plot topography (-> soutce_channel == 11)
+
+        self._do_median_level()
+
+        extent = [0, self.max_width * 1e6, 0, self.max_height * (self.lines-self.missing_lines)/self.lines * 1e6]
+
+        figure_max, ax, im = create_figure(self.value*1e9, extent, max_figure_size)
+        tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
+        size = (tight_bbox.width * 1.25, tight_bbox.height)  # Legend takes 20% of width -> 100%/80% = 1.25
+        figure_tight, ax, im = create_figure(self.value * 1e9, extent, size)
+
+        bar = figure_tight.colorbar(im, ax=ax) #, shrink=(1-0.15-0.05))  # 0.15 - fraction; 0.05 - pad
+        bar.ax.set_title("nm") # bar.set_label("nm")
+        figure_tight.show()
+
+        return figure_tight
+
+    def _do_subtract_mean_plane(self):
+        dummy_grad = np.gradient(self.value)
+        grad_x = dummy_grad[0].mean()
+        grad_y = dummy_grad[1].mean()
+        print(grad_x, grad_y)
+        for index, x in np.ndenumerate(self.value):
+            self.value[index] = self.value[index] - index[0]*grad_x - index[1] * grad_y
+
+    def _do_median_level(self):
+        self._do_subtract_mean_plane()
+        try:
+            self.value = self.value - self.value.mean()
+        except:
+            pass

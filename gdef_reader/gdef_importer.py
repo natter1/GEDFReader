@@ -12,7 +12,6 @@ import numpy as np
 from gdef_reader.gdef_data_strucutres import GDEFHeader, GDEFControlBlock, GDEFVariableType, GDEFVariable, type_sizes
 from gdef_reader.gdef_measurement import GDEFMeasurement
 
-from skimage.io import imsave
 
 class GDEFImporter:
     def __init__(self, filename: str):
@@ -227,9 +226,13 @@ class GDEFImporter:
         shape = (result.columns-result.missing_lines, result.lines)
         try:
             result.value = np.reshape(value_data, shape)
-            imsave(f"measurment_blockID{block.id}.png", result.value)
         except:
-            pass
+            result.value = None
+        if True:  # block.id == 248:
+            fig = result.create_plot()
+        # if fig:
+        #     fig.savefig(f"NI_20-01-15_ID{block.id}.png")
+
         result.comment = block.variables[47].data[1].variables[0].data.decode("utf-8").strip('\x00')
         result.preview = block.variables[47].data[2].variables[0].data
 
@@ -237,7 +240,8 @@ class GDEFImporter:
 
 
 if __name__ == '__main__':
-    dummy = GDEFImporter("AFM.gdf")
+    # dummy = GDEFImporter("AFM.gdf")
+    dummy = GDEFImporter("NI_20-01-15.gdf")
     file2 = open("flow_summary.txt", "w")
     file2.write("\n".join(dummy.flow_summary))
     print(dummy)

@@ -228,10 +228,14 @@ class GDEFImporter:
             result.value = np.reshape(value_data, shape)
         except:
             result.value = None
-        if True:  # block.id == 248:
-            fig = result.create_plot()
-        # if fig:
-        #     fig.savefig(f"NI_20-01-15_ID{block.id}.png")
+
+        fig = result.create_plot()
+        if fig:
+            fig.show()
+        result.save_png(f"NI_20-01-15_{block.id}")
+
+        print(result._get_minimum_position())
+        print(result._calc_volume_with_radius())
 
         result.comment = block.variables[47].data[1].variables[0].data.decode("utf-8").strip('\x00')
         result.preview = block.variables[47].data[2].variables[0].data
@@ -240,8 +244,8 @@ class GDEFImporter:
 
 
 if __name__ == '__main__':
-    dummy = GDEFImporter("AFM.gdf")
-    # dummy = GDEFImporter("NI_20-01-15.gdf")
+    # dummy = GDEFImporter("AFM.gdf")
+    dummy = GDEFImporter("NI_20-01-15.gdf")
     file2 = open("flow_summary.txt", "w")
     file2.write("\n".join(dummy.flow_summary))
     print(dummy)

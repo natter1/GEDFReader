@@ -5,7 +5,6 @@ from matplotlib.figure import Figure
 
 from gdef_reader.gdef_data_strucutres import GDEFHeader
 
-from skimage.io import imsave
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -67,13 +66,72 @@ class GDEFMeasurement:
         self.q_boost = None
         self.offset_pos = None
 
-    def export_png(self):
-        if self.value:
-            imsave(f"measurment.png", self.value)
+    def save_png(self, filename, max_figure_size=(6, 6), dpi=300, transparent=False):
+        figure = self.create_plot(max_figure_size=max_figure_size, dpi=dpi)
+        if figure:
+            figure.savefig(filename, transparent=transparent)
 
-    def create_plot(self, max_figure_size=(6, 6)):
+    def _get_minimum_position(self):
+        minimum = np.min(self.value)
+        minimum_position = (0, 0)
+        for index, value in np.ndenumerate(self.value):
+            if value == minimum:
+                minimum_position = index
+        return minimum_position
+
+    def _is_pixel_in_radius(self, position, center, radius):
+        """Radius in [m]"""
+        pixel_length = self.max_width / self.columns
+        distance_pixel = ((position[0]-center[0])**2 + (position[1]-center[1])**2)**0.5
+        if pixel_length*distance_pixel <= radius:
+            return True
+        else:
+            return False
+
+    def _calc_volume_with_radius(self):
+        minimum = np.min(self.value)
+        radius = abs(7 * minimum)
+        minimum_position = self._get_minimum_position()
+        pixel_area = (self.max_width / self.columns)**2
+        result = 0
+        for index, value in np.ndenumerate(self.value):
+            if self._is_pixel_in_radius(index, minimum_position, radius):
+                result += value * pixel_area
+        return result
+
+    def _get_indent_pile_up_area_mask(self):
+        minimum = np.min(self.value)
+        radius = abs(7 * minimum)
+        minimum_position = self._get_minimum_position()
+        roughness_part = 0.05
+
+        result = np.zeros((self.value.shape[0], self.value.shape[1], 4))
+        for index, _ in np.ndenumerate(self.value):
+            if self._is_pixel_in_radius(index, minimum_position, radius):
+                if self.value[index] < roughness_part * minimum:
+                    result[index] = (0, 0, 1, 0.6)
+                elif self.value[index] > roughness_part * abs(minimum):
+                    result[index] = (0, 1, 0, 0.6)
+                else:
+                    result[index] = (0, 0, 0, 0.1)
+        return result
+
+
+    def _get_greyscale_data(self):
+        # Normalised [0,1]
+        data_min = np.min(self.value)
+        data_ptp = np.ptp(self.value)
+
+        result = np.zeros((self.value.shape[0], self.value.shape[1], 4))
+        for (nx, ny), _ in np.ndenumerate(self.value):
+            value = (self.value[nx, ny] - data_min) / data_ptp
+            result[nx, ny] = (value, value, value, 0)
+            # result[nx, ny] = (data[nx, ny], data[nx, ny], data[nx, ny])
+        return result
+
+    def create_plot(self, max_figure_size=(6, 6), dpi=300) -> Optional[Figure]:
         def create_figure(data, extent, figure_size):
-            fig, ax = plt.subplots(figsize=figure_size)
+            fig, ax = plt.subplots(figsize=figure_size, dpi=dpi)
             im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
             ax.set_xlabel("µm")
             ax.set_ylabel("µm")
@@ -94,9 +152,12 @@ class GDEFMeasurement:
         size = (tight_bbox.width * 1.25, tight_bbox.height)  # Legend takes 20% of width -> 100%/80% = 1.25
         figure_tight, ax, im = create_figure(self.value * 1e9, extent, size)
 
-        bar = figure_tight.colorbar(im, ax=ax) #, shrink=(1-0.15-0.05))  # 0.15 - fraction; 0.05 - pad
+        bar = figure_tight.colorbar(im, ax=ax)  # shrink=(1-0.15-0.05))  # 0.15 - fraction; 0.05 - pad
         bar.ax.set_title("nm") # bar.set_label("nm")
-        figure_tight.show()
+
+        # data = self._get_greyscale_data()
+        data = self._get_indent_pile_up_area_mask()
+        im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
 
         return figure_tight
 

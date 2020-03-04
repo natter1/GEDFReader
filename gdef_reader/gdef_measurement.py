@@ -74,7 +74,7 @@ class GDEFMeasurement:
     def create_plot(self, max_figure_size=(6, 6)):
         def create_figure(data, extent, figure_size):
             fig, ax = plt.subplots(figsize=figure_size)
-            im = ax.imshow(data, cmap=plt.cm.Reds, interpolation='none', extent=extent)
+            im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
             ax.set_xlabel("µm")
             ax.set_ylabel("µm")
             return fig, ax, im
@@ -101,16 +101,19 @@ class GDEFMeasurement:
         return figure_tight
 
     def _do_subtract_mean_plane(self):
-        dummy_grad = np.gradient(self.value)
-        grad_x = dummy_grad[0].mean()
-        grad_y = dummy_grad[1].mean()
-        print(grad_x, grad_y)
-        for index, x in np.ndenumerate(self.value):
-            self.value[index] = self.value[index] - index[0]*grad_x - index[1] * grad_y
+        try:
+            value_gradient = np.gradient(self.value)
+        except ValueError:
+            return
+        mean_value_gradient_x = value_gradient[0].mean()
+        mean_value_gradient_y = value_gradient[1].mean()
+        for (nx, ny), _ in np.ndenumerate(self.value):
+            self.value[nx, ny] = self.value[nx, ny] - nx * mean_value_gradient_x - ny * mean_value_gradient_y
 
-    def _do_median_level(self):
-        self._do_subtract_mean_plane()
+    def _do_median_level(self, subtract_mean_plane: bool = True):
+        if subtract_mean_plane:
+            self._do_subtract_mean_plane()
         try:
             self.value = self.value - self.value.mean()
-        except:
+        except ValueError:
             pass

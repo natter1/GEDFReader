@@ -1,4 +1,6 @@
+import errno
 import io
+import os
 from enum import Enum
 from typing import Optional, BinaryIO, List
 import struct
@@ -15,6 +17,19 @@ from gdef_reader.gdef_measurement import GDEFMeasurement
 
 class GDEFImporter:
     def __init__(self, filename: str):
+        self.filename = filename[:-4]
+
+        def make_folder(folder):
+            try:
+                os.mkdir(folder)
+            except OSError as exc:
+                if exc.errno != errno.EEXIST:
+                    raise
+                pass  # path already exit -> no error handling needed
+
+        make_folder('..\\output')
+        make_folder(f'..\\output\\{self.filename}')
+
         self.header: GDEFHeader = GDEFHeader()
         self.buffer: Optional[BinaryIO] = None
 
@@ -232,7 +247,7 @@ class GDEFImporter:
         fig = result.create_plot()
         if fig:
             fig.show()
-        result.save_png(f"NI_20-01-15_{block.id}")
+        result.save_png(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}")
 
         print(result._get_minimum_position())
         print(result._calc_volume_with_radius())
@@ -240,6 +255,7 @@ class GDEFImporter:
         result.comment = block.variables[47].data[1].variables[0].data.decode("utf-8").strip('\x00')
         result.preview = block.variables[47].data[2].variables[0].data
 
+        result.save(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}.pygdf")
         return result
 
 

@@ -1,3 +1,4 @@
+import pickle
 from typing import Optional, List
 
 # from gdef_reader.gdef_importer import GDEFHeader, GDEFControlBlock
@@ -66,6 +67,15 @@ class GDEFMeasurement:
         self.q_boost = None
         self.offset_pos = None
 
+    def save(self, filename):
+        with open(filename, 'wb') as file:
+            pickle.dump(self, file, 3)
+
+    @classmethod
+    def load(self, filename):
+        with open(filename, 'rb') as file:
+            return pickle.load(filename)
+
     def save_png(self, filename, max_figure_size=(6, 6), dpi=300, transparent=False):
         figure = self.create_plot(max_figure_size=max_figure_size, dpi=dpi)
         if figure:
@@ -90,6 +100,8 @@ class GDEFMeasurement:
 
     def _calc_volume_with_radius(self):
         minimum = np.min(self.value)
+        if minimum is None:
+            return 0
         radius = abs(7 * minimum)
         minimum_position = self._get_minimum_position()
         pixel_area = (self.max_width / self.columns)**2

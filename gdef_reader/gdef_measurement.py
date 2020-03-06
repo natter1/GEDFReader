@@ -1,7 +1,9 @@
 import pickle
-from typing import Optional, List
+from pathlib import Path
+from typing import Optional, List, Tuple
 
 # from gdef_reader.gdef_importer import GDEFHeader, GDEFControlBlock
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from gdef_reader.gdef_data_strucutres import GDEFHeader
@@ -66,6 +68,9 @@ class GDEFMeasurement:
         self.frequency_offset = None
         self.q_boost = None
         self.offset_pos = None
+
+        self.gdf_filename = ""  # filename of original *.gdf file
+        self.filename: Optional[Path] = None  # filename of pickled *.pygdf
 
     def save(self, filename):
         with open(filename, 'wb') as file:
@@ -141,7 +146,10 @@ class GDEFMeasurement:
             # result[nx, ny] = (data[nx, ny], data[nx, ny], data[nx, ny])
         return result
 
-    def create_plot(self, max_figure_size=(6, 6), dpi=300) -> Optional[Figure]:
+    def _get_extend_for_plot(self):
+        return [0, self.max_width * 1e6, 0, self.max_height * (self.lines - self.missing_lines) / self.lines * 1e6]
+
+    def create_plot(self, max_figure_size=(6, 6), dpi=300) -> Optional[Tuple[Figure, Axes]]:
         def create_figure(data, extent, figure_size):
             fig, ax = plt.subplots(figsize=figure_size, dpi=dpi)
             im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
@@ -157,7 +165,7 @@ class GDEFMeasurement:
 
         self._do_median_level()
 
-        extent = [0, self.max_width * 1e6, 0, self.max_height * (self.lines-self.missing_lines)/self.lines * 1e6]
+        extent = self._get_extend_for_plot()
 
         figure_max, ax, im = create_figure(self.value*1e9, extent, max_figure_size)
         tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
@@ -167,11 +175,13 @@ class GDEFMeasurement:
         bar = figure_tight.colorbar(im, ax=ax)  # shrink=(1-0.15-0.05))  # 0.15 - fraction; 0.05 - pad
         bar.ax.set_title("nm") # bar.set_label("nm")
 
-        # data = self._get_greyscale_data()
-        data = self._get_indent_pile_up_area_mask()
-        im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
+        return figure_tight, ax
 
-        return figure_tight
+    def add_indent_pile_up_mask_to_axes(self, ax: Axes) -> Axes:
+        data = self._get_indent_pile_up_area_mask()
+        extent = self._get_extend_for_plot()
+        im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
+        return Axes
 
     def _do_subtract_mean_plane(self):
         try:

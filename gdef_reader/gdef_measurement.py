@@ -153,13 +153,13 @@ class GDEFMeasurement:
     def _get_extend_for_plot(self):
         return [0, self.max_width * 1e6, 0, self.max_height * (self.lines - self.missing_lines) / self.lines * 1e6]
 
-    def create_plot(self, max_figure_size=(6, 6), dpi=300) -> Optional[Tuple[Figure, Axes]]:
+    def create_plot(self, max_figure_size=(6, 6), dpi=300) -> Optional[Figure]:
         def create_figure(data, extent, figure_size):
             fig, ax = plt.subplots(figsize=figure_size, dpi=dpi)
             im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
             ax.set_xlabel("µm")
             ax.set_ylabel("µm")
-            return fig, ax, im
+            return fig  , ax, im
 
         if self.values is None:
             return
@@ -167,7 +167,7 @@ class GDEFMeasurement:
         if self.source_channel != 11:
             return  # for now, only plot topography (-> soutce_channel == 11)
 
-        self._do_median_level()
+        # self._do_median_level()
 
         extent = self._get_extend_for_plot()
 
@@ -179,13 +179,17 @@ class GDEFMeasurement:
         bar = figure_tight.colorbar(im, ax=ax)  # shrink=(1-0.15-0.05))  # 0.15 - fraction; 0.05 - pad
         bar.ax.set_title("nm") # bar.set_label("nm")
 
-        return figure_tight, ax
+        return figure_tight  # , ax
 
     def add_indent_pile_up_mask_to_axes(self, ax: Axes) -> Axes:
         data = self._get_indent_pile_up_area_mask()
         extent = self._get_extend_for_plot()
         im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
         return Axes
+
+    def correct_background(self):
+        """Set average value to zero and subtract tilted background-plane."""
+        self._do_median_level(subtract_mean_plane=True)
 
     def _subtract_mean_plane(self):
         try:

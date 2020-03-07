@@ -242,6 +242,7 @@ class GDEFImporter:
         try:
             result._values_original = np.reshape(value_data, shape)
             result.values = np.reshape(value_data, shape)
+            result.correct_background()
         except:
             result.values = None
 
@@ -261,8 +262,8 @@ class GDEFImporter:
 
 
 if __name__ == '__main__':
-    # dummy = GDEFImporter("AFM.gdf")
-    dummy = GDEFImporter("NI_20-01-15.gdf")
+    dummy = GDEFImporter("AFM.gdf")
+    # dummy = GDEFImporter("NI_20-01-15.gdf")
     file2 = open("flow_summary.txt", "w")
     file2.write("\n".join(dummy.flow_summary))
     print(dummy)

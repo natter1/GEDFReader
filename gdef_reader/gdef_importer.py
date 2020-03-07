@@ -240,9 +240,10 @@ class GDEFImporter:
         value_data = block.variables[47].data[0].variables[0].data
         shape = (result.columns-result.missing_lines, result.lines)
         try:
-            result.value = np.reshape(value_data, shape)
+            result._values_original = np.reshape(value_data, shape)
+            result.values = np.reshape(value_data, shape)
         except:
-            result.value = None
+            result.values = None
 
         fig = result.create_plot()
         if fig:

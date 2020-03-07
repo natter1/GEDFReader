@@ -16,7 +16,8 @@ class GDEFMeasurement:
         self.header: Optional[GDEFHeader] = None
         self.spm_image_file_vesion = None
 
-        self.value = None
+        self._values_original = None  # do not change!
+        self.values = None
         self.preview = None
         self.comment = ''
 
@@ -72,6 +73,10 @@ class GDEFMeasurement:
         self.gdf_filename = ""  # filename of original *.gdf file
         self.filename: Optional[Path] = None  # filename of pickled *.pygdf
 
+    @property
+    def values_origibal(self):
+        return self._values_original
+
     def save(self, filename):
         with open(filename, 'wb') as file:
             pickle.dump(self, file, 3)
@@ -87,9 +92,9 @@ class GDEFMeasurement:
             figure.savefig(filename, transparent=transparent)
 
     def _get_minimum_position(self):
-        minimum = np.min(self.value)
+        minimum = np.min(self.values)
         minimum_position = (0, 0)
-        for index, value in np.ndenumerate(self.value):
+        for index, value in np.ndenumerate(self.values):
             if value == minimum:
                 minimum_position = index
         return minimum_position
@@ -104,44 +109,43 @@ class GDEFMeasurement:
             return False
 
     def _calc_volume_with_radius(self):
-        minimum = np.min(self.value)
+        minimum = np.min(self.values)
         if minimum is None:
             return 0
         radius = abs(7 * minimum)
         minimum_position = self._get_minimum_position()
         pixel_area = (self.max_width / self.columns)**2
         result = 0
-        for index, value in np.ndenumerate(self.value):
+        for index, value in np.ndenumerate(self.values):
             if self._is_pixel_in_radius(index, minimum_position, radius):
                 result += value * pixel_area
         return result
 
     def _get_indent_pile_up_area_mask(self):
-        minimum = np.min(self.value)
+        minimum = np.min(self.values)
         radius = abs(7 * minimum)
         minimum_position = self._get_minimum_position()
         roughness_part = 0.05
 
-        result = np.zeros((self.value.shape[0], self.value.shape[1], 4))
-        for index, _ in np.ndenumerate(self.value):
+        result = np.zeros((self.values.shape[0], self.values.shape[1], 4))
+        for index, _ in np.ndenumerate(self.values):
             if self._is_pixel_in_radius(index, minimum_position, radius):
-                if self.value[index] < roughness_part * minimum:
+                if self.values[index] < roughness_part * minimum:
                     result[index] = (0, 0, 1, 0.6)
-                elif self.value[index] > roughness_part * abs(minimum):
+                elif self.values[index] > roughness_part * abs(minimum):
                     result[index] = (0, 1, 0, 0.6)
                 else:
                     result[index] = (0, 0, 0, 0.1)
         return result
 
-
     def _get_greyscale_data(self):
         # Normalised [0,1]
-        data_min = np.min(self.value)
-        data_ptp = np.ptp(self.value)
+        data_min = np.min(self.values)
+        data_ptp = np.ptp(self.values)
 
-        result = np.zeros((self.value.shape[0], self.value.shape[1], 4))
-        for (nx, ny), _ in np.ndenumerate(self.value):
-            value = (self.value[nx, ny] - data_min) / data_ptp
+        result = np.zeros((self.values.shape[0], self.values.shape[1], 4))
+        for (nx, ny), _ in np.ndenumerate(self.values):
+            value = (self.values[nx, ny] - data_min) / data_ptp
             result[nx, ny] = (value, value, value, 0)
             # result[nx, ny] = (data[nx, ny], data[nx, ny], data[nx, ny])
         return result
@@ -157,7 +161,7 @@ class GDEFMeasurement:
             ax.set_ylabel("µm")
             return fig, ax, im
 
-        if self.value is None:
+        if self.values is None:
             return
 
         if self.source_channel != 11:
@@ -167,10 +171,10 @@ class GDEFMeasurement:
 
         extent = self._get_extend_for_plot()
 
-        figure_max, ax, im = create_figure(self.value*1e9, extent, max_figure_size)
+        figure_max, ax, im = create_figure(self.values * 1e9, extent, max_figure_size)
         tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
         size = (tight_bbox.width * 1.25, tight_bbox.height)  # Legend takes 20% of width -> 100%/80% = 1.25
-        figure_tight, ax, im = create_figure(self.value * 1e9, extent, size)
+        figure_tight, ax, im = create_figure(self.values * 1e9, extent, size)
 
         bar = figure_tight.colorbar(im, ax=ax)  # shrink=(1-0.15-0.05))  # 0.15 - fraction; 0.05 - pad
         bar.ax.set_title("nm") # bar.set_label("nm")
@@ -183,20 +187,20 @@ class GDEFMeasurement:
         im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
         return Axes
 
-    def _do_subtract_mean_plane(self):
+    def _subtract_mean_plane(self):
         try:
-            value_gradient = np.gradient(self.value)
+            value_gradient = np.gradient(self.values)
         except ValueError:
             return
         mean_value_gradient_x = value_gradient[0].mean()
         mean_value_gradient_y = value_gradient[1].mean()
-        for (nx, ny), _ in np.ndenumerate(self.value):
-            self.value[nx, ny] = self.value[nx, ny] - nx * mean_value_gradient_x - ny * mean_value_gradient_y
+        for (nx, ny), _ in np.ndenumerate(self.values):
+            self.values[nx, ny] = self.values[nx, ny] - nx * mean_value_gradient_x - ny * mean_value_gradient_y
 
     def _do_median_level(self, subtract_mean_plane: bool = True):
         if subtract_mean_plane:
-            self._do_subtract_mean_plane()
+            self._subtract_mean_plane()
         try:
-            self.value = self.value - self.value.mean()
+            self.values = self.values - self.values.mean()
         except ValueError:
             pass

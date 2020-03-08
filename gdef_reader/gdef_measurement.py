@@ -1,26 +1,17 @@
 import pickle
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import Optional
 
-# from gdef_reader.gdef_importer import GDEFHeader, GDEFControlBlock
+import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from gdef_reader.gdef_data_strucutres import GDEFHeader
 
-import matplotlib.pyplot as plt
-import numpy as np
 
-class GDEFMeasurement:
+class GDEFSettings:
     def __init__(self):
-        self.header: Optional[GDEFHeader] = None
-        self.spm_image_file_vesion = None
-
-        self._values_original = None  # do not change!
-        self.values = None
-        self.preview = None
-        self.comment = ''
-
         # Settings:
         self.lines = None
         self.columns = None
@@ -70,6 +61,33 @@ class GDEFMeasurement:
         self.q_boost = None
         self.offset_pos = None
 
+    def pixel_width(self):
+        return self.max_width / self.columns
+
+    def pixel_area(self):
+        return self.pixel_width()**2
+
+    def extent_for_plot(self):
+        width_in_um = self.max_width * 1e6
+        height_in_um = self.max_height * (self.lines - self.missing_lines) / self.lines * 1e6
+        return [0, width_in_um, 0, height_in_um]
+
+    def shape(self):
+        return self.columns - self.missing_lines, self.lines
+
+
+class GDEFMeasurement:
+    def __init__(self):
+        self.header: Optional[GDEFHeader] = None
+        self.spm_image_file_vesion = None
+
+        self.settings = GDEFSettings()
+
+        self._values_original = None  # do not change!
+        self.values = None
+        self.preview = None
+        self.comment = ''
+
         self.gdf_filename = ""  # filename of original *.gdf file
         self.filename: Optional[Path] = None  # filename of pickled *.pygdf
 
@@ -81,9 +99,9 @@ class GDEFMeasurement:
         with open(filename, 'wb') as file:
             pickle.dump(self, file, 3)
 
-    @classmethod
-    def load(self, filename):
-        with open(filename, 'rb') as file:
+    @staticmethod
+    def load(filename):
+        with open(filename, 'rb'):
             return pickle.load(filename)
 
     def save_png(self, filename, max_figure_size=(6, 6), dpi=300, transparent=False):
@@ -101,7 +119,7 @@ class GDEFMeasurement:
 
     def _is_pixel_in_radius(self, position, center, radius):
         """Radius in [m]"""
-        pixel_length = self.max_width / self.columns
+        pixel_length = self.settings.pixel_width()
         distance_pixel = ((position[0]-center[0])**2 + (position[1]-center[1])**2)**0.5
         if pixel_length*distance_pixel <= radius:
             return True
@@ -114,18 +132,17 @@ class GDEFMeasurement:
             return 0
         radius = abs(7 * minimum)
         minimum_position = self._get_minimum_position()
-        pixel_area = (self.max_width / self.columns)**2
+        pixel_area = self.settings.pixel_area()
         result = 0
         for index, value in np.ndenumerate(self.values):
             if self._is_pixel_in_radius(index, minimum_position, radius):
                 result += value * pixel_area
         return result
 
-    def _get_indent_pile_up_area_mask(self):
+    def _get_indent_pile_up_area_mask(self, roughness_part=0.05):
         minimum = np.min(self.values)
         radius = abs(7 * minimum)
         minimum_position = self._get_minimum_position()
-        roughness_part = 0.05
 
         result = np.zeros((self.values.shape[0], self.values.shape[1], 4))
         for index, _ in np.ndenumerate(self.values):
@@ -147,45 +164,41 @@ class GDEFMeasurement:
         for (nx, ny), _ in np.ndenumerate(self.values):
             value = (self.values[nx, ny] - data_min) / data_ptp
             result[nx, ny] = (value, value, value, 0)
-            # result[nx, ny] = (data[nx, ny], data[nx, ny], data[nx, ny])
         return result
 
-    def _get_extend_for_plot(self):
-        return [0, self.max_width * 1e6, 0, self.max_height * (self.lines - self.missing_lines) / self.lines * 1e6]
-
     def create_plot(self, max_figure_size=(6, 6), dpi=300) -> Optional[Figure]:
-        def create_figure(data, extent, figure_size):
+        def create_figure(data, figure_size):
             fig, ax = plt.subplots(figsize=figure_size, dpi=dpi)
             im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
             ax.set_xlabel("µm")
             ax.set_ylabel("µm")
-            return fig  , ax, im
+            return fig, ax, im
 
         if self.values is None:
             return
 
-        if self.source_channel != 11:
+        if self.settings.source_channel != 11:
             return  # for now, only plot topography (-> soutce_channel == 11)
 
         # self._do_median_level()
 
-        extent = self._get_extend_for_plot()
+        extent = self.settings.extent_for_plot()
 
-        figure_max, ax, im = create_figure(self.values * 1e9, extent, max_figure_size)
+        figure_max, ax, im = create_figure(self.values * 1e9, max_figure_size)
         tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
         size = (tight_bbox.width * 1.25, tight_bbox.height)  # Legend takes 20% of width -> 100%/80% = 1.25
-        figure_tight, ax, im = create_figure(self.values * 1e9, extent, size)
+        figure_tight, ax, im = create_figure(self.values * 1e9, size)
 
         bar = figure_tight.colorbar(im, ax=ax)  # shrink=(1-0.15-0.05))  # 0.15 - fraction; 0.05 - pad
-        bar.ax.set_title("nm") # bar.set_label("nm")
+        bar.ax.set_title("nm")  # bar.set_label("nm")
 
         return figure_tight  # , ax
 
     def add_indent_pile_up_mask_to_axes(self, ax: Axes) -> Axes:
         data = self._get_indent_pile_up_area_mask()
-        extent = self._get_extend_for_plot()
-        im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
-        return Axes
+        extent = self.settings.extent_for_plot()
+        ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
+        return ax
 
     def correct_background(self):
         """Set average value to zero and subtract tilted background-plane."""

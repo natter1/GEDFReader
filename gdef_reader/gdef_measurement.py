@@ -92,7 +92,7 @@ class GDEFMeasurement:
         self.filename: Optional[Path] = None  # filename of pickled *.pygdf
 
     @property
-    def values_origibal(self):
+    def values_original(self):
         return self._values_original
 
     def save(self, filename):

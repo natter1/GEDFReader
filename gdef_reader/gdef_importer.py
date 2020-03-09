@@ -1,11 +1,10 @@
 import errno
 import io
 import os
-from enum import Enum
-from typing import Optional, BinaryIO, List
 import struct
-import numpy as np
+from typing import Optional, BinaryIO, List
 
+import numpy as np
 
 # HEADER_SIZE = 4 + 2 + 2 + 4 + 4
 # CONTROL_BLOCK_SIZE = 2 + 2 + 4 + 4 + 1 + 3
@@ -112,19 +111,21 @@ class GDEFImporter:
                     self.flow_offset = ' ' * 4 * depth
 
             if depth == 0:
-                self.flow_summary.append(self.flow_offset + f'        read variable data for block: {block.id} - (; depth={depth})')
+                self.flow_summary.append(
+                    self.flow_offset + f'        read variable data for block: {block.id} - (; depth={depth})'
+                )
                 self.read_variable_data(block, depth)
                 self.flow_offset = ' ' * 4 * depth
 
             self.blocks.append(block)
-            if depth==0:
+            if depth == 0:
                 self.base_blocks.append(block)
             blocks.append(block)
         self.flow_summary.append(self.flow_offset + f'return from read_variable_lists(depth={depth})')
         return blocks  # measurement.blocks
 
     def read_variable_data(self, block: GDEFControlBlock, depth: int):
-        self.flow_offset = '        ' +  ' ' * 4 * depth
+        self.flow_offset = '        ' + ' ' * 4 * depth
         self.flow_summary.append( self.flow_offset + f'read_variable_data(block={block.id}, depth={depth})')
 
         for variable in block.variables:
@@ -145,7 +146,7 @@ class GDEFImporter:
                         if chunk == b'':
                             break
                         variable.data.append(struct.unpack('<f', chunk))
-                    if len(variable.data)==1:
+                    if len(variable.data) == 1:
                         variable.data = variable.data[0][0]  # [0][0] struct.unpack also returns tuple, not float/double
                 elif variable.type == GDEFVariableType.VAR_DOUBLE.value:
                     f = io.BytesIO(variable.data)
@@ -264,8 +265,8 @@ class GDEFImporter:
 if __name__ == '__main__':
     dummy = GDEFImporter("AFM.gdf")
     # dummy = GDEFImporter("NI_20-01-15.gdf")
-    file2 = open("flow_summary.txt", "w")
-    file2.write("\n".join(dummy.flow_summary))
+    with open("flow_summary.txt", "w") as file:
+        file.write("\n".join(dummy.flow_summary))
     print(dummy)
     measurements = dummy.export_measurements()
     print(measurements)

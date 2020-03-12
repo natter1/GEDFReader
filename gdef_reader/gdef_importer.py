@@ -239,6 +239,9 @@ class GDEFImporter:
         result.settings.offset_pos = block.variables[46].data
 
         value_data = block.variables[47].data[0].variables[0].data
+        result.comment = block.variables[47].data[1].variables[0].data.decode("utf-8").strip('\x00')
+        result.preview = block.variables[47].data[2].variables[0].data
+
         shape = result.settings.shape()
         try:
             result._values_original = np.reshape(value_data, shape)
@@ -255,15 +258,13 @@ class GDEFImporter:
         print(result._get_minimum_position())
         print(result._calc_volume_with_radius())
 
-        result.comment = block.variables[47].data[1].variables[0].data.decode("utf-8").strip('\x00')
-        result.preview = block.variables[47].data[2].variables[0].data
-
         result.save(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}.pygdf")
         return result
 
 
 if __name__ == '__main__':
-    dummy = GDEFImporter("AFM.gdf")
+    dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2.gdf")
+    # dummy = GDEFImporter("AFM.gdf")
     # dummy = GDEFImporter("NI_20-01-15.gdf")
     with open("flow_summary.txt", "w") as file:
         file.write("\n".join(dummy.flow_summary))

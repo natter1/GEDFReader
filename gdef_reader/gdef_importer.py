@@ -253,7 +253,7 @@ class GDEFImporter:
         fig = result.create_plot()
         if fig:
             fig.show()
-        result.save_png(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}")
+        result.save_png(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}", dpi=96)
 
         print(result._get_minimum_position())
         print(result._calc_volume_with_radius())
@@ -263,9 +263,9 @@ class GDEFImporter:
 
 
 if __name__ == '__main__':
-    dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2.gdf")
+    # dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2.gdf")
     # dummy = GDEFImporter("AFM.gdf")
-    # dummy = GDEFImporter("NI_20-01-15.gdf")
+    dummy = GDEFImporter("NI_20-01-15.gdf")
     with open("flow_summary.txt", "w") as file:
         file.write("\n".join(dummy.flow_summary))
     print(dummy)

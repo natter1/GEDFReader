@@ -104,10 +104,10 @@ class GDEFMeasurement:
         with open(filename, 'rb'):
             return pickle.load(filename)
 
-    def save_png(self, filename, max_figure_size=(6, 6), dpi=300, transparent=False):
+    def save_png(self, filename, max_figure_size=(4, 4), dpi=300, transparent=False):
         figure = self.create_plot(max_figure_size=max_figure_size, dpi=dpi)
         if figure:
-            figure.savefig(filename, transparent=transparent)
+            figure.savefig(filename, transparent=transparent, dpi=dpi)
 
     def _get_minimum_position(self):
         minimum = np.min(self.values)
@@ -166,7 +166,7 @@ class GDEFMeasurement:
             result[nx, ny] = (value, value, value, 0)
         return result
 
-    def create_plot(self, max_figure_size=(4, 4), dpi=100) -> Optional[Figure]:
+    def create_plot(self, max_figure_size=(4, 4), dpi=96) -> Optional[Figure]:
         def create_figure(data, figure_size):
             fig, ax = plt.subplots(figsize=figure_size, dpi=dpi)
             im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)

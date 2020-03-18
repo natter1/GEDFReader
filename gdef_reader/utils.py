@@ -23,6 +23,26 @@ def load_pygdf_measurements(path: Path) -> List[GDEFMeasurement]:
     return result
 
 
+def create_png_for_nanoindents(path: Path, png_save_path: Optional[Path]= None):
+    measurements = load_pygdf_measurements(path)
+    if png_save_path is None:
+        png_save_path = path
+    else:
+        png_save_path = png_save_path
+        png_save_path.mkdir(exist_ok=True)
+    for measurement in measurements:
+        print(measurement.comment)
+        figure = measurement.create_plot()
+        if figure is None:
+            continue
+        print(png_save_path.joinpath(f"{measurement.filename.stem + '.png'}"))
+        figure.savefig(png_save_path.joinpath(f"{measurement.filename.stem + '.png'}"), dpi=96)  # , transparent=transparent)
+        measurement.add_indent_pile_up_mask_to_axes(figure.axes[0])
+        print(png_save_path.joinpath(f"{measurement.filename.stem + '_masked.png'}"))
+        figure.savefig(png_save_path.joinpath(f"{measurement.filename.stem + '_masked.png'}"), dpi=96)
+        figure.clear()
+
+
 def create_pptx_for_nanoindents(path, pptx_filename, pptx_template: Optional[AbstractTemplate] = None):
     pptx = PPTXCreator(template=pptx_template)
     pptx.add_title_slide(f"AFM on Nanoindents - {path.stem}")

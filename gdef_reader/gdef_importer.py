@@ -249,23 +249,24 @@ class GDEFImporter:
             result.correct_background()
         except:
             result.values = None
+        result.settings._pixel_width = result.settings.max_width / result.settings.columns
 
-        fig = result.create_plot()
-        if fig:
-            fig.show()
-        result.save_png(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}", dpi=96)
-
-        print(result._get_minimum_position())
-        print(result._calc_volume_with_radius())
+        # fig = result.create_plot()
+        # if fig:
+        #     fig.show()
+        # result.save_png(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}", dpi=96)
+        #
+        # print(result._get_minimum_position())
+        # print(result._calc_volume_with_radius())
 
         result.save(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}.pygdf")
         return result
 
 
 if __name__ == '__main__':
-    # dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2.gdf")
+    dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2.gdf")
     # dummy = GDEFImporter("AFM.gdf")
-    dummy = GDEFImporter("NI_20-01-15.gdf")
+    # dummy = GDEFImporter("NI_20-01-15.gdf")
     with open("flow_summary.txt", "w") as file:
         file.write("\n".join(dummy.flow_summary))
     print(dummy)

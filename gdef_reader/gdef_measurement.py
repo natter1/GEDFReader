@@ -61,8 +61,11 @@ class GDEFSettings:
         self.q_boost = None
         self.offset_pos = None
 
+        self._pixel_width = None
+
+    @property
     def pixel_width(self):
-        return self.max_width / self.columns
+        return self._pixel_width  # self.max_width / self.columns
 
     def pixel_area(self):
         return self.pixel_width()**2
@@ -77,6 +80,9 @@ class GDEFSettings:
 
 
 class GDEFMeasurement:
+    # speed optimization to reduce calculationtime of _is_pixel_in_radius()
+    pixel_radius_distance_matrix = {}
+    max_pixel_radius_value = 0
     def __init__(self):
         self.header: Optional[GDEFHeader] = None
         self.spm_image_file_vesion = None
@@ -90,6 +96,8 @@ class GDEFMeasurement:
 
         self.gdf_filename = ""  # filename of original *.gdf file
         self.filename: Optional[Path] = None  # filename of pickled *.pygdf
+
+        self.background_corrected = False
 
     @property
     def values_original(self):
@@ -110,23 +118,37 @@ class GDEFMeasurement:
             figure.savefig(filename, transparent=transparent, dpi=dpi)
 
     def _get_minimum_position(self):
+        # ---------------------------------------------------------------------------------------------------
+        # this makes code actually slower (not this method, but other code parts ^^); so do not use np.where:
+        # delme = np.where(self.values == np.amin(self.values))
+        # return delme[0][0], delme[1][0]
+        # ---------------------------------------------------------------------------------------------------
         minimum = np.min(self.values)
         minimum_position = (0, 0)
         for index, value in np.ndenumerate(self.values):
             if value == minimum:
                 minimum_position = index
+                break
         return minimum_position
+
+    @classmethod
+    def _check_pixel_radius_dict(cls):
+        if cls.pixel_radius_distance_matrix == {}:  # todo: or GDEFMeasurement.max_pixel_radius_value < self.settings. ...
+            for x in range(-255, 256):
+                for y in range(-255, 256):  # todo: symmetry???
+                    cls.pixel_radius_distance_matrix[x,y] = (x**2 + y**2)**0.5
 
     def _is_pixel_in_radius(self, position, center, radius):
         """Radius in [m]"""
-        pixel_length = self.settings.pixel_width()
-        distance_pixel = ((position[0]-center[0])**2 + (position[1]-center[1])**2)**0.5
-        if pixel_length*distance_pixel <= radius:
+        # optimized for speed; do not introduce help variables, if not necessary
+        if self.settings._pixel_width \
+           * GDEFMeasurement.pixel_radius_distance_matrix[(position[0]-center[0]),(position[1]-center[1])] <= radius:
             return True
         else:
             return False
 
     def _calc_volume_with_radius(self):
+        self._check_pixel_radius_dict()
         minimum = np.min(self.values)
         if minimum is None:
             return 0
@@ -140,16 +162,20 @@ class GDEFMeasurement:
         return result
 
     def _get_indent_pile_up_area_mask(self, roughness_part=0.05):
+        self._check_pixel_radius_dict()
         minimum = np.min(self.values)
         radius = abs(7 * minimum)
         minimum_position = self._get_minimum_position()
 
+        below_suface_limit = roughness_part * minimum
+        above_suface_limit = abs(below_suface_limit)
+
         result = np.zeros((self.values.shape[0], self.values.shape[1], 4))
         for index, _ in np.ndenumerate(self.values):
             if self._is_pixel_in_radius(index, minimum_position, radius):
-                if self.values[index] < roughness_part * minimum:
+                if self.values[index] < below_suface_limit:
                     result[index] = (0, 0, 1, 0.6)
-                elif self.values[index] > roughness_part * abs(minimum):
+                elif self.values[index] > above_suface_limit:
                     result[index] = (0, 1, 0, 0.6)
                 else:
                     result[index] = (0, 0, 0, 0.1)
@@ -203,7 +229,9 @@ class GDEFMeasurement:
 
     def correct_background(self):
         """Set average value to zero and subtract tilted background-plane."""
-        self._do_median_level(subtract_mean_plane=True)
+        if not self.background_corrected:
+            self._do_median_level(subtract_mean_plane=True)
+            self.background_corrected = True
 
     def _subtract_mean_plane(self):
         try:

@@ -1,3 +1,4 @@
+natsort
 numpy
 matplotlib
 python-pptx-interface

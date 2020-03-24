@@ -259,7 +259,7 @@ class GDEFImporter:
         # print(result._get_minimum_position())
         # print(result._calc_volume_with_radius())
 
-        result.save(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}.pygdf")
+        result.save(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id:03}.pygdf")  # todo: what happens, when block.id > 999?
         return result
 
 

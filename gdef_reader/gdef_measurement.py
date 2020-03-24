@@ -68,7 +68,7 @@ class GDEFSettings:
         return self._pixel_width  # self.max_width / self.columns
 
     def pixel_area(self):
-        return self.pixel_width()**2
+        return self.pixel_width**2
 
     def extent_for_plot(self):
         width_in_um = self.max_width * 1e6
@@ -80,9 +80,6 @@ class GDEFSettings:
 
 
 class GDEFMeasurement:
-    # speed optimization to reduce calculationtime of _is_pixel_in_radius()
-    pixel_radius_distance_matrix = {}
-    max_pixel_radius_value = 0
     def __init__(self):
         self.header: Optional[GDEFHeader] = None
         self.spm_image_file_vesion = None
@@ -131,56 +128,6 @@ class GDEFMeasurement:
                 break
         return minimum_position
 
-    @classmethod
-    def _check_pixel_radius_dict(cls):
-        if cls.pixel_radius_distance_matrix == {}:  # todo: or GDEFMeasurement.max_pixel_radius_value < self.settings. ...
-            for x in range(-255, 256):
-                for y in range(-255, 256):  # todo: symmetry???
-                    cls.pixel_radius_distance_matrix[x,y] = (x**2 + y**2)**0.5
-
-    def _is_pixel_in_radius(self, position, center, radius):
-        """Radius in [m]"""
-        # optimized for speed; do not introduce help variables, if not necessary
-        if self.settings._pixel_width \
-           * GDEFMeasurement.pixel_radius_distance_matrix[(position[0]-center[0]),(position[1]-center[1])] <= radius:
-            return True
-        else:
-            return False
-
-    def _calc_volume_with_radius(self):
-        self._check_pixel_radius_dict()
-        minimum = np.min(self.values)
-        if minimum is None:
-            return 0
-        radius = abs(7 * minimum)
-        minimum_position = self._get_minimum_position()
-        pixel_area = self.settings.pixel_area()
-        result = 0
-        for index, value in np.ndenumerate(self.values):
-            if self._is_pixel_in_radius(index, minimum_position, radius):
-                result += value * pixel_area
-        return result
-
-    def _get_indent_pile_up_area_mask(self, roughness_part=0.05):
-        self._check_pixel_radius_dict()
-        minimum = np.min(self.values)
-        radius = abs(7 * minimum)
-        minimum_position = self._get_minimum_position()
-
-        below_suface_limit = roughness_part * minimum
-        above_suface_limit = abs(below_suface_limit)
-
-        result = np.zeros((self.values.shape[0], self.values.shape[1], 4))
-        for index, _ in np.ndenumerate(self.values):
-            if self._is_pixel_in_radius(index, minimum_position, radius):
-                if self.values[index] < below_suface_limit:
-                    result[index] = (0, 0, 1, 0.6)
-                elif self.values[index] > above_suface_limit:
-                    result[index] = (0, 1, 0, 0.6)
-                else:
-                    result[index] = (0, 0, 0, 0.1)
-        return result
-
     def _get_greyscale_data(self):
         # Normalised [0,1]
         data_min = np.min(self.values)
@@ -221,12 +168,6 @@ class GDEFMeasurement:
 
         return figure_tight  # , ax
 
-    def add_indent_pile_up_mask_to_axes(self, ax: Axes) -> Axes:
-        data = self._get_indent_pile_up_area_mask()
-        extent = self.settings.extent_for_plot()
-        ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
-        return ax
-
     def correct_background(self):
         """Set average value to zero and subtract tilted background-plane."""
         if not self.background_corrected:
@@ -250,3 +191,13 @@ class GDEFMeasurement:
             self.values = self.values - self.values.mean()
         except ValueError:
             pass
+
+    def get_summary_table_data(self):  # todo: consider move method to utils.py
+        result = [["source channel", self.settings.source_channel]]
+        result.append(["retrace", self.settings.retrace])
+        result.append(["missing lines", self.settings.missing_lines])
+        result.append(["max width [m]", f"{self.settings.max_width:.2e}"])
+        result.append(["max height [m]", f"{self.settings.max_height:.2e}"])
+        result.append(["filename", f"{self.filename.stem}"])
+
+        return result

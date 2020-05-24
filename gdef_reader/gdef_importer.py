@@ -239,7 +239,7 @@ class GDEFImporter:
         result.settings.offset_pos = block.variables[46].data
 
         value_data = block.variables[47].data[0].variables[0].data
-        result.comment = block.variables[47].data[1].variables[0].data.decode("utf-8").strip('\x00')
+        result.comment = block.variables[47].data[1].variables[0].data.decode("Latin-1").strip('\x00')
         result.preview = block.variables[47].data[2].variables[0].data
 
         shape = result.settings.shape()
@@ -264,7 +264,8 @@ class GDEFImporter:
 
 
 if __name__ == '__main__':
-    dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2.gdf")
+    # dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2.gdf")
+    dummy = GDEFImporter("Al_1µm_s001.gdf")
     # dummy = GDEFImporter("AFM.gdf")
     # dummy = GDEFImporter("NI_20-01-15.gdf")
     with open("flow_summary.txt", "w") as file:

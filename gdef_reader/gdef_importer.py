@@ -178,16 +178,16 @@ class GDEFImporter:
         self.flow_offset = '        ' + ' ' * 4 * depth
         self.flow_summary.append(self.flow_offset + f'return from read_variable_data(block={block.id}, depth={depth})')
 
-    def export_measurements(self) -> List[GDEFMeasurement]:
+    def export_measurements(self, create_images=False) -> List[GDEFMeasurement]:
         """Create a list of GDEFMeasurement-Objects from imported data."""
         result = []
         for i, block in enumerate(self.blocks):
             if block.n_data!=1 or block.n_variables != 50:
                 continue
-            result.append(self._get_measurement_from_block(block))
+            result.append(self._get_measurement_from_block(block, create_images))
         return result
 
-    def _get_measurement_from_block(self, block: GDEFControlBlock)-> GDEFMeasurement:
+    def _get_measurement_from_block(self, block: GDEFControlBlock, create_image)-> GDEFMeasurement:
         result = GDEFMeasurement()
 
         result.settings.lines = block.variables[0].data
@@ -242,7 +242,8 @@ class GDEFImporter:
         result.comment = block.variables[47].data[1].variables[0].data.decode("Latin-1").strip('\x00')
         result.preview = block.variables[47].data[2].variables[0].data
 
-        shape = result.settings.shape()
+        x, y = result.settings.shape()
+        shape = (y, x)
         try:
             result._values_original = np.reshape(value_data, shape)
             result.values = np.reshape(value_data, shape)
@@ -251,10 +252,11 @@ class GDEFImporter:
             result.values = None
         result.settings._pixel_width = result.settings.max_width / result.settings.columns
 
-        # fig = result.create_plot()
-        # if fig:
-        #     fig.show()
-        # result.save_png(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}", dpi=96)
+        if create_image:
+            fig = result.create_plot()
+            if fig:
+                fig.show()
+            result.save_png(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}", dpi=96)
         #
         # print(result._get_minimum_position())
         # print(result._calc_volume_with_radius())
@@ -265,11 +267,19 @@ class GDEFImporter:
 
 if __name__ == '__main__':
     # dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2.gdf")
-    dummy = GDEFImporter("Al_1µm_s001.gdf")
+    # dummy = GDEFImporter("Al_1µm_s001.gdf")
+    # dummy = GDEFImporter("Ni_1µm_s001.gdf")
+    # dummy = GDEFImporter("Al_1µm_s001_roughness.gdf")
+    # dummy = GDEFImporter("Ni_1µm_s001_roughness.gdf")
+    # dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2_roughness.gdf")
+    # dummy = GDEFImporter("Ni_1µm_s001_roughness_test_phase_bending_scanparameters.gdf")
+    # dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_01.gdf")
+    # dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_02.gdf")
+    # dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_03.gdf")
     # dummy = GDEFImporter("AFM.gdf")
     # dummy = GDEFImporter("NI_20-01-15.gdf")
-    with open("flow_summary.txt", "w") as file:
-        file.write("\n".join(dummy.flow_summary))
+    # with open("flow_summary.txt", "w") as file:
+    #     file.write("\n".join(dummy.flow_summary))
     print(dummy)
     measurements = dummy.export_measurements()
     print(measurements)

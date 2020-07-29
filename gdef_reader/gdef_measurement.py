@@ -161,7 +161,7 @@ class GDEFMeasurement:
 
         figure_max, ax, im = create_figure(self.values * 1e9, max_figure_size)
         tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
-        size = (tight_bbox.width * 1.25, tight_bbox.height)  # Legend takes 20% of width -> 100%/80% = 1.25
+        size = (tight_bbox.width * 1.25, tight_bbox.height *1.05)  # Legend takes 20% of width -> 100%/80% = 1.25
         figure_tight, ax, im = create_figure(self.values * 1e9, size)
         bar = figure_tight.colorbar(im, ax=ax)  # shrink=(1-0.15-0.05))  # 0.15 - fraction; 0.05 - pad
         bar.ax.set_title("nm")  # bar.set_label("nm")

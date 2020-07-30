@@ -10,6 +10,7 @@ from gdef_reader.utils import load_pygdf_measurements
 import matplotlib.pyplot as plt
 import png
 
+samplename = "cantilever03"
 folder = '..\\delme'
 path = Path.cwd().parent.joinpath("delme")
 measurements = load_pygdf_measurements(path)
@@ -23,6 +24,7 @@ data05 = measurements[4].values
 data06 = measurements[5].values
 
 #data02 = data02[0:, 15:]
+
 
 def stich(data01, data02, data01_x_offset):
     """
@@ -90,6 +92,8 @@ data_stiched = stich(data_stiched, data04, data_stiched.shape[1]-data01_x_offset
 data_stiched = stich(data_stiched, data05, data_stiched.shape[1]-data01_x_offset_right)
 data_stiched = stich(data_stiched, data06, data_stiched.shape[1]-data01_x_offset_right)
 
+
+
 data=data_stiched
 data_min = np.nanmin(data)
 data_max = np.nanmax(data)
@@ -98,6 +102,101 @@ data = 255 * data # Now scale by 255
 img = data.astype(np.uint8)
 
 
+# get rms roughness
+def nanrms(x, axis=None):
+    return np.sqrt(np.nanmean(x**2, axis=axis))
+
+def create_absolute_gradient_array(array2d, cutoff = 1.0):
+    result = np.gradient(array2d)  # [0]
+    result = np.sqrt(result[0] ** 2 + result[1] ** 2)
+    max_grad = np.nanmax(result)
+    with np.nditer(result, op_flags=['readwrite']) as it:
+        for x in it:
+            if x is not np.nan and x > cutoff * max_grad:
+                x[...] = 0 #np.nan
+    return result
+
+def create_image(array2d):
+    data_min = np.nanmin(array2d)
+    array2d = (array2d - min(0, data_min)) / (np.nanmax(array2d) - min(0, data_min))  # normalize the data to 0 - 1
+    array2d = 255 * array2d  # Now scale by 255
+    return array2d.astype(np.uint8)
+
+x_pos = []
+y_rms = []
+averaging = 10
+gradient_cutoff = 0.1
+
+
+for i in range(data_stiched.shape[1]-averaging):
+    x_pos.append((i+averaging/2.0)*measurements[0].settings.pixel_width*1e6)
+    y_rms.append(nanrms(data_stiched[:, i:i+averaging]))
+    # y_rms.append(np.nanmean(gradient_stiched_data[:, i:i+averaging]))
+
+fig, (ax_rms) = plt.subplots(1, 1, figsize=(10, 6))
+ax_rms.plot(x_pos, y_rms, 'r')
+ax_rms.set_xlabel("[µm]")
+ax_rms.set_ylabel(f"rms (averaged over {averaging} line(s))")
+fig.show()
+
+
 #data_image = np.vstack(map(np.uint16, data_stiched))
 #png.from_array(data_image, mode="L").save("delme_stich.png")
-png.from_array(img, mode="L").save("delme_stich.png")
+
+# img = create_image(data_stiched)
+# png.from_array(img, mode="L").save(f"{samplename}_stiched.png")
+#
+# png.from_array(create_image(create_absolute_gradient_array(data_stiched, 1.0)),
+#                mode="L").save(f"{samplename}_gradient_cutoff_1-0.png")
+#
+# png.from_array(create_image(create_absolute_gradient_array(data_stiched, 0.9)),
+#                mode="L").save(f"{samplename}_gradient_cutoff_0-9.png")
+#
+# png.from_array(create_image(create_absolute_gradient_array(data_stiched, 0.8)),
+#                mode="L").save(f"{samplename}_gradient_cutoff_0-8.png")
+#
+# png.from_array(create_image(create_absolute_gradient_array(data_stiched, 0.7)),
+#                mode="L").save(f"{samplename}_gradient_cutoff_0-7.png")
+#
+# png.from_array(create_image(create_absolute_gradient_array(data_stiched, 0.6)),
+#                mode="L").save(f"{samplename}_gradient_cutoff_0-6.png")
+#
+# png.from_array(create_image(create_absolute_gradient_array(data_stiched, 0.5)),
+#                mode="L").save(f"{samplename}_gradient_cutoff_0-5.png")
+#
+# png.from_array(create_image(create_absolute_gradient_array(data_stiched, 0.4)),
+#                mode="L").save(f"{samplename}_gradient_cutoff_0-4.png")
+#
+# png.from_array(create_image(create_absolute_gradient_array(data_stiched, 0.3)),
+#                mode="L").save(f"{samplename}_gradient_cutoff_0-3.png")
+#
+# png.from_array(create_image(create_absolute_gradient_array(data_stiched, 0.2)),
+#                mode="L").save(f"{samplename}_gradient_cutoff_0-2.png")
+#
+# png.from_array(create_image(create_absolute_gradient_array(data_stiched, 0.1)),
+#                mode="L").save(f"{samplename}_gradient_cutoff_0-1.png")
+#
+# png.from_array(create_image(create_absolute_gradient_array(data_stiched, 0.05)),
+#                mode="L").save(f"{samplename}_gradient_cutoff_0-05.png")
+
+
+
+# fig, (ax_100, ax_090, ax_080, ax_070, ax_060, ax_050, ax_040, ax_030, ax_020, ax_015, ax_010, ax_005) \
+#     = plt.subplots(12, 1, figsize=(12, 20))
+#
+# ax_100.imshow(create_absolute_gradient_array(data_stiched, 1.0), cmap='gray')
+# ax_100.set_title('gradient cutoff 1.0')
+# ax_100.set_axis_off()
+
+
+cutoff_percent_list = [100, 90, 80, 70, 60, 50, 40, 30, 20, 15, 12, 10, 8, 5]
+
+fig, ax_list \
+    = plt.subplots(len(cutoff_percent_list), 1, figsize=(len(cutoff_percent_list)*0.4, 13))
+
+for i, percent in enumerate(cutoff_percent_list):
+    ax_list[i].imshow(create_absolute_gradient_array(data_stiched, percent/100.0), cmap='gray')
+    ax_list[i].set_title(f'gradient cutoff {percent}%')
+    ax_list[i].set_axis_off()
+
+fig.show()

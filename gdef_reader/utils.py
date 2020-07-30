@@ -10,7 +10,7 @@ from gdef_reader.gdef_measurement import GDEFMeasurement
 # todo: optional import:
 from pptx_tools.creator import PPTXCreator, PPTXPosition
 
-from gdef_reader.gdefindent_analyzer import GDEFIndentAnalyzer
+from gdef_reader.gdef_indent_analyzer import GDEFIndentAnalyzer
 from gdef_reader.pptx_styles import summary_table, position_2x2_00, position_2x2_10, position_2x2_01, \
     minimize_table_height, position_2x2_11
 

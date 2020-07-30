@@ -274,7 +274,7 @@ if __name__ == '__main__':
     # dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2_roughness.gdf")
     # dummy = GDEFImporter("Ni_1µm_s001_roughness_test_phase_bending_scanparameters.gdf")
     # dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_01.gdf")
-    # dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_02.gdf")
+    dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_02.gdf")
     # dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_03.gdf")
     # dummy = GDEFImporter("AFM.gdf")
     # dummy = GDEFImporter("NI_20-01-15.gdf")

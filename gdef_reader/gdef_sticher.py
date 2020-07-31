@@ -190,13 +190,27 @@ fig.show()
 
 
 cutoff_percent_list = [100, 90, 80, 70, 60, 50, 40, 30, 20, 15, 12, 10, 8, 5]
+cutoff_percent_list = [100, 60, 20, 15, 12, 10, 8, 5, 3, 2, 1]
+averaging = 5
 
-fig, ax_list \
-    = plt.subplots(len(cutoff_percent_list), 1, figsize=(len(cutoff_percent_list)*0.4, 13))
+fig, ax_list = plt.subplots(len(cutoff_percent_list), 1, figsize=(len(cutoff_percent_list)*0.4, 13))
+figure_gradient_rms, (ax_gradient_rms) = plt.subplots(1, 1, figsize=(10, 10))
+ax_gradient_rms.set_xlabel("[µm]")
+ax_gradient_rms.set_ylabel(f"absolute gradient rms (averaged over {averaging} line(s))")
 
 for i, percent in enumerate(cutoff_percent_list):
-    ax_list[i].imshow(create_absolute_gradient_array(data_stiched, percent/100.0), cmap='gray')
+    absolut_gradient_array = create_absolute_gradient_array(data_stiched, percent/100.0)
+    ax_list[i].imshow(absolut_gradient_array, cmap='gray')
     ax_list[i].set_title(f'gradient cutoff {percent}%')
     ax_list[i].set_axis_off()
 
+    x_pos = []
+    y_gradient_rms = []
+    for i in range(absolut_gradient_array.shape[1] - averaging):
+        x_pos.append((i + averaging / 2.0) * measurements[0].settings.pixel_width * 1e6)
+        y_gradient_rms.append(nanrms(absolut_gradient_array[:, i:i + averaging]))
+    ax_gradient_rms.plot(x_pos, y_gradient_rms, label=f"{percent}%")
+
 fig.show()
+ax_gradient_rms.legend()
+figure_gradient_rms.show()

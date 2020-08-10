@@ -91,8 +91,8 @@ class GDEFMeasurement:
         self.preview = None
         self.comment = ''
 
-        self.gdf_filename = ""  # filename of original *.gdf file
-        self.filename: Optional[Path] = None  # filename of pickled *.pygdf
+        self.gdf_filename = ""  # basename of original *.gdf file
+        self.filename: Optional[Path] = None  # basename of pickled *.pygdf
 
         self.background_corrected = False
 
@@ -198,6 +198,6 @@ class GDEFMeasurement:
         result.append(["missing lines", self.settings.missing_lines])
         result.append(["max width [m]", f"{self.settings.max_width:.2e}"])
         result.append(["max height [m]", f"{self.settings.max_height:.2e}"])
-        result.append(["filename", f"{self.filename.stem}"])
+        result.append(["basename", f"{self.filename.stem}"])
 
         return result

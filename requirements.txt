@@ -1,5 +1,5 @@
 natsort
 numpy
-scipy
-matplotlib
+scipy>=1.5.2
+matplotlib>=3.3.0
 python-pptx-interface

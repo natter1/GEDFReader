@@ -1,15 +1,13 @@
 import copy
 from pathlib import Path
 from scipy import signal
-from scipy import misc
+# from scipy import misc
 import numpy as np
 
-from gdef_reader.gdef_importer import GDEFImporter
-from gdef_reader.gdef_importer import GDEFMeasurement
 from gdef_reader.utils import load_pygdf_measurements
 
 import matplotlib.pyplot as plt
-import png
+# import png
 
 
 def main():

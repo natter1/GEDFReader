@@ -3,6 +3,7 @@ import io
 import os
 import struct
 from typing import Optional, BinaryIO, List
+from pathlib import Path
 
 import numpy as np
 
@@ -15,8 +16,8 @@ from gdef_reader.gdef_measurement import GDEFMeasurement
 
 
 class GDEFImporter:
-    def __init__(self, filename: str):
-        self.filename = filename[:-4]
+    def __init__(self, filename: Path):
+        self.basename = filename.stem
 
         def make_folder(folder):
             try:
@@ -27,7 +28,7 @@ class GDEFImporter:
                 pass  # path already exit -> no error handling needed
 
         make_folder('..\\output')
-        make_folder(f'..\\output\\{self.filename}')
+        make_folder(f'..\\output\\{self.basename}')
 
         self.header: GDEFHeader = GDEFHeader()
         self.buffer: Optional[BinaryIO] = None
@@ -178,13 +179,27 @@ class GDEFImporter:
         self.flow_offset = '        ' + ' ' * 4 * depth
         self.flow_summary.append(self.flow_offset + f'return from read_variable_data(block={block.id}, depth={depth})')
 
-    def export_measurements(self, create_images=False) -> List[GDEFMeasurement]:
-        """Create a list of GDEFMeasurement-Objects from imported data."""
+    def export_measurements(self, path: Path = None, create_images: bool = False) -> List[GDEFMeasurement]:
+        """
+        Create a list of GDEFMeasurement-Objects from imported data.
+        :param path: Save path for GDEFMeasurement-objects. No saved files, if None.
+        :param create_images:
+        :return: list of GDEFMeasurement-Objects
+        """
         result = []
         for i, block in enumerate(self.blocks):
             if block.n_data!=1 or block.n_variables != 50:
                 continue
             result.append(self._get_measurement_from_block(block, create_images))
+
+        for measurement in result:
+            if create_images:
+                fig = measurement.create_plot()
+                if fig:
+                    fig.show()
+            measurement.save_png(f"..\\output\\{self.basename}\\{self.basename}_block_{block.id}", dpi=96)
+            measurement.save(f"..\\output\\{self.basename}\\{self.basename}_block_{block.id:03}.pygdf")  # todo: what happens, when block.id > 999?
+
         return result
 
     def _get_measurement_from_block(self, block: GDEFControlBlock, create_image)-> GDEFMeasurement:
@@ -252,16 +267,10 @@ class GDEFImporter:
             result.values = None
         result.settings._pixel_width = result.settings.max_width / result.settings.columns
 
-        if create_image:
-            fig = result.create_plot()
-            if fig:
-                fig.show()
-            result.save_png(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id}", dpi=96)
         #
         # print(result._get_minimum_position())
         # print(result._calc_volume_with_radius())
 
-        result.save(f"..\\output\\{self.filename}\\{self.filename}_block_{block.id:03}.pygdf")  # todo: what happens, when block.id > 999?
         return result
 
 
@@ -274,7 +283,7 @@ if __name__ == '__main__':
     # dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2_roughness.gdf")
     # dummy = GDEFImporter("Ni_1µm_s001_roughness_test_phase_bending_scanparameters.gdf")
     # dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_01.gdf")
-    dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_02.gdf")
+    dummy = GDEFImporter("../my_scripts/Al_cantilever_Katja_A5_largeCantilever_02.gdf")
     # dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_03.gdf")
     # dummy = GDEFImporter("AFM.gdf")
     # dummy = GDEFImporter("NI_20-01-15.gdf")

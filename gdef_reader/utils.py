@@ -64,10 +64,10 @@ def create_pptx_for_nanoindents(path, pptx_filename, pptx_template: Optional[Abs
         pptx.add_matplotlib_figure(figure, slide, position_2x2_00())
         table_shape = pptx.add_table(slide, measurement.get_summary_table_data(), position_2x2_01(), table_style=summary_table())
         minimize_table_height(table_shape)
-        # figure.savefig(f"{measurement.filename.with_suffix('.png')}")  # , transparent=transparent)
+        # figure.savefig(f"{measurement.basename.with_suffix('.png')}")  # , transparent=transparent)
 
         indent_analyzer.add_indent_pile_up_mask_to_axes(figure.axes[0], roughness_part=0.05)
-        # figure.savefig(f"{measurement.filename.with_name(measurement.filename.stem + '_masked.png')}", dpi=96)
+        # figure.savefig(f"{measurement.basename.with_name(measurement.basename.stem + '_masked.png')}", dpi=96)
         pptx.add_matplotlib_figure(figure, slide, position_2x2_10())
         table_shape = pptx.add_table(slide, indent_analyzer.get_summary_table_data(), position_2x2_11(), table_style=summary_table())
         minimize_table_height(table_shape)

@@ -9,4 +9,5 @@ Features
 * import measurements from \*.gdf file into python
 * create maps using matplotlib
 * analyze nanoindents
-* create customizable output (e.g. *.png or power point presentstions)
+* stich measurements
+* create customizable output (e.g. \*.png or power point presentstions)

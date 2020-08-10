@@ -133,7 +133,7 @@ def main():
     #figure_gradient_rms.show()
 
 
-def _stich(data01, data02, data01_x_offset):
+def _stich(data01, data02, data01_x_offset, create_stich_control_plots = True):
     """
     Stiches two GDEFMeasurement.values using cross-correlation.
     :param data01:
@@ -168,32 +168,33 @@ def _stich(data01, data02, data01_x_offset):
     result[data01_y0:data01_height, data01_x0:data01_width] = data01
     result[data02_y0:data02_height, data02_x0:data02_width] = data02
 
-    # fig, (ax_orig, ax_template, ax_corr, ax_stich) = plt.subplots(4, 1, figsize=(6, 20))
-    #
-    # ax_orig.imshow(data01, cmap='gray')
-    # ax_orig.set_title('data01')
-    # ax_orig.set_axis_off()
-    #
-    # ax_template.imshow(data02, cmap='gray')
-    # ax_template.set_title('data02')
-    # ax_template.set_axis_off()
-    #
-    # ax_corr.imshow(correlation, cmap='gray')
-    # ax_corr.set_title('Cross-correlation')
-    # ax_corr.set_axis_off()
-    #
-    # ax_orig.plot(x, y, 'ro')
+    if create_stich_control_plots:
+        fig, (ax_orig, ax_template, ax_corr, ax_stich) = plt.subplots(4, 1, figsize=(6, 20))
 
-    # ax_stich.set_title('stiched')
-    # ax_stich.set_axis_off()
-    # ax_stich.imshow(result, cmap='gray')
-    #
-    # fig.show()
+        ax_orig.imshow(data01, cmap='gray')
+        ax_orig.set_title('data01')
+        ax_orig.set_axis_off()
+
+        ax_template.imshow(data02, cmap='gray')
+        ax_template.set_title('data02')
+        ax_template.set_axis_off()
+
+        ax_corr.imshow(correlation, cmap='gray')
+        ax_corr.set_title('Cross-correlation')
+        ax_corr.set_axis_off()
+
+        ax_orig.plot(x, y, 'ro')
+
+        ax_stich.set_title('stiched')
+        ax_stich.set_axis_off()
+        ax_stich.imshow(result, cmap='gray')
+
+        fig.show()
 
     return result
 
 
-def stich(values_list : List[np.ndarray], initial_x_offset_fraction = 0.35) -> np.ndarray:
+def stich(values_list : List[np.ndarray], initial_x_offset_fraction = 0.35, create_stich_control_plots = True) -> np.ndarray:
     """
     Stiches a list of GDEFMeasurement.values using cross-correlation.
     :param values_list: List of GDEFMeasurement.values

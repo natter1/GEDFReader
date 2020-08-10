@@ -19,14 +19,13 @@ def main():
     measurements = load_pygdf_measurements(path)
     print(measurements)
 
+    # todo: change dataXX to list data[xx] -> variable measurement-number
     data01 = measurements[0].values
     data02 = measurements[1].values
     data03 = measurements[2].values
     data04 = measurements[3].values
     data05 = measurements[4].values
     data06 = measurements[5].values
-
-    #data02 = data02[0:, 15:]
 
     data01_x_offset_right = round(data01.shape[1] * 0.35)
     data_stiched = stich(data01, data02, data01.shape[1]-data01_x_offset_right)

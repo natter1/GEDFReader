@@ -190,20 +190,23 @@ class GDEFImporter:
         for i, block in enumerate(self.blocks):
             if block.n_data!=1 or block.n_variables != 50:
                 continue
-            result.append(self._get_measurement_from_block(block, create_images))
+            measurement = self._get_measurement_from_block(block, create_images)
+            measurement.gdf_basename = self.basename
+            result.append(measurement)
 
         for measurement in result:
             if create_images:
                 fig = measurement.create_plot()
                 if fig:
                     fig.show()
-            measurement.save_png(f"..\\output\\{self.basename}\\{self.basename}_block_{block.id}", dpi=96)
-            measurement.save(f"..\\output\\{self.basename}\\{self.basename}_block_{block.id:03}.pygdf")  # todo: what happens, when block.id > 999?
+            measurement.save_png(f"..\\output\\{self.basename}\\{self.basename}_block_{measurement.gdf_block_id}", dpi=96)
+            measurement.save(f"..\\output\\{self.basename}\\{self.basename}_block_{measurement.gdf_block_id:03}.pygdf")  # todo: what happens, when block.id > 999?
 
         return result
 
     def _get_measurement_from_block(self, block: GDEFControlBlock, create_image)-> GDEFMeasurement:
         result = GDEFMeasurement()
+        result.gdf_block_id = block.id
 
         result.settings.lines = block.variables[0].data
         result.settings.columns = block.variables[1].data

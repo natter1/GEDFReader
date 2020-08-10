@@ -91,8 +91,9 @@ class GDEFMeasurement:
         self.preview = None
         self.comment = ''
 
-        self.gdf_filename = ""  # basename of original *.gdf file
+        self.gdf_basename = ""  # basename of original *.gdf file
         self.filename: Optional[Path] = None  # basename of pickled *.pygdf
+        self.gdf_block_id = None
 
         self.background_corrected = False
 

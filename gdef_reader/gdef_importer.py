@@ -2,8 +2,8 @@ import errno
 import io
 import os
 import struct
-from typing import Optional, BinaryIO, List
 from pathlib import Path
+from typing import Optional, BinaryIO, List
 
 import numpy as np
 
@@ -26,9 +26,6 @@ class GDEFImporter:
                 if exc.errno != errno.EEXIST:
                     raise
                 pass  # path already exit -> no error handling needed
-
-        make_folder('..\\output')
-        make_folder(f'..\\output\\{self.basename}')
 
         self.header: GDEFHeader = GDEFHeader()
         self.buffer: Optional[BinaryIO] = None
@@ -199,8 +196,11 @@ class GDEFImporter:
                 fig = measurement.create_plot()
                 if fig:
                     fig.show()
-            measurement.save_png(f"..\\output\\{self.basename}\\{self.basename}_block_{measurement.gdf_block_id}", dpi=96)
-            measurement.save(f"..\\output\\{self.basename}\\{self.basename}_block_{measurement.gdf_block_id:03}.pygdf")  # todo: what happens, when block.id > 999?
+            if path:
+                path.mkdir(parents=True, exist_ok=True)
+                if create_images:
+                    measurement.save_png(f"{path}\\{self.basename}_block_{measurement.gdf_block_id}", dpi=96)
+                measurement.save(f"{path}\\{self.basename}_block_{measurement.gdf_block_id:03}.pygdf")  # todo: what happens, when block.id > 999?
 
         return result
 
@@ -275,23 +275,3 @@ class GDEFImporter:
         # print(result._calc_volume_with_radius())
 
         return result
-
-
-if __name__ == '__main__':
-    # dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2.gdf")
-    # dummy = GDEFImporter("Al_1µm_s001.gdf")
-    # dummy = GDEFImporter("Ni_1µm_s001.gdf")
-    # dummy = GDEFImporter("Al_1µm_s001_roughness.gdf")
-    # dummy = GDEFImporter("Ni_1µm_s001_roughness.gdf")
-    # dummy = GDEFImporter("500nm_Cu__500_0925_5_X3_Y2_roughness.gdf")
-    # dummy = GDEFImporter("Ni_1µm_s001_roughness_test_phase_bending_scanparameters.gdf")
-    # dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_01.gdf")
-    dummy = GDEFImporter("../my_scripts/Al_cantilever_Katja_A5_largeCantilever_02.gdf")
-    # dummy = GDEFImporter("Al_cantilever_Katja_A5_largeCantilever_03.gdf")
-    # dummy = GDEFImporter("AFM.gdf")
-    # dummy = GDEFImporter("NI_20-01-15.gdf")
-    # with open("flow_summary.txt", "w") as file:
-    #     file.write("\n".join(dummy.flow_summary))
-    print(dummy)
-    measurements = dummy.export_measurements()
-    print(measurements)

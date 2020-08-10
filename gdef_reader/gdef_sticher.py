@@ -1,12 +1,12 @@
 import copy
 from pathlib import Path
-from scipy import signal
-# from scipy import misc
-import numpy as np
-
-from gdef_reader.utils import load_pygdf_measurements
 
 import matplotlib.pyplot as plt
+# from scipy import misc
+import numpy as np
+from scipy import signal
+
+from gdef_reader.utils import load_pygdf_measurements
 # import png
 
 

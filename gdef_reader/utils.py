@@ -2,17 +2,30 @@ import pickle
 from pathlib import Path
 from typing import List, Optional
 
+# todo: optional import:
+from pptx_tools.creator import PPTXCreator
 from pptx_tools.templates import AbstractTemplate
 
-from gdef_reader.gdef_measurement import GDEFMeasurement
-
-
-# todo: optional import:
-from pptx_tools.creator import PPTXCreator, PPTXPosition
-
+from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reader.gdef_indent_analyzer import GDEFIndentAnalyzer
+from gdef_reader.gdef_measurement import GDEFMeasurement
 from gdef_reader.pptx_styles import summary_table, position_2x2_00, position_2x2_10, position_2x2_01, \
     minimize_table_height, position_2x2_11
+
+
+def create_pygdf_files(input_path: Path, output_path: Path = None, create_images: bool = False):
+    gdf_filenames = input_path.glob("*.gdf")  # glob returns a generator, so gdf_filenames can only be used once!
+
+    if not output_path:
+        output_path = input_path.joinpath("pygdf")
+        output_path.mkdir(parents=True, exist_ok=True)
+
+    gdf_measurements = []
+    for gdf_filename in gdf_filenames:
+        print(gdf_filename)
+        gdf_importer = GDEFImporter(gdf_filename)
+        pygdf_path = output_path.joinpath(gdf_filename.stem)
+        gdf_measurements.append(gdf_importer.export_measurements(pygdf_path, create_images))
 
 
 def load_pygdf_measurements(path: Path) -> List[GDEFMeasurement]:

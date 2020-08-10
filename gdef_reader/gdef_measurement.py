@@ -4,7 +4,6 @@ from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
 from gdef_reader.gdef_data_strucutres import GDEFHeader

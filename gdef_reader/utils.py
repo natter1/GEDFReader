@@ -13,20 +13,21 @@ from gdef_reader.pptx_styles import summary_table, position_2x2_00, position_2x2
     minimize_table_height, position_2x2_11
 
 
-def create_pygdf_files(input_path: Path, output_path: Path = None, create_images: bool = False):
+def create_pygdf_files(input_path: Path, output_path: Path = None, create_images: bool = False) -> List[Path]:
+    result = []
     gdf_filenames = input_path.glob("*.gdf")  # glob returns a generator, so gdf_filenames can only be used once!
 
     if not output_path:
         output_path = input_path.joinpath("pygdf")
-        output_path.mkdir(parents=True, exist_ok=True)
+    output_path.mkdir(parents=True, exist_ok=True)
 
-    gdf_measurements = []
     for gdf_filename in gdf_filenames:
-        print(gdf_filename)
         gdf_importer = GDEFImporter(gdf_filename)
         pygdf_path = output_path.joinpath(gdf_filename.stem)
-        gdf_measurements.append(gdf_importer.export_measurements(pygdf_path, create_images))
+        result.append(pygdf_path)
+        gdf_importer.export_measurements(pygdf_path, create_images)
 
+    return result
 
 def load_pygdf_measurements(path: Path) -> List[GDEFMeasurement]:
     result = []

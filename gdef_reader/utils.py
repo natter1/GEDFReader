@@ -190,3 +190,37 @@ def create_absolute_gradient_rms_figure(values: np.ndarray, cutoff_percent_list,
         ax_gradient_rms.plot(x_pos, y_gradient_rms, label=f"{percent}%")
     ax_gradient_rms.legend()
     return result
+
+
+def create_cropped_plot(values: np.ndarray, pixel_width, max_figure_size=(4, 4), dpi=96) -> Optional[Figure]:
+    def create_figure(data, figure_size):
+        fig, ax = plt.subplots(figsize=figure_size, dpi=dpi)
+        im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
+        # fig.suptitle(self.comment + f" {self.settings.scan_speed*1e6:.0f} µm/s")
+        # # ax.set_title(self.comment[12:] + f" {self.settings.scan_speed*1e6:.0f} µm/s")
+        ax.set_xlabel("µm")
+        ax.set_ylabel("µm")
+        return fig, ax, im
+
+    def extent_for_plot(shape, pixel_width):
+        width_in_um = shape[1] * pixel_width * 1e6
+        height_in_um = shape[0] * pixel_width * 1e6
+        return [0, width_in_um, 0, height_in_um]
+
+    if values is None:
+        return
+    # if self.settings.source_channel != 11:
+    #     return  # for now, only plot topography (-> source_channel == 11)
+
+    # self._do_median_level()
+
+    extent = extent_for_plot(values.shape, pixel_width)
+
+    figure_max, ax, im = create_figure(values * 1e9, max_figure_size)
+    tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
+    size = (tight_bbox.width * 1.25, tight_bbox.height *1.05)  # Legend takes 20% of width -> 100%/80% = 1.25
+    figure_tight, ax, im = create_figure(values * 1e9, size)
+    bar = figure_tight.colorbar(im, ax=ax)  # shrink=(1-0.15-0.05))  # 0.15 - fraction; 0.05 - pad
+    bar.ax.set_title("nm")  # bar.set_label("nm")
+
+    return figure_tight  # , ax

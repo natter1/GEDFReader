@@ -143,8 +143,8 @@ class GDEFMeasurement:
         def create_figure(data, figure_size):
             fig, ax = plt.subplots(figsize=figure_size, dpi=dpi)
             im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
-            #fig.suptitle(self.comment + f" {self.settings.scan_speed*1e6:.0f} µm/s")
-            ax.set_title(self.comment[12:] + f" {self.settings.scan_speed*1e6:.0f} µm/s")
+            fig.suptitle(self.comment + f" {self.settings.scan_speed*1e6:.0f} µm/s")
+            # ax.set_title(self.comment[12:] + f" {self.settings.scan_speed*1e6:.0f} µm/s")
             ax.set_xlabel("µm")
             ax.set_ylabel("µm")
             return fig, ax, im
@@ -153,7 +153,7 @@ class GDEFMeasurement:
             return
 
         if self.settings.source_channel != 11:
-            return  # for now, only plot topography (-> soutce_channel == 11)
+            return  # for now, only plot topography (-> source_channel == 11)
 
         # self._do_median_level()
 

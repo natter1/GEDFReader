@@ -5,6 +5,8 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
+from matplotlib.axes import Axes
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from gdef_reader.gdef_data_strucutres import GDEFHeader
 
@@ -69,7 +71,7 @@ class GDEFSettings:
     def pixel_area(self):
         return self.pixel_width**2
 
-    def extent_for_plot(self):
+    def size_in_um_for_plot(self):
         width_in_um = self.max_width * 1e6
         height_in_um = self.max_height * (self.lines - self.missing_lines) / self.lines * 1e6
         return [0, width_in_um, 0, height_in_um]
@@ -139,34 +141,34 @@ class GDEFMeasurement:
             result[nx, ny] = (value, value, value, 0)
         return result
 
-    def create_plot(self, max_figure_size=(4, 4), dpi=96) -> Optional[Figure]:
-        def create_figure(data, figure_size):
-            fig, ax = plt.subplots(figsize=figure_size, dpi=dpi)
-            im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
-            fig.suptitle(self.comment + f" {self.settings.scan_speed*1e6:.0f} µm/s")
-            # ax.set_title(self.comment[12:] + f" {self.settings.scan_speed*1e6:.0f} µm/s")
-            ax.set_xlabel("µm")
-            ax.set_ylabel("µm")
-            return fig, ax, im
+    def set_topography_to_axes(self, ax: Axes):
+        # ax.set_title(self.comment + f" {self.settings.scan_speed*1e6:.0f} µm/s", pad=16)
+        extent = self.settings.size_in_um_for_plot()
+        im = ax.imshow(self.values * 1e9, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
+        ax.set_title(self.comment, pad=16)
+        ax.set_xlabel("µm")
+        ax.set_ylabel("µm")
 
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        cax.set_title("nm", y=1)  # bar.set_label("nm")
+        plt.colorbar(im, cax=cax)
+
+    def create_plot(self, max_figure_size=(4, 4), dpi=96) -> Optional[Figure]:
         if self.values is None:
             return
 
         if self.settings.source_channel != 11:
             return  # for now, only plot topography (-> source_channel == 11)
 
-        # self._do_median_level()
+        figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
+        self.set_topography_to_axes(ax)
 
-        extent = self.settings.extent_for_plot()
-
-        figure_max, ax, im = create_figure(self.values * 1e9, max_figure_size)
         tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
-        size = (tight_bbox.width * 1.25, tight_bbox.height *1.05)  # Legend takes 20% of width -> 100%/80% = 1.25
-        figure_tight, ax, im = create_figure(self.values * 1e9, size)
-        bar = figure_tight.colorbar(im, ax=ax)  # shrink=(1-0.15-0.05))  # 0.15 - fraction; 0.05 - pad
-        bar.ax.set_title("nm")  # bar.set_label("nm")
+        figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=dpi)
+        self.set_topography_to_axes(ax)
 
-        return figure_tight  # , ax
+        return figure_tight
 
     def correct_background(self):
         """Set average value to zero and subtract tilted background-plane."""

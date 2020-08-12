@@ -77,7 +77,7 @@ class GDEFIndentAnalyzer:
 
     def add_indent_pile_up_mask_to_axes(self, ax: Axes, roughness_part=0.05) -> Axes:
         data = self._get_indent_pile_up_area_mask(roughness_part=roughness_part)
-        extent = self.measurement.settings.extent_for_plot()
+        extent = self.measurement.settings.size_in_um_for_plot()
         ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
         return ax
 

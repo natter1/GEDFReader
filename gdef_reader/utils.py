@@ -224,3 +224,43 @@ def create_cropped_plot(values: np.ndarray, pixel_width, max_figure_size=(4, 4),
     bar.ax.set_title("nm")  # bar.set_label("nm")
 
     return figure_tight  # , ax
+
+
+def create_summary_figure(measurements: List[GDEFMeasurement], figure_size=(16, 10)):
+    n = len(measurements)
+    if n == 0:
+        return plt.subplots(1, figsize=figure_size, dpi=300)
+
+    optimal_ratio = figure_size[0] / figure_size[1]
+    dummy_fig = measurements[0].create_plot()
+    single_plot_ratio = dummy_fig.get_figwidth() / dummy_fig.get_figheight()
+    optimal_ratio /= single_plot_ratio
+
+    possible_ratios = []
+    for i in range(1, n+1):
+        for j in range(1, n+1):
+            if i*j >= n:
+                x, y = i, j
+                possible_ratios.append((x, y))
+                break
+
+    # sort ratios by best fit to optimal ratio:
+    possible_ratios[:] = sorted(possible_ratios, key=lambda ratio: abs(ratio[0] / ratio[1] - optimal_ratio))
+    best_ratio = possible_ratios[0][1], possible_ratios[0][0]
+
+    result, ax_list = plt.subplots(*best_ratio, figsize=figure_size, dpi=300)
+    for i, measurement in enumerate(measurements):
+        y = i // best_ratio[0]
+        x = i - (y * best_ratio[0])
+        if best_ratio[1] > 1:
+            measurement.set_topography_to_axes(ax_list[x, y])
+        else:
+            measurement.set_topography_to_axes(ax_list[x])
+    i = len(measurements)
+    while i < best_ratio[0]*best_ratio[1]:
+        y = i // best_ratio[0]
+        x = i - (y * best_ratio[0])
+        ax_list[x, y].set_axis_off()
+        i += 1
+
+    return result

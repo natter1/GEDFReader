@@ -145,9 +145,9 @@ class GDEFMeasurement:
         # ax.set_title(self.comment + f" {self.settings.scan_speed*1e6:.0f} µm/s", pad=16)
         extent = self.settings.size_in_um_for_plot()
         im = ax.imshow(self.values * 1e9, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
-        ax.set_title(self.comment, pad=16)
-        ax.set_xlabel("µm")
-        ax.set_ylabel("µm")
+        ax.set_title(self.comment)  # , pad=16)
+        ax.set_xlabel("µm", labelpad=1.0)
+        ax.set_ylabel("µm", labelpad=1.0)
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)

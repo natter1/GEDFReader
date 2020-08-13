@@ -5,8 +5,10 @@ from typing import List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 # todo: optional import:
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pptx_tools.creator import PPTXCreator
 from pptx_tools.templates import AbstractTemplate
 
@@ -193,14 +195,17 @@ def create_absolute_gradient_rms_figure(values: np.ndarray, cutoff_percent_list,
 
 
 def create_cropped_plot(values: np.ndarray, pixel_width, max_figure_size=(4, 4), dpi=96) -> Optional[Figure]:
-    def create_figure(data, figure_size):
-        fig, ax = plt.subplots(figsize=figure_size, dpi=dpi)
-        im = ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
-        # fig.suptitle(self.comment + f" {self.settings.scan_speed*1e6:.0f} µm/s")
-        # # ax.set_title(self.comment[12:] + f" {self.settings.scan_speed*1e6:.0f} µm/s")
-        ax.set_xlabel("µm")
-        ax.set_ylabel("µm")
-        return fig, ax, im
+    def set_topography_to_axes(ax: Axes):
+        extent = extent_for_plot(values.shape, pixel_width)
+        im = ax.imshow(values * 1e9, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
+        # ax.set_title(self.comment)  # , pad=16)
+        ax.set_xlabel("µm", labelpad=1.0)
+        ax.set_ylabel("µm", labelpad=1.0)
+
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        cax.set_title("nm", y=1)  # bar.set_label("nm")
+        plt.colorbar(im, cax=cax)
 
     def extent_for_plot(shape, pixel_width):
         width_in_um = shape[1] * pixel_width * 1e6
@@ -209,21 +214,16 @@ def create_cropped_plot(values: np.ndarray, pixel_width, max_figure_size=(4, 4),
 
     if values is None:
         return
-    # if self.settings.source_channel != 11:
-    #     return  # for now, only plot topography (-> source_channel == 11)
 
-    # self._do_median_level()
+    figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
+    set_topography_to_axes(ax)
+    figure_max.tight_layout()
 
-    extent = extent_for_plot(values.shape, pixel_width)
-
-    figure_max, ax, im = create_figure(values * 1e9, max_figure_size)
     tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
-    size = (tight_bbox.width * 1.25, tight_bbox.height *1.05)  # Legend takes 20% of width -> 100%/80% = 1.25
-    figure_tight, ax, im = create_figure(values * 1e9, size)
-    bar = figure_tight.colorbar(im, ax=ax)  # shrink=(1-0.15-0.05))  # 0.15 - fraction; 0.05 - pad
-    bar.ax.set_title("nm")  # bar.set_label("nm")
+    figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=dpi)
+    set_topography_to_axes(ax)
 
-    return figure_tight  # , ax
+    return figure_tight
 
 
 def create_summary_figure(measurements: List[GDEFMeasurement], figure_size=(16, 10)):

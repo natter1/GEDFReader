@@ -2,7 +2,7 @@ import os
 import pickle
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reader.gdef_measurement import GDEFMeasurement
@@ -16,7 +16,7 @@ class GDEFContainer:
         self.basename: str = gdf_path.stem
         self.base_path_name = gdf_path.parent.stem
         self.path: Optional[Path] = gdf_path
-        self.last_modification_datetime: datetime = datetime().fromtimestamp(os.path.getmtime(gdf_path))
+        self.last_modification_datetime: datetime = datetime.fromtimestamp(os.path.getmtime(gdf_path))
         self.measurements: List[GDEFMeasurement] = GDEFImporter(gdf_path).export_measurements()
         self.filter_ids: List[int] = []
 
@@ -27,16 +27,16 @@ class GDEFContainer:
     def filtered_measurements(self) -> List[GDEFMeasurement]:
         return [x for x in self.measurements if not x.gdf_block_id in self.filter_ids]
 
-    def save(self, path: Path):
-        if path:
-            path.mkdir(parents=True, exist_ok=True)
-            filename = path.joinpath(f"{self.basename}.pygdf")
-        with open(filename, 'wb') as file:
-            pickle.dump(self, file, 3)
+    # def save(self, path: Path):
+    #     if path:
+    #         path.mkdir(parents=True, exist_ok=True)
+    #         filename = path.joinpath(f"{self.basename}.pygdf")
+    #     with open(filename, 'wb') as file:
+    #         pickle.dump(self, file, 3)
 
 
 class GDEFReporter:
-    def __init__(self, gdf_containers: Optional[GDEFContainer, List[GDEFContainer]] = None):
+    def __init__(self, gdf_containers: Union[GDEFContainer, List[GDEFContainer]] = None):
         if isinstance(gdf_containers, GDEFContainer):
             self.gdf_containers = [gdf_containers]
         else:

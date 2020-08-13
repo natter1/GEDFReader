@@ -90,7 +90,7 @@ class GDEFImporter:
         break_flag = False
 
         while (not break_flag) and (self.buffer.tell() != self._eof):
-            print(f"tell: {self.buffer.tell()} - eof: {self._eof}")
+            # print(f"tell: {self.buffer.tell()} - eof: {self._eof}")
             block = GDEFControlBlock()
             block = self.read_control_block(block)
 
@@ -200,7 +200,7 @@ class GDEFImporter:
                 path.mkdir(parents=True, exist_ok=True)
                 if create_images:
                     measurement.save_png(f"{path}\\{self.basename}_block_{measurement.gdf_block_id}", dpi=96)
-                measurement.save(f"{path}\\{self.basename}_block_{measurement.gdf_block_id:03}.pygdfblock")  # todo: what happens, when block.id > 999?
+                measurement.save(f"{path}\\{self.basename}_block_{measurement.gdf_block_id:03}.pygdf")  # todo: what happens, when block.id > 999?
 
         return result
 
@@ -269,9 +269,5 @@ class GDEFImporter:
         except:
             result.values = None
         result.settings._pixel_width = result.settings.max_width / result.settings.columns
-
-        #
-        # print(result._get_minimum_position())
-        # print(result._calc_volume_with_radius())
 
         return result

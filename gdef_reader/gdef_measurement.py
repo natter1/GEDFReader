@@ -99,6 +99,10 @@ class GDEFMeasurement:
         self.background_corrected = False
 
     @property
+    def name(self):
+        return f"{self.gdf_basename}_block_{self.gdf_block_id:03}"
+
+    @property
     def values_original(self):
         return self._values_original
 
@@ -201,6 +205,9 @@ class GDEFMeasurement:
         result.append(["max width [m]", f"{self.settings.max_width:.2e}"])
         result.append(["max height [m]", f"{self.settings.max_height:.2e}"])
         result.append(["scan speed [µm/s]", f"{self.settings.scan_speed*1e6:.0f}"])
-        result.append(["basename", f"{self.filename.stem}"])
+        if self.filename:
+            result.append(["basename", f"{self.filename.stem}"])
+        else:
+            result.append(["name", f"{self.gdf_basename}_block_{self.gdf_block_id:03}"])
 
         return result

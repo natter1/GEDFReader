@@ -7,8 +7,8 @@ long_description = (root_path / "README.rst").read_text()
 
 setup(
     name='GDEFReader',
-    version='0.0.1a13',
-    packages=['gdef_reader'],
+    version='0.0.1a15',
+    packages=['gdef_reader', 'gdef_reporter'],
     url='https://github.com/natter1/gdef_reader',
     license='MIT',
     author='Nathanael Jöhrmann',

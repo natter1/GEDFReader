@@ -262,5 +262,5 @@ def create_summary_figure(measurements: List[GDEFMeasurement], figure_size=(16, 
         x = i - (y * best_ratio[0])
         ax_list[x, y].set_axis_off()
         i += 1
-
+    result.tight_layout()
     return result

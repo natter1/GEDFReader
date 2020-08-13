@@ -200,7 +200,7 @@ class GDEFImporter:
                 path.mkdir(parents=True, exist_ok=True)
                 if create_images:
                     measurement.save_png(f"{path}\\{self.basename}_block_{measurement.gdf_block_id}", dpi=96)
-                measurement.save(f"{path}\\{self.basename}_block_{measurement.gdf_block_id:03}.pygdf")  # todo: what happens, when block.id > 999?
+                measurement.save(f"{path}\\{self.basename}_block_{measurement.gdf_block_id:03}.pygdfblock")  # todo: what happens, when block.id > 999?
 
         return result
 

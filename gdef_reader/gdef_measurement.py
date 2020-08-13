@@ -200,6 +200,7 @@ class GDEFMeasurement:
         result.append(["missing lines", self.settings.missing_lines])
         result.append(["max width [m]", f"{self.settings.max_width:.2e}"])
         result.append(["max height [m]", f"{self.settings.max_height:.2e}"])
+        result.append(["scan speed [µm/s]", f"{self.settings.scan_speed*1e6:.0f}"])
         result.append(["basename", f"{self.filename.stem}"])
 
         return result

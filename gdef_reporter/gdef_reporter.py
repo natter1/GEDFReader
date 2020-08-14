@@ -1,9 +1,9 @@
 import os
-import pickle
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Union
+from typing import List, Union
 
+import matplotlib.pyplot as plt
 from pptx_tools.creator import PPTXCreator
 from pptx_tools.position import PPTXPosition
 from pptx_tools.table_style import PPTXTableStyle
@@ -11,9 +11,7 @@ from pptx_tools.table_style import PPTXTableStyle
 from gdef_reader.etit169_pptx_template import TemplateETIT169
 from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reader.gdef_measurement import GDEFMeasurement
-
-import matplotlib.pyplot as plt
-
+from gdef_reader.gdef_sticher import stich
 from gdef_reader.pptx_styles import summary_table, minimize_table_height
 
 
@@ -28,20 +26,11 @@ class GDEFContainer:
         self.last_modification_datetime: datetime = datetime.fromtimestamp(os.path.getmtime(gdf_path))
         self.measurements: List[GDEFMeasurement] = GDEFImporter(gdf_path).export_measurements()
         self.filter_ids: List[int] = []
-
-    # def set_filter_ids(self, ids: List[int]):
-    #     self.filter_ids = ids
+        self.descriprion = f"{self.base_path_name} - {self.basename}"
 
     @property
     def filtered_measurements(self) -> List[GDEFMeasurement]:
         return [x for x in self.measurements if not x.gdf_block_id in self.filter_ids]
-
-    # def save(self, path: Path):
-    #     if path:
-    #         path.mkdir(parents=True, exist_ok=True)
-    #         filename = path.joinpath(f"{self.basename}.pygdf")
-    #     with open(filename, 'wb') as file:
-    #         pickle.dump(self, file, 3)
 
 
 class GDEFReporter:
@@ -51,15 +40,15 @@ class GDEFReporter:
         else:
             self.gdf_containers: List[GDEFContainer] = gdf_containers
         self.primary_gdf_folder = gdf_containers[0].path.parent  # todo: check for muliple folders
+        self.title = f"AFM - {self.primary_gdf_folder.stem}"
+        self.subtitle = self.title
         self.pptx = None
 
     def create_summary_pptx(self, pptx_template=TemplateETIT169()):
         self.pptx = PPTXCreator(template=pptx_template)
-        title_slide = self.pptx.add_title_slide(f"AFM - {self.primary_gdf_folder.stem}")
+        title_slide = self.pptx.add_title_slide(self.title)
 
-        table_data = [["file", "date"]]
-        for container in self.gdf_containers:
-            table_data.append([f"{container.path.stem}.gdf", container.last_modification_datetime])
+        table_data = self.get_files_date_table_data()
 
         table_style = PPTXTableStyle()
         table_style.set_width_as_fraction(0.55)
@@ -77,6 +66,12 @@ class GDEFReporter:
             minimize_table_height(table_shape)
 
         return self.pptx
+
+    def get_files_date_table_data(self):
+        result = [["file", "date"]]
+        for container in self.gdf_containers:
+            result.append([f"{container.path.stem}.gdf", container.last_modification_datetime])
+        return result
 
     def create_summary_figure(self, measurements: List[GDEFMeasurement], figure_size=(16, 10)):
         n = len(measurements)
@@ -117,19 +112,8 @@ class GDEFReporter:
         result.tight_layout()
         return result
 
-# def creation_date(path_to_file):
-#     """
-#     Try to get the date that a file was created, falling back to when it was
-#     last modified if that isn't possible.
-#     See http://stackoverflow.com/a/39501288/1709587 for explanation.
-#     """
-#     if platform.system() == 'Windows':
-#         return time.ctime(os.path.getctime(path_to_file))
-#     else:
-#         stat = os.stat(path_to_file)
-#         try:
-#             return time.ctime(stat.st_birthtime)
-#         except AttributeError:
-#             # We're probably on Linux. No easy way to get creation dates here,
-#             # so we'll settle for when its content was last modified.
-#             return time.ctime(stat.st_mtime)
+    def create_stiched_data(measurements, initial_x_offset_fraction = 0.35, show_control_plots=False):
+        values_list = []
+        for measurement in measurements:
+            values_list.append(measurement.values)
+        return stich(values_list, initial_x_offset_fraction, show_control_plots)

@@ -122,7 +122,8 @@ class GDEFReporter:
             values_list.append(measurement.values)
         return GDEFSticher(values_list, initial_x_offset_fraction, show_control_plots).stiched_data
 
-    def _create_image_data(self, data: np.ndarray):
+    @classmethod
+    def _create_image_data(cls, data: np.ndarray):
         """
         Transform given data array into a n array with uint8 values between 0 and 255.
         :param data:
@@ -133,9 +134,11 @@ class GDEFReporter:
         data = 255 * data  # Now scale by 255
         return data.astype(np.uint8)
 
-    def data_to_png(self, data, mode = 'L'):
+    @classmethod
+    def data_to_png(cls, data: np.ndarray, mode ='L'):
         """
         Can be used to get a png-object for pptx or to save to hard disc.
         Mode 'L' means greyscale. Mode'LA' is greyscale with alpha channel.
         """
-        return png.from_array(data, mode=mode) #.save(f"{samplename}_stiched.png")
+        image_data = cls._create_image_data(data)
+        return png.from_array(image_data, mode=mode) #.save(f"{samplename}_stiched.png")

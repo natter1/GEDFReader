@@ -29,6 +29,7 @@ class GDEFSticher:
         x_offset_right = round(result.shape[1] * initial_x_offset_fraction)
         for measurement in self.measurements[1:]:
             result = self._stich(result, measurement.values, result.shape[1] - x_offset_right, show_control_figures)
+        self.stiched_data = result
         return result
 
     def _stich(self, data01, data02, data01_x_offset, show_control_figures = True):

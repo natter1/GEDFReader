@@ -18,7 +18,7 @@ class GDEFSticher:
 
         self.stich(initial_x_offset_fraction, show_control_figures)
 
-    def stich(self, initial_x_offset_fraction: float = 0.35, show_control_plots: bool = True) -> np.ndarray:
+    def stich(self, initial_x_offset_fraction: float = 0.35, show_control_figures: bool = False) -> np.ndarray:
         """
         Stiches a list of GDEFMeasurement.values using cross-correlation.
         :param values_list: List of GDEFMeasurement.values
@@ -28,7 +28,7 @@ class GDEFSticher:
         result = self.measurements[0].values
         x_offset_right = round(result.shape[1] * initial_x_offset_fraction)
         for measurement in self.measurements[1:]:
-            result = self._stich(result, measurement.values, result.shape[1] - x_offset_right, show_control_plots)
+            result = self._stich(result, measurement.values, result.shape[1] - x_offset_right, show_control_figures)
         return result
 
     def _stich(self, data01, data02, data01_x_offset, show_control_figures = True):
@@ -67,10 +67,10 @@ class GDEFSticher:
         result[data02_y0:data02_height, data02_x0:data02_width] = data02
 
         if show_control_figures:
-            self.createstich_control_figure(data01, data02, correlation)
+            self._create_stich_control_figure(data01, data02, correlation)
         return result
 
-    def createstich_control_figure(self, data01: np.ndarray, data02: np.ndarray, correlation: np.ndarray):
+    def _create_stich_control_figure(self, data01: np.ndarray, data02: np.ndarray, correlation: np.ndarray):
         result, (ax_orig, ax_template, ax_corr, ax_stich) = plt.subplots(4, 1, figsize=(6, 20))
 
         ax_orig.imshow(data01, cmap='gray')

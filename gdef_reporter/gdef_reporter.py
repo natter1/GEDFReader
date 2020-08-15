@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Union
 
 import matplotlib.pyplot as plt
+import png
 from pptx_tools.creator import PPTXCreator
 from pptx_tools.position import PPTXPosition
 from pptx_tools.table_style import PPTXTableStyle
@@ -11,8 +12,10 @@ from pptx_tools.table_style import PPTXTableStyle
 from gdef_reader.etit169_pptx_template import TemplateETIT169
 from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reader.gdef_measurement import GDEFMeasurement
-from gdef_reader.gdef_sticher import stich
+from gdef_reader.gdef_sticher import GDEFSticher
 from gdef_reader.pptx_styles import summary_table, minimize_table_height
+
+import numpy as np
 
 
 class GDEFContainer:
@@ -57,6 +60,7 @@ class GDEFReporter:
         for container in self.gdf_containers:
             slide = self.pptx.add_slide(f"Overview - {container.basename}.gdf")
             self.pptx.add_matplotlib_figure(self.create_summary_figure(container.measurements), slide, PPTXPosition(0, 0.115), zoom=0.62)
+
             table_style = summary_table()
             table_style.font_style.set(size=11)
             table_style.set_width_as_fraction(0.245)
@@ -116,4 +120,22 @@ class GDEFReporter:
         values_list = []
         for measurement in measurements:
             values_list.append(measurement.values)
-        return stich(values_list, initial_x_offset_fraction, show_control_plots)
+        return GDEFSticher(values_list, initial_x_offset_fraction, show_control_plots).stiched_data
+
+    def _create_image_data(self, data: np.ndarray):
+        """
+        Transform given data array into a n array with uint8 values between 0 and 255.
+        :param data:
+        :return:
+        """
+        data_min = np.nanmin(data)
+        data = (data - min(0, data_min)) / (np.nanmax(data) - min(0, data_min))  # normalize the data to 0 - 1
+        data = 255 * data  # Now scale by 255
+        return data.astype(np.uint8)
+
+    def data_to_png(self, data, mode = 'L'):
+        """
+        Can be used to get a png-object for pptx or to save to hard disc.
+        Mode 'L' means greyscale. Mode'LA' is greyscale with alpha channel.
+        """
+        return png.from_array(data, mode=mode) #.save(f"{samplename}_stiched.png")

@@ -2,4 +2,4 @@ natsort
 numpy
 scipy>=1.5.2
 matplotlib>=3.3.0
-python-pptx-interface
+python-pptx-interface>=0.0.12

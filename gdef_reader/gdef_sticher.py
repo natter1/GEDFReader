@@ -1,4 +1,5 @@
 import copy
+import warnings
 from pathlib import Path
 from typing import List
 
@@ -15,6 +16,10 @@ class GDEFSticher:
     def __init__(self, measurements: List[GDEFMeasurement], initial_x_offset_fraction = 0.35, show_control_figures=False):
         self.measurements = measurements
         self.stiched_data = None
+        self.pixel_width = measurements[0].settings.pixel_width
+        for measurement in self.measurements:
+            if measurement.settings.pixel_width != self.pixel_width:
+                warnings.warn(f"Measurement {measurement.name} has a different pixel_width than used for GDEFSticher!")
 
         self.stich(initial_x_offset_fraction, show_control_figures)
 
@@ -70,6 +75,9 @@ class GDEFSticher:
         if show_control_figures:
             self._create_stich_control_figure(data01, data02, correlation)
         return result
+
+    def create_cropped_figure(self, max_figure_size=(20, 10), dpi=300):
+        create_cropped_plot(self.stiched_data, self.pixel_width, max_figure_size)
 
     def _create_stich_control_figure(self, data01: np.ndarray, data02: np.ndarray, correlation: np.ndarray):
         result, (ax_orig, ax_template, ax_corr, ax_stich) = plt.subplots(4, 1, figsize=(6, 20))

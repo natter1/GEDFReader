@@ -59,7 +59,7 @@ class GDEFPlotter:
     def create_absolute_gradient_rms_figure(self, values: np.ndarray, cutoff_percent_list, pixel_width, moving_average_n=1) -> Figure:
         result, (ax_gradient_rms) = plt.subplots(1, 1, figsize=self.figure_size)
         ax_gradient_rms.set_xlabel("[µm]")
-        ax_gradient_rms.set_ylabel(f"absolute gradient root mean square (moving average over {moving_average_n} column(s))")
+        ax_gradient_rms.set_ylabel(f"rms(abs(grad(surface)))) (moving average over {moving_average_n} column(s))")
 
         for i, percent in enumerate(cutoff_percent_list):
             absolut_gradient_array = create_absolute_gradient_array(values, percent / 100.0)

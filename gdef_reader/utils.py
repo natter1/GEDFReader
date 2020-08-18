@@ -149,18 +149,18 @@ def save_figure(figure: Figure, output_path: Path, filename: str,  png: bool = T
         figure.savefig(output_path.joinpath(f"{filename}.pdf"))
 
 
-# def create_absolute_gradient_figure(values: np.ndarray, cutoff_percent_list, nan_color='red') -> Figure:
-#     result, ax_list_cutoff = plt.subplots(len(cutoff_percent_list), 1, figsize=(len(cutoff_percent_list) * 0.4, 13))
-#
-#     cmap_gray_red_nan = copy.copy(plt.cm.gray)  # use copy to prevent unwanted changes to other plots somewhere else
-#     cmap_gray_red_nan.set_bad(color=nan_color)
-#
-#     for i, percent in enumerate(cutoff_percent_list):
-#         absolut_gradient_array = create_absolute_gradient_array(values, percent / 100.0)
-#         ax_list_cutoff[i].imshow(absolut_gradient_array, cmap_gray_red_nan)
-#         ax_list_cutoff[i].set_title(f'gradient cutoff {percent}%')
-#         ax_list_cutoff[i].set_axis_off()
-#     return result
+def create_absolute_gradient_figures(values: np.ndarray, cutoff_percent_list, nan_color='red') -> Figure:
+    result, ax_list_cutoff = plt.subplots(len(cutoff_percent_list), 1, figsize=(len(cutoff_percent_list) * 0.4, 13))
+
+    cmap_gray_red_nan = copy.copy(plt.cm.gray)  # use copy to prevent unwanted changes to other plots somewhere else
+    cmap_gray_red_nan.set_bad(color=nan_color)
+
+    for i, percent in enumerate(cutoff_percent_list):
+        absolut_gradient_array = create_absolute_gradient_array(values, percent / 100.0)
+        ax_list_cutoff[i].imshow(absolut_gradient_array, cmap_gray_red_nan)
+        ax_list_cutoff[i].set_title(f'gradient cutoff {percent}%')
+        ax_list_cutoff[i].set_axis_off()
+    return result
 
 
 # def create_surface_plot(values: np.ndarray, pixel_width, max_figure_size=(4, 4), dpi=96) -> Optional[Figure]:

@@ -146,7 +146,10 @@ class GDEFMeasurement:
         return result
 
     def set_topography_to_axes(self, ax: Axes):
-        # ax.set_title(self.comment + f" {self.settings.scan_speed*1e6:.0f} µm/s", pad=16)
+        if self.values is None:
+            ax.set_title(self.comment)
+            print(f"GDEFMeasurement {self.name} has values==None")
+            return
         extent = self.settings.size_in_um_for_plot()
         im = ax.imshow(self.values * 1e9, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
         ax.set_title(self.comment)  # , pad=16)

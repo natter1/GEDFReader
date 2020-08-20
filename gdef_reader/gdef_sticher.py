@@ -1,11 +1,12 @@
 import copy
 import warnings
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 # from scipy import misc
 import numpy as np
+from matplotlib.figure import Figure
 from scipy import signal
 
 from gdef_reader.gdef_measurement import GDEFMeasurement
@@ -13,7 +14,8 @@ from gdef_reader.utils import load_pygdf_measurements
 # import png
 
 class GDEFSticher:
-    def __init__(self, measurements: List[GDEFMeasurement], initial_x_offset_fraction = 0.35, show_control_figures=False):
+    def __init__(self, measurements: List[GDEFMeasurement],
+                 initial_x_offset_fraction: float = 0.35, show_control_figures: bool = False):
         self.measurements = measurements
         self.stiched_data = None
         self.pixel_width = measurements[0].settings.pixel_width
@@ -37,7 +39,7 @@ class GDEFSticher:
         self.stiched_data = result
         return result
 
-    def _stich(self, data01, data02, data01_x_offset, show_control_figures = True):
+    def _stich(self, data01: np.ndarray, data02:np.ndarray, data01_x_offset: int, show_control_figures: bool = True) -> np.ndarray:
         """
         Stiches two GDEFMeasurement.values using cross-correlation.
         :param data01:
@@ -76,10 +78,11 @@ class GDEFSticher:
             self._create_stich_control_figure(data01, data02, correlation)
         return result
 
-    def create_cropped_figure(self, max_figure_size=(20, 10), dpi=300):
+    def create_cropped_figure(self, max_figure_size: Tuple[float, float] = (20, 10), dpi: int = 300) -> Figure:
+        # todo: something is broken here
         create_cropped_plot(self.stiched_data, self.pixel_width, max_figure_size)
 
-    def _create_stich_control_figure(self, data01: np.ndarray, data02: np.ndarray, correlation: np.ndarray):
+    def _create_stich_control_figure(self, data01: np.ndarray, data02: np.ndarray, correlation: np.ndarray) -> Figure:
         result, (ax_orig, ax_template, ax_corr, ax_stich) = plt.subplots(4, 1, figsize=(6, 20))
 
         ax_orig.imshow(data01, cmap='gray')

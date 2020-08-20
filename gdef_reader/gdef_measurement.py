@@ -1,6 +1,6 @@
 import pickle
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -65,18 +65,18 @@ class GDEFSettings:
         self._pixel_width = None
 
     @property
-    def pixel_width(self):
+    def pixel_width(self) -> float:
         return self._pixel_width  # self.max_width / self.columns
 
-    def pixel_area(self):
+    def pixel_area(self) -> float:
         return self.pixel_width**2
 
-    def size_in_um_for_plot(self):
+    def size_in_um_for_plot(self) -> Tuple[float, float, float, float]:
         width_in_um = self.max_width * 1e6
         height_in_um = self.max_height * (self.lines - self.missing_lines) / self.lines * 1e6
         return [0, width_in_um, 0, height_in_um]
 
-    def shape(self):
+    def shape(self) -> Tuple[int, int]:
         return self.columns - self.missing_lines, self.lines
 
 
@@ -87,7 +87,7 @@ class GDEFMeasurement:
 
         self.settings = GDEFSettings()
 
-        self._values_original = None  # do not change!
+        self._values_original = None  # do not change! Use values instead
         self.values = None
         self.preview = None
         self.comment = ''
@@ -99,11 +99,11 @@ class GDEFMeasurement:
         self.background_corrected = False
 
     @property
-    def name(self):
+    def name(self) -> str:
         return f"{self.gdf_basename}_block_{self.gdf_block_id:03}"
 
     @property
-    def values_original(self):
+    def values_original(self) -> np.ndarray:
         return self._values_original
 
     def save(self, filename):
@@ -111,11 +111,12 @@ class GDEFMeasurement:
             pickle.dump(self, file, 3)
 
     @staticmethod
-    def load(filename):
+    def load(filename) -> "GDEFMeasurement":
         with open(filename, 'rb'):
             return pickle.load(filename)
 
-    def save_png(self, filename, max_figure_size=(4, 4), dpi=300, transparent=False):
+    # todo: check possible types for filename (str, path, ...)
+    def save_png(self, filename, max_figure_size=(4, 4), dpi: int = 300, transparent: bool = False):
         figure = self.create_plot(max_figure_size=max_figure_size, dpi=dpi)
         if figure:
             figure.savefig(filename, transparent=transparent, dpi=dpi)

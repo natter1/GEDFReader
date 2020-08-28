@@ -159,16 +159,16 @@ class GDEFMeasurement:
         elif self.settings.source_channel == 9:
             title = "bending"
             unit = "N"
-            values = self._values_original
+            values = self.values
         elif self.settings.source_channel == 12:
             title = "phase"
             unit = "deg"
             # factor 18.0 from gwyddion - seems to create too large values (e.g. 600 degree)
-            values = self._values_original  # * 18.0
+            values = self.values  # * 18.0
         else:
             title = f"SC: {self.settings.source_channel}"
             unit = f"SC: {self.settings.source_channel}"
-            values = self._values_original
+            values = self.values
 
         extent = self.settings.size_in_um_for_plot()
         im = ax.imshow(values, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
@@ -180,7 +180,7 @@ class GDEFMeasurement:
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
-        if self.settings.source_channel in [11]:
+        if self.settings.source_channel in [9, 11, 12]:
             cax.set_title(unit, y=1)  # bar.set_label("nm")
         else:
             cax.set_title(unit, y=0, pad=-15) #-0.2)#1)  # bar.set_label("nm")
@@ -205,6 +205,8 @@ class GDEFMeasurement:
 
     def correct_background(self):
         """Set average value to zero and subtract tilted background-plane."""
+        if not self.settings.source_channel == 11:  # only correct topography data
+            return
         if not self.background_corrected:
             self._do_median_level(subtract_mean_plane=True)
             self.background_corrected = True

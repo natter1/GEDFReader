@@ -151,18 +151,32 @@ class GDEFMeasurement:
             ax.set_title(self.comment)
             print(f"GDEFMeasurement {self.name} has values==None")
             return
+        # todo: refactor to extra method
+        if self.settings.source_channel == 11:
+            title = "nm"
+            values = self.values * 1e9  # m -> nm
+        elif self.settings.source_channel == 9:
+            title = "bending"
+            values = self.values
+        elif self.settings.source_channel == 12:
+            title = "phase [°]"
+            values = self.values * 18.0
+        else:
+            title = f"SC: {self.settings.source_channel}"
+            values = self.values
+
         extent = self.settings.size_in_um_for_plot()
-        im = ax.imshow(self.values * 1e9, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
+        im = ax.imshow(values, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
         ax.set_title(self.comment)  # , pad=16)
         ax.set_xlabel("µm", labelpad=1.0)
         ax.set_ylabel("µm", labelpad=1.0)
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
-        if self.settings.source_channel == 11:
-            cax.set_title("nm", y=1)  # bar.set_label("nm")
+        if self.settings.source_channel in [11]:
+            cax.set_title(title, y=1)  # bar.set_label("nm")
         else:
-            cax.set_title(f"SC: {self.settings.source_channel}", y=0, pad=-15) #-0.2)#1)  # bar.set_label("nm")
+            cax.set_title(title, y=0, pad=-15) #-0.2)#1)  # bar.set_label("nm")
             cax.title.set_color("red")
         plt.colorbar(im, cax=cax)
 

@@ -159,15 +159,19 @@ class GDEFMeasurement:
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
-        cax.set_title("nm", y=1)  # bar.set_label("nm")
+        if self.settings.source_channel == 11:
+            cax.set_title("nm", y=1)  # bar.set_label("nm")
+        else:
+            cax.set_title(f"SC: {self.settings.source_channel}", y=0, pad=-15) #-0.2)#1)  # bar.set_label("nm")
+            cax.title.set_color("red")
         plt.colorbar(im, cax=cax)
 
     def create_plot(self, max_figure_size=(4, 4), dpi=96) -> Optional[Figure]:
         if self.values is None:
             return
 
-        if self.settings.source_channel != 11:
-            return  # for now, only plot topography (-> source_channel == 11)
+        # if self.settings.source_channel != 11:
+        #     return  # for now, only plot topography (-> source_channel == 11)
 
         figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
         self.set_topography_to_axes(ax)

@@ -105,8 +105,10 @@ class GDEFReporter:
             x = i - (y * best_ratio[0])
             if best_ratio[1] > 1:
                 measurement.set_topography_to_axes(ax_list[x, y])
-            else:
+            elif best_ratio[0] > 1:
                 measurement.set_topography_to_axes(ax_list[x])
+            else:
+                measurement.set_topography_to_axes(ax_list)
         i = len(measurements)
         while i < best_ratio[0] * best_ratio[1]:
             y = i // best_ratio[0]

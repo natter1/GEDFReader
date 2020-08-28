@@ -153,30 +153,37 @@ class GDEFMeasurement:
             return
         # todo: refactor to extra method
         if self.settings.source_channel == 11:
-            title = "nm"
+            title = "topography"
+            unit = "nm"
             values = self.values * 1e9  # m -> nm
         elif self.settings.source_channel == 9:
             title = "bending"
-            values = self.values
+            unit = "N"
+            values = self._values_original
         elif self.settings.source_channel == 12:
-            title = "phase [°]"
-            values = self.values * 18.0
+            title = "phase"
+            unit = "deg"
+            # factor 18.0 from gwyddion - seems to create too large values (e.g. 600 degree)
+            values = self._values_original  # * 18.0
         else:
             title = f"SC: {self.settings.source_channel}"
-            values = self.values
+            unit = f"SC: {self.settings.source_channel}"
+            values = self._values_original
 
         extent = self.settings.size_in_um_for_plot()
         im = ax.imshow(values, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
-        ax.set_title(self.comment)  # , pad=16)
+        if self.comment:
+            title = self.comment
+        ax.set_title(title)  # , pad=16)
         ax.set_xlabel("µm", labelpad=1.0)
         ax.set_ylabel("µm", labelpad=1.0)
 
         divider = make_axes_locatable(ax)
         cax = divider.append_axes("right", size="5%", pad=0.05)
         if self.settings.source_channel in [11]:
-            cax.set_title(title, y=1)  # bar.set_label("nm")
+            cax.set_title(unit, y=1)  # bar.set_label("nm")
         else:
-            cax.set_title(title, y=0, pad=-15) #-0.2)#1)  # bar.set_label("nm")
+            cax.set_title(unit, y=0, pad=-15) #-0.2)#1)  # bar.set_label("nm")
             cax.title.set_color("red")
         plt.colorbar(im, cax=cax)
 

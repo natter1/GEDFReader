@@ -74,7 +74,7 @@ class GDEFSettings:
     def size_in_um_for_plot(self) -> Tuple[float, float, float, float]:
         width_in_um = self.max_width * 1e6
         height_in_um = self.max_height * (self.lines - self.missing_lines) / self.lines * 1e6
-        return [0, width_in_um, 0, height_in_um]
+        return 0.0, width_in_um, 0.0, height_in_um
 
     def shape(self) -> Tuple[int, int]:
         return self.columns - self.missing_lines, self.lines
@@ -83,7 +83,7 @@ class GDEFSettings:
 class GDEFMeasurement:
     def __init__(self):
         self.header: Optional[GDEFHeader] = None
-        self.spm_image_file_vesion = None
+        self.spm_image_file_version = None
 
         self.settings = GDEFSettings()
 
@@ -183,7 +183,7 @@ class GDEFMeasurement:
         if self.settings.source_channel in [9, 11, 12]:
             cax.set_title(unit, y=1)  # bar.set_label("nm")
         else:
-            cax.set_title(unit, y=0, pad=-15) #-0.2)#1)  # bar.set_label("nm")
+            cax.set_title(unit, y=0, pad=-15)  # -0.2)#1)  # bar.set_label("nm")
             cax.title.set_color("red")
         plt.colorbar(im, cax=cax)
 

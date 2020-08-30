@@ -3,7 +3,7 @@ import io
 import os
 import struct
 from pathlib import Path
-from typing import Optional, BinaryIO, List
+from typing import Optional, BinaryIO, List, Union
 
 import numpy as np
 
@@ -38,7 +38,7 @@ class GDEFImporter:
         self.flow_offset = ''
         self.load(filename)
 
-    def load(self, filename: str):
+    def load(self, filename: Union[str, Path]):
         self.buffer = open(filename, 'rb')
         self._eof = self.buffer.seek(0, 2)
         self.buffer.seek(0)

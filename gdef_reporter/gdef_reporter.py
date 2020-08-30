@@ -18,6 +18,9 @@ from gdef_reader.pptx_styles import summary_table, minimize_table_height
 import numpy as np
 
 
+# todo: class GDEFMeasurement_Collection
+
+
 class GDEFContainer:
     """
     Container class for all measurements inside a *.gdf-file
@@ -33,7 +36,11 @@ class GDEFContainer:
 
     @property
     def filtered_measurements(self) -> List[GDEFMeasurement]:
-        return [x for x in self.measurements if not x.gdf_block_id in self.filter_ids]
+        return [x for x in self.measurements if x.gdf_block_id not in self.filter_ids]
+
+    def correct_backgrounds(self, deg: int = 1, keep_offset: bool = False):
+        for measurement in self.measurements:
+            measurement.correct_background(deg, keep_offset)
 
 
 class GDEFReporter:
@@ -118,7 +125,8 @@ class GDEFReporter:
         result.tight_layout()
         return result
 
-    def create_stiched_data(measurements, initial_x_offset_fraction = 0.35, show_control_plots=False):
+    @classmethod
+    def create_stiched_data(cls, measurements, initial_x_offset_fraction=0.35, show_control_plots=False):
         values_list = []
         for measurement in measurements:
             values_list.append(measurement.values)
@@ -132,15 +140,15 @@ class GDEFReporter:
         :return:
         """
         data_min = np.nanmin(data)
-        data = (data - min(0, data_min)) / (np.nanmax(data) - min(0, data_min))  # normalize the data to 0 - 1
+        data = (data - np.min([0, data_min])) / (np.nanmax(data) - np.min([0, data_min]))  # normalize the data to 0 - 1
         data = 255 * data  # Now scale by 255
         return data.astype(np.uint8)
 
     @classmethod
-    def data_to_png(cls, data: np.ndarray, mode ='L'):
+    def data_to_png(cls, data: np.ndarray, mode='L'):
         """
         Can be used to get a png-object for pptx or to save to hard disc.
         Mode 'L' means greyscale. Mode'LA' is greyscale with alpha channel.
         """
         image_data = cls._create_image_data(data)
-        return png.from_array(image_data, mode=mode) #.save(f"{samplename}_stiched.png")
+        return png.from_array(image_data, mode=mode)  # .save(f"{samplename}_stiched.png")

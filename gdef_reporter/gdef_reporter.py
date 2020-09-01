@@ -48,9 +48,10 @@ class GDEFContainerList(list):
     List of GDEFContainer objects and some helper methods
     """
     def __init__(self, containers: Union[GDEFContainer, List[GDEFContainer, None]] = None):
+        # super().__init__()  # todo: is this needed/optimal?
         if isinstance(containers, GDEFContainer):
             self.append(containers)
-        elif containers:
+        elif containers:  # make sure containers is not None; todo: better check if containers is list of GDEFContainer
             self.extend(containers)
 
     def correct_backgrounds(self, use_gradient_plane: bool = True, legendre_deg: int = 1, keep_offset: bool = False):

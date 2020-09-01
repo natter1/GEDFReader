@@ -27,6 +27,8 @@ def correct_background(legendre_deg: int = 0, median_level: bool = True) -> np.n
 
 def subtract_mean_level(array2d: np.ndarray):
     result =array2d
+    if result is None:
+        return None
     try:
         result = array2d - array2d.mean()
     except ValueError:

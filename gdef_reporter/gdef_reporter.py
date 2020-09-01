@@ -70,26 +70,32 @@ class GDEFReporter:
         self.title = f"AFM - {self.primary_gdf_folder.stem}"
         self.subtitle = self.title
         self.pptx = None
+        self.title_slide = None
 
-    def create_summary_pptx(self, pptx_template=TemplateETIT169()):
+    def create_summary_pptx(self, filtered: bool = False, pptx_template=TemplateETIT169()):
         self.pptx = PPTXCreator(template=pptx_template)
-        title_slide = self.pptx.add_title_slide(self.title)
+        self.title_slide = self.pptx.add_title_slide(self.title)
 
         table_data = self.get_files_date_table_data()
 
         table_style = PPTXTableStyle()
         table_style.set_width_as_fraction(0.55)
-        self.pptx.add_table(title_slide, table_data, PPTXPosition(0.0, 0.224, 0.1, 0.1), table_style)
+        self.pptx.add_table(self.title_slide, table_data, PPTXPosition(0.0, 0.224, 0.1, 0.1), table_style)
 
         for container in self.gdf_containers:
             slide = self.pptx.add_slide(f"Overview - {container.basename}.gdf")
-            self.pptx.add_matplotlib_figure(self.create_summary_figure(container.measurements), slide, PPTXPosition(0, 0.115), zoom=0.62)
+            if filtered:
+                measurements = container.measurements
+            else:
+                measurements = container.filtered_measurements
+
+            self.pptx.add_matplotlib_figure(self.create_summary_figure(measurements), slide, PPTXPosition(0, 0.115), zoom=0.62)
 
             table_style = summary_table()
             table_style.font_style.set(size=11)
             table_style.set_width_as_fraction(0.245)
-            table_data = container.measurements[0].get_summary_table_data()
-            table_data.append(["comment", container.measurements[0].comment])
+            table_data = measurements[0].get_summary_table_data()
+            table_data.append(["comment", measurements[0].comment])
             table_shape = self.pptx.add_table(slide, table_data, PPTXPosition(0.75, 0.115), table_style)
             minimize_table_height(table_shape)
 

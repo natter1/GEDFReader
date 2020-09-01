@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Optional
 
 import matplotlib.pyplot as plt
 import png
@@ -38,18 +38,34 @@ class GDEFContainer:
     def filtered_measurements(self) -> List[GDEFMeasurement]:
         return [x for x in self.measurements if x.gdf_block_id not in self.filter_ids]
 
-    def correct_backgrounds(self, deg: int = 1, keep_offset: bool = False):
+    def correct_backgrounds(self, use_gradient_plane: bool = True, legendre_deg: int = 1, keep_offset: bool = False):
         for measurement in self.measurements:
-            measurement.correct_background(deg, keep_offset)
+            measurement.correct_background(use_gradient_plane, legendre_deg, keep_offset)
+
+
+class GDEFContainerList(list):
+    """
+    List of GDEFContainer objects and some helper methods
+    """
+    def __init__(self, containers: Union[GDEFContainer, List[GDEFContainer, None]] = None):
+        if isinstance(containers, GDEFContainer):
+            self.append(containers)
+        elif containers:
+            self.extend(containers)
+
+    def correct_backgrounds(self, use_gradient_plane: bool = True, legendre_deg: int = 1, keep_offset: bool = False):
+        for container in self:
+            container.correct_backgrounds(use_gradient_plane, legendre_deg, keep_offset)
+
+    def set_filter_ids(self, filter_dict: dict):
+        for container in self:
+            container.filter_ids = filter_dict[container.basename]
 
 
 class GDEFReporter:
-    def __init__(self, gdf_containers: Union[GDEFContainer, List[GDEFContainer]] = None):
-        if isinstance(gdf_containers, GDEFContainer):
-            self.gdf_containers = [gdf_containers]
-        else:
-            self.gdf_containers: List[GDEFContainer] = gdf_containers
-        self.primary_gdf_folder = gdf_containers[0].path.parent  # todo: check for muliple folders
+    def __init__(self, gdf_containers: Union[GDEFContainer, List[GDEFContainer], None] = None):
+        self.gdf_containers: GDEFContainerList = GDEFContainerList(gdf_containers)
+        self.primary_gdf_folder = gdf_containers[0].path.parent  # todo: check for multiple folders
         self.title = f"AFM - {self.primary_gdf_folder.stem}"
         self.subtitle = self.title
         self.pptx = None

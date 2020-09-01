@@ -163,7 +163,7 @@ class GDEFMeasurement:
             values = self.values
         elif self.settings.source_channel == 12:
             title = "phase"
-            unit = "legendre_deg"
+            unit = "deg"
             # factor 18.0 from gwyddion - seems to create too large values (e.g. 600 degree)
             values = self.values  # * 18.0
         else:

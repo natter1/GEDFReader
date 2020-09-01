@@ -47,7 +47,7 @@ class GDEFContainerList(list):
     """
     List of GDEFContainer objects and some helper methods
     """
-    def __init__(self, containers: Union[GDEFContainer, List[GDEFContainer, None]] = None):
+    def __init__(self, containers: Union[GDEFContainer, List[GDEFContainer], None] = None):
         # super().__init__()  # todo: is this needed/optimal?
         if isinstance(containers, GDEFContainer):
             self.append(containers)

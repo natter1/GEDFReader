@@ -47,6 +47,8 @@ def subtract_legendre_fit(array2d: np.ndarray, deg: int = 1, keep_offset: bool =
     ...
     """
     result = array2d
+    if result is None:
+        return None
     if deg == 0 and keep_offset:
         return result
     n_row = np.linspace(-1, 1, array2d.shape[0])
@@ -74,6 +76,8 @@ def subtract_mean_gradient_plane(array2d: np.ndarray, keep_offset: bool = False)
     example: ____________________|                   |__
     """
     result = array2d
+    if result is None:
+        return None
     try:
         value_gradient = np.gradient(array2d)
     except ValueError:

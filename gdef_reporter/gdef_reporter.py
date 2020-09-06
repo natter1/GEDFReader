@@ -1,9 +1,10 @@
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union, Optional
+from typing import List, Union
 
 import matplotlib.pyplot as plt
+import numpy as np
 import png
 from pptx_tools.creator import PPTXCreator
 from pptx_tools.position import PPTXPosition
@@ -14,8 +15,6 @@ from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reader.gdef_measurement import GDEFMeasurement
 from gdef_reader.gdef_sticher import GDEFSticher
 from gdef_reader.pptx_styles import summary_table, minimize_table_height
-
-import numpy as np
 
 
 # todo: class GDEFMeasurement_Collection
@@ -89,7 +88,8 @@ class GDEFReporter:
             else:
                 measurements = container.filtered_measurements
 
-            self.pptx.add_matplotlib_figure(self.create_summary_figure(measurements), slide, PPTXPosition(0, 0.115), zoom=0.62)
+            self.pptx.add_matplotlib_figure(self.create_summary_figure(measurements), slide,
+                                            PPTXPosition(0, 0.115), zoom=0.62)
 
             table_style = summary_table()
             table_style.font_style.set(size=11)

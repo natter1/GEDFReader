@@ -1,6 +1,8 @@
+from typing import Optional
+
 import numpy as np
 from numpy.polynomial import Legendre
-import matplotlib.pyplot as plt
+
 
 def main():
     array2d = np.array([[1, 4, 1.67], [2, 3, 2]])
@@ -13,7 +15,7 @@ def correct_background(legendre_deg: int = 0, median_level: bool = True) -> np.n
     :param median_level: If True, average value is subtracted from all data points.
     :param legendre_deg:
     """
-    pass#_do_median_level(subtract_mean_plane=True)
+    pass  # _do_median_level(subtract_mean_plane=True)
     # background_corrected = True
 
 
@@ -25,8 +27,8 @@ def correct_background(legendre_deg: int = 0, median_level: bool = True) -> np.n
 #     """
 
 
-def subtract_mean_level(array2d: np.ndarray):
-    result =array2d
+def subtract_mean_level(array2d: np.ndarray) -> Optional[np.ndarray]:
+    result = array2d
     if result is None:
         return None
     try:
@@ -37,7 +39,7 @@ def subtract_mean_level(array2d: np.ndarray):
     return result
 
 
-def subtract_legendre_fit(array2d: np.ndarray, deg: int = 1, keep_offset: bool = False) -> np.ndarray:
+def subtract_legendre_fit(array2d: np.ndarray, deg: int = 1, keep_offset: bool = False) -> Optional[np.ndarray]:
     """
     Use a legendre polynomial fit of degree legendre_deg in X and Y direction to correct background.
     legendre_deg = 0 ... subtract mean value
@@ -68,7 +70,7 @@ def subtract_legendre_fit(array2d: np.ndarray, deg: int = 1, keep_offset: bool =
     return result
 
 
-def subtract_mean_gradient_plane(array2d: np.ndarray, keep_offset: bool = False) -> np.ndarray:
+def subtract_mean_gradient_plane(array2d: np.ndarray, keep_offset: bool = False) -> Optional[np.ndarray]:
     """
     Returns 2d numpy.ndarray with subtracted mean gradient plane from given array2d. Using the gradient might give
      better results, when the measurement has asymmetric structures like large objects on a surface.

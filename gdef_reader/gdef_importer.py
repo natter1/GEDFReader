@@ -1,6 +1,4 @@
-import errno
 import io
-import os
 import struct
 from pathlib import Path
 from typing import Optional, BinaryIO, List, Union
@@ -19,13 +17,13 @@ class GDEFImporter:
     def __init__(self, filename: Path):
         self.basename = filename.stem
 
-        def make_folder(folder):
-            try:
-                os.mkdir(folder)
-            except OSError as exc:
-                if exc.errno != errno.EEXIST:
-                    raise
-                pass  # path already exit -> no error handling needed
+        # def make_folder(folder):
+        #     try:
+        #         os.mkdir(folder)
+        #     except OSError as exc:
+        #         if exc.errno != errno.EEXIST:
+        #             raise
+        #         pass  # path already exit -> no error handling needed
 
         self.header: GDEFHeader = GDEFHeader()
         self.buffer: Optional[BinaryIO] = None
@@ -34,8 +32,6 @@ class GDEFImporter:
         self.base_blocks: List[GDEFControlBlock] = []
 
         self._eof = None
-        self.flow_summary = []
-        self.flow_offset = ''
         self.load(filename)
 
     def load(self, filename: Union[str, Path]):
@@ -46,7 +42,6 @@ class GDEFImporter:
         self.read_variable_lists()
 
     def read_header(self):
-        self.flow_summary.append('read_header()')
         self.buffer.seek(0)  # sets the file's current position at the offset
         self.header.magic = self.buffer.read(4)
         self.header.version = int.from_bytes(self.buffer.read(2), 'little')
@@ -61,10 +56,7 @@ class GDEFImporter:
 
     def read_control_block(self, block):
         block.mark = self.buffer.read(2)
-        self.flow_summary.append(self.flow_offset + f'    read block: {block.id} - block.mark={block.mark})')
         if not block.mark == b'CB':
-            file2 = open("flow_summary.txt", "w")
-            file2.write(self.flow_summary)
             assert block.mark == b'CB'
 
         self.buffer.read(2)  # align
@@ -85,12 +77,9 @@ class GDEFImporter:
 
     def read_variable_lists(self, depth: int = 0):
         blocks = []
-        self.flow_offset = ' ' * 4 * depth
-        self.flow_summary.append(self.flow_offset + f'read_variable_lists(depth={depth})')
         break_flag = False
 
         while (not break_flag) and (self.buffer.tell() != self._eof):
-            # print(f"tell: {self.buffer.tell()} - eof: {self._eof}")
             block = GDEFControlBlock()
             block = self.read_control_block(block)
 
@@ -101,7 +90,6 @@ class GDEFImporter:
             for i in range(block.n_variables):
                 variable = GDEFVariable()
                 variable = self.read_variable(variable)
-                self.flow_summary.append(self.flow_offset + f'        block variable {i} - {variable.name}')
                 block.variables.append(variable)
 
                 if variable.type == GDEFVariableType.VAR_DATABLOCK.value:
@@ -109,27 +97,18 @@ class GDEFImporter:
                     self.flow_offset = ' ' * 4 * depth
 
             if depth == 0:
-                self.flow_summary.append(
-                    self.flow_offset + f'        read variable data for block: {block.id} - (; depth={depth})'
-                )
                 self.read_variable_data(block, depth)
-                self.flow_offset = ' ' * 4 * depth
 
             self.blocks.append(block)
             if depth == 0:
                 self.base_blocks.append(block)
             blocks.append(block)
-        self.flow_summary.append(self.flow_offset + f'return from read_variable_lists(depth={depth})')
         return blocks  # measurement.blocks
 
     def read_variable_data(self, block: GDEFControlBlock, depth: int):
-        self.flow_offset = '        ' + ' ' * 4 * depth
-        self.flow_summary.append( self.flow_offset + f'read_variable_data(block={block.id}, depth={depth})')
-
         for variable in block.variables:
             if variable.type == GDEFVariableType.VAR_DATABLOCK.value:
                 nestedblocks: GDEFControlBlock = variable.data
-                self.flow_summary.append(self.flow_offset + f'    read variable data for nestedblocks: (n_blocks={len(nestedblocks)}; depth={depth+1})')
                 for block in nestedblocks:
                     self.read_variable_data(block, depth+1)
             else:
@@ -168,13 +147,6 @@ class GDEFImporter:
                         pass  # variable.data = variable.data.decode("utf-8")
                 else:
                     print("should not happen")
-                try:
-                    self.flow_summary.append(self.flow_offset + f"    variable = {variable.name} - {variable.data[0]}...")
-                except:
-                    self.flow_summary.append(self.flow_offset + f"    variable = {variable.name} - {variable.data}")
-
-        self.flow_offset = '        ' + ' ' * 4 * depth
-        self.flow_summary.append(self.flow_offset + f'return from read_variable_data(block={block.id}, depth={depth})')
 
     def export_measurements(self, path: Path = None, create_images: bool = False) -> List[GDEFMeasurement]:
         """
@@ -185,7 +157,7 @@ class GDEFImporter:
         """
         result = []
         for i, block in enumerate(self.blocks):
-            if block.n_data!=1 or block.n_variables != 50:
+            if block.n_data != 1 or block.n_variables != 50:
                 continue
             measurement = self._get_measurement_from_block(block, create_images)
             measurement.gdf_basename = self.basename
@@ -204,7 +176,7 @@ class GDEFImporter:
 
         return result
 
-    def _get_measurement_from_block(self, block: GDEFControlBlock, create_image)-> GDEFMeasurement:
+    def _get_measurement_from_block(self, block: GDEFControlBlock, create_image) -> GDEFMeasurement:
         result = GDEFMeasurement()
         result.gdf_block_id = block.id
 

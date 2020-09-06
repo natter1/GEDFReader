@@ -14,7 +14,7 @@ class TemplateETIT169(TemplateExample):
     """
     TEMPLATE_FILE = pkg_resources.resource_filename('pptx_tools', 'resources/ETIT_16-9.pptx')
 
-    def __init__(self, template_file = None):
+    def __init__(self, template_file=None):
         if template_file:
             self.TEMPLATE_FILE = template_file
 

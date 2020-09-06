@@ -5,10 +5,8 @@ from typing import List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 # todo: optional import:
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pptx_tools.creator import PPTXCreator
 from pptx_tools.templates import AbstractTemplate
 
@@ -49,7 +47,7 @@ def load_pygdf_measurements(path: Path) -> List[GDEFMeasurement]:
     return result
 
 
-def create_png_for_nanoindents(path: Path, png_save_path: Optional[Path]= None):
+def create_png_for_nanoindents(path: Path, png_save_path: Optional[Path] = None):
     measurements = load_pygdf_measurements(path)
     if png_save_path is None:
         png_save_path = path
@@ -102,7 +100,7 @@ def nanrms(x: np.ndarray, axis=None):
     return np.sqrt(np.nanmean(x**2, axis=axis))
 
 
-def create_absolute_gradient_array(array2d, cutoff = 1.0):
+def create_absolute_gradient_array(array2d, cutoff=1.0):
     result = np.gradient(array2d)
     result = np.sqrt(result[0] ** 2 + result[1] ** 2)
     max_grad = np.nanmax(result)

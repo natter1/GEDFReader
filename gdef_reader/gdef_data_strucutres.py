@@ -51,4 +51,3 @@ class GDEFVariable:
         self.type: Optional[GDEFVariableType] = None
         self.size = None
         self.data = None
-

@@ -1,17 +1,13 @@
-import copy
 import warnings
-from pathlib import Path
-from typing import List, Tuple
+from typing import List
 
 import matplotlib.pyplot as plt
-# from scipy import misc
 import numpy as np
 from matplotlib.figure import Figure
 from scipy import signal
 
 from gdef_reader.gdef_measurement import GDEFMeasurement
-from gdef_reader.utils import load_pygdf_measurements
-# import png
+
 
 class GDEFSticher:
     def __init__(self, measurements: List[GDEFMeasurement],
@@ -28,7 +24,6 @@ class GDEFSticher:
     def stich(self, initial_x_offset_fraction: float = 0.35, show_control_figures: bool = False) -> np.ndarray:
         """
         Stiches a list of GDEFMeasurement.values using cross-correlation.
-        :param values_list: List of GDEFMeasurement.values
         :param initial_x_offset_fraction: used to specify max. overlap area, thus increasing speed and reducing risk of wrong stiching
         :return: stiched np.ndarray
         """
@@ -78,9 +73,9 @@ class GDEFSticher:
             self._create_stich_control_figure(data01, data02, correlation)
         return result
 
-    def create_cropped_figure(self, max_figure_size: Tuple[float, float] = (20, 10), dpi: int = 300) -> Figure:
-        # todo: something is broken here
-        create_cropped_plot(self.stiched_data, self.pixel_width, max_figure_size)
+    # def create_cropped_figure(self, max_figure_size: Tuple[float, float] = (20, 10), dpi: int = 300) -> Figure:
+    #     # todo: something is broken here
+    #     create_cropped_plot(self.stiched_data, self.pixel_width, max_figure_size)
 
     def _create_stich_control_figure(self, data01: np.ndarray, data02: np.ndarray, correlation: np.ndarray) -> Figure:
         result, (ax_orig, ax_template, ax_corr, ax_stich) = plt.subplots(4, 1, figsize=(6, 20))

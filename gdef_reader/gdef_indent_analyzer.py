@@ -22,7 +22,7 @@ class GDEFIndentAnalyzer:
 
     @classmethod
     def _check_pixel_radius_dict(cls):
-        if cls.pixel_radius_distance_matrix == {}:  # todo: or GDEFMeasurement.max_pixel_radius_value < self.settings. ...
+        if cls.pixel_radius_distance_matrix == {}:  # todo: or GDEFMeasurement.max_pixel_radius_value < self.settings...
             for x in range(-255, 256):
                 for y in range(-255, 256):  # todo: symmetry???
                     cls.pixel_radius_distance_matrix[x, y] = (x ** 2 + y ** 2) ** 0.5
@@ -30,9 +30,8 @@ class GDEFIndentAnalyzer:
     def _is_pixel_in_radius(self, position, center, radius):
         """Radius in [m]"""
         # optimized for speed; do not introduce help variables, if not necessary
-        if self.measurement.settings._pixel_width \
-                * GDEFIndentAnalyzer.pixel_radius_distance_matrix[
-            (position[0] - center[0]), (position[1] - center[1])] <= radius:
+        if self.measurement.settings._pixel_width * GDEFIndentAnalyzer.pixel_radius_distance_matrix[
+                (position[0] - center[0]), (position[1] - center[1])] <= radius:
             return True
         else:
             return False

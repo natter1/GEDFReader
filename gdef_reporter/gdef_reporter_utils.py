@@ -3,8 +3,8 @@ from pathlib import Path
 from gdef_reporter.gdef_reporter import GDEFContainerList, GDEFContainer, GDEFReporter
 
 
-def create_gdef_reporter(gdf_path: Path, filter_dict: dict = None,
-                         use_gradient_plane: bool = False, legendre_deg: int = 1, keep_offset=False):
+def create_gdef_reporter(gdf_path: Path, filter_dict: dict = None, use_gradient_plane: bool = False,
+                         legendre_deg: int = 1, keep_offset: bool = False) -> GDEFReporter:
     gdf_container_list = GDEFContainerList()
     for gdf_file in gdf_path.glob("*.gdf"):
         gdf_container_list.append(GDEFContainer(gdf_file))

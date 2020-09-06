@@ -56,7 +56,8 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def create_absolute_gradient_rms_figure(self, values: np.ndarray, cutoff_percent_list, pixel_width, moving_average_n=1) -> Figure:
+    def create_absolute_gradient_rms_figure(self, values: np.ndarray, cutoff_percent_list, pixel_width,
+                                            moving_average_n=1) -> Figure:
         result, (ax_gradient_rms) = plt.subplots(1, 1, figsize=self.figure_size)
         ax_gradient_rms.set_xlabel("[µm]")
         ax_gradient_rms.set_ylabel(f"rms(abs(grad(surface)))) (moving average over {moving_average_n} column(s))")
@@ -93,4 +94,3 @@ class GDEFPlotter:
         cax = divider.append_axes("right", size="5%", pad=0.05)
         cax.set_title("nm", y=1)  # bar.set_label("nm")
         plt.colorbar(im, cax=cax)
-

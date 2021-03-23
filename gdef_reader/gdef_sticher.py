@@ -12,9 +12,21 @@ from gdef_reader.gdef_measurement import GDEFMeasurement
 class GDEFSticher:
     def __init__(self, measurements: List[GDEFMeasurement],
                  initial_x_offset_fraction: float = 0.35, show_control_figures: bool = False):
+        """
+        GDEFSticher combines/stich several AFM area-measurements using cross-corelation to find the best fit.
+        To reduce calculation time, the best overlap position is only searched in a fraction of the measurement area
+        (defined by parameter initial_x_offset_fraction), and each measutrement is added to the right side.
+        Make sure the given list of measurements is ordered from left to right, otherwise wrong results are to be expected.
+        To evaluate the stiching, show_control_figures can be set to True. This creates a summary image
+        for each stiching step (using matplotlib plt.show()).
+
+        :param measurements:
+        :param initial_x_offset_fraction: used to specify max. overlap area, thus increasing speed and reducing risk of wrong stiching
+        :param show_control_figures:
+        """
         self.measurements = measurements
         self.stiched_data = None
-        self.pixel_width = measurements[0].settings.pixel_width
+        self.pixel_width = self.measurements[0].settings.pixel_width
         for measurement in self.measurements:
             if measurement.settings.pixel_width != self.pixel_width:
                 warnings.warn(f"Measurement {measurement.name} has a different pixel_width than used for GDEFSticher!")
@@ -70,14 +82,16 @@ class GDEFSticher:
         result[data02_y0:data02_height, data02_x0:data02_width] = data02
 
         if show_control_figures:
-            self._create_stich_control_figure(data01, data02, correlation)
+            plt = self._create_stich_control_figure(data01, data02, correlation, result)
+            plt.show()
         return result
 
     # def create_cropped_figure(self, max_figure_size: Tuple[float, float] = (20, 10), dpi: int = 300) -> Figure:
     #     # todo: something is broken here
     #     create_cropped_plot(self.stiched_data, self.pixel_width, max_figure_size)
 
-    def _create_stich_control_figure(self, data01: np.ndarray, data02: np.ndarray, correlation: np.ndarray) -> Figure:
+    def _create_stich_control_figure(self, data01: np.ndarray, data02: np.ndarray,
+                                     correlation: np.ndarray, stiched_data: np.ndarray) -> Figure:
         result, (ax_orig, ax_template, ax_corr, ax_stich) = plt.subplots(4, 1, figsize=(6, 20))
 
         ax_orig.imshow(data01, cmap='gray')
@@ -94,6 +108,6 @@ class GDEFSticher:
 
         ax_stich.set_title('stiched')
         ax_stich.set_axis_off()
-        ax_stich.imshow(result, cmap='gray')
+        ax_stich.imshow(stiched_data, cmap='gray')
 
         return result

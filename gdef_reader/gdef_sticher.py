@@ -7,6 +7,7 @@ from matplotlib.figure import Figure
 from scipy import signal
 
 from gdef_reader.gdef_measurement import GDEFMeasurement
+from gdef_reader.utils import create_absolute_gradient_array
 
 
 class GDEFSticher:
@@ -60,6 +61,18 @@ class GDEFSticher:
 
         reduced_correlation = correlation[:, data02_x_offset_right:]  # make sure, data02 is appended on right side
                                                                       # this reduces risk of wrong stiching, but measurements have to be in right order
+
+        # max_overlap_area = (reduced_correlation.shape[1]+1) * (reduced_correlation.shape[0]+1)
+        # # overlap_area =
+        # with np.nditer(reduced_correlation, op_flags=['readwrite'], flags=['multi_index']) as it:
+        #     for x in it:
+        #         #print("%d <%s>" % (x, it.multi_index), end=' ')
+        #         iy, ix = it.multi_index
+        #         cy, cx = reduced_correlation.shape
+        #         # x[...] = x * max_overlap_area / ((cx-ix) * min(iy+1, cy-iy))  # norm by oberlapping area
+        #         # x[...] = x * (reduced_correlation.shape[0]+1) / min(iy+1, cy-iy)  # norm only with y
+        #         x[...] = x * (reduced_correlation.shape[1]+1) / (cx-ix)  # norm only with x
+        #         #print("%d <%s>" % (x, it.multi_index), end=' ')
 
         y, x = np.unravel_index(np.nanargmax(reduced_correlation), reduced_correlation.shape)  # find (first) best match
         y, x = y - data02.shape[0] + 1, x + 1 + data01_x_offset  # - data02_x_offset_right)  # test with two identical datasets -> should give: y, x = 0, 0

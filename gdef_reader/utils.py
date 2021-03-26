@@ -1,10 +1,11 @@
 import copy
 import pickle
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.stats import norm
 from matplotlib.figure import Figure
 # todo: optional import:
 from pptx_tools.creator import PPTXCreator
@@ -13,6 +14,8 @@ from pptx_tools.templates import AbstractTemplate
 from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reader.gdef_indent_analyzer import GDEFIndentAnalyzer
 from gdef_reader.gdef_measurement import GDEFMeasurement
+from gdef_reader.gdef_sticher import GDEFSticher
+from gdef_reader.plotter_styles import PlotterStyle
 from gdef_reader.pptx_styles import summary_table, position_2x2_00, position_2x2_10, position_2x2_01, \
     minimize_table_height, position_2x2_11
 
@@ -95,9 +98,12 @@ def create_pptx_for_nanoindents(path, pptx_filename, pptx_template: Optional[Abs
 
 
 # get rms roughness
-def nanrms(x: np.ndarray, axis=None):
+def nanrms(x: np.ndarray, axis=None, subtract_average: bool=False):
     """Returns root mean square of given numpy.ndarray x."""
-    return np.sqrt(np.nanmean(x**2, axis=axis))
+    average = 0
+    if subtract_average:
+        np.nanmean(x)  # don't do this with rms for gradient field!
+    return np.sqrt(np.nanmean((x-average)**2, axis=axis))
 
 
 def create_absolute_gradient_array(array2d, cutoff=1.0):
@@ -148,6 +154,14 @@ def save_figure(figure: Figure, output_path: Path, filename: str,  png: bool = T
 
 
 def create_absolute_gradient_figures(values: np.ndarray, cutoff_percent_list, nan_color='red') -> Figure:
+    """
+    Creates a matplotlib figure, to show the influence of different cutoff values. The omitted values are represented
+    in the color nan_ccolor (default is red).
+    :param values:
+    :param cutoff_percent_list:
+    :param nan_color:
+    :return:
+    """
     result, ax_list_cutoff = plt.subplots(len(cutoff_percent_list), 1, figsize=(len(cutoff_percent_list) * 0.4, 13))
 
     cmap_gray_red_nan = copy.copy(plt.cm.gray)  # use copy to prevent unwanted changes to other plots somewhere else
@@ -159,6 +173,127 @@ def create_absolute_gradient_figures(values: np.ndarray, cutoff_percent_list, na
         ax_list_cutoff[i].set_title(f'gradient cutoff {percent}%')
         ax_list_cutoff[i].set_axis_off()
     return result
+
+
+def _create_rms_figure(data_dict: Dict[str, dict], moving_average_n, x_offset,
+                       plotter_style: PlotterStyle, y_label: str) -> Figure:
+    """
+    Creates a matplotlib figure, showing a graph of the root meean square of the np.ndarray in
+    data_dict. The key value in data_dict is used as label in the legend.
+    :param data_dict: key: label for legend entry; value: dict with entries for pixel_width and data
+    :param moving_average_n: n is the number of cols used for moving average.
+    :param x_offset: moing graphs along x-axis if neccessary (e.g. to align different measurements)
+    :param plotter_style:
+    :return: Figure
+    """
+    graph_styler = plotter_style.graph_styler
+
+    result, ax_rms = plt.subplots(1, figsize=plotter_style.figure_size, dpi=plotter_style.dpi)
+
+    ax_rms.set_xlabel("[µm]")
+    ax_rms.set_ylabel(y_label)
+    ax_rms.set_yticks([])
+
+    for key, value in data_dict.items():
+        x_pos, y_rms = create_xy_rms_data(value["data"], value["pixel_width"], moving_average_n)
+        x_pos = [x+x_offset for x in x_pos]
+
+        ax_rms.plot(x_pos, y_rms, **graph_styler.dict, label=key)
+        graph_styler.next_style()
+
+        ax_rms.legend()
+
+    # fig.suptitle(f"cutoff = {cutoff_percent}%")
+    result.tight_layout()
+    return result
+
+
+def create_rms_figure(sticher_dict: Dict[str, GDEFSticher], moving_average_n=1,
+                                    x_offset=0, plotter_style: PlotterStyle=None) -> Figure:
+    """
+    Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
+    data_dict. The key value in data_dict is used as label in the legend.
+    :param sticher_dict:
+    :param cutoff_percent:
+    :param moving_average_n:
+    :param x_offset:
+    :param plotter_style:
+    :return:
+    """
+    if plotter_style is None:
+        plotter_style = PlotterStyle(300, (8, 4))
+    y_label = f"roughness (moving average n = {moving_average_n})"
+    data_dict = {}
+    for key in sticher_dict:
+        sticher = sticher_dict[key]
+        data_dict[key] = {"pixel_width": sticher.pixel_width, "data": sticher.stiched_data}
+
+    result = _create_rms_figure(data_dict, moving_average_n, x_offset, plotter_style, y_label)
+    return result
+
+
+def create_gradient_rms_figure(sticher_dict: Dict[str, GDEFSticher], cutoff_percent=8, moving_average_n=1,
+                                    x_offset=0, plotter_style: PlotterStyle=None) -> Figure:
+    """
+    Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
+    data_dict. The key value in data_dict is used as label in the legend.
+    :param sticher_dict:
+    :param cutoff_percent:
+    :param moving_average_n:
+    :param x_offset:
+    :param plotter_style:
+    :return:
+    """
+    if plotter_style is None:
+        plotter_style = PlotterStyle(300, (8, 4))
+    y_label = f"roughness(gradient) (moving average n = {moving_average_n})"
+
+    data_dict = {}
+    for key in sticher_dict:
+        sticher = sticher_dict[key]
+        gradient_data = create_absolute_gradient_array(sticher.stiched_data, cutoff_percent / 100.0)
+        data_dict[key] = {"pixel_width": sticher.pixel_width, "data": gradient_data}
+    result = _create_rms_figure(data_dict, moving_average_n, x_offset, plotter_style, y_label)
+    return result
+
+
+def create_z_histogram_from_ndarray(values2d: np.ndarray, label=""):
+    z_values = values2d.flatten()
+
+    result = plt.figure()
+    labels = [label]
+    H = result.hist(z_values, label=labels)
+    # containers = H[-1]
+    # leg = plt.legend(frameon=False)
+    # plt.title("From a web browser, click on the legend\n"
+    #           "marker to toggle the corresponding histogram.")
+    return result
+
+
+
+    # graph_styler = plotter_style.graph_styler
+    # 
+    # result, ax_compare_gradient_rms = plt.subplots(1, figsize=plotter_style.figure_size, dpi=plotter_style.dpi)
+    # 
+    # ax_compare_gradient_rms.set_xlabel("[µm]")
+    # ax_compare_gradient_rms.set_ylabel(
+    #     f"roughness(gradient) (moving average n = {moving_average_n})")
+    # ax_compare_gradient_rms.set_yticks([])
+    # counter = 0
+    # for key in data_dict:
+    #     sticher = data_dict[key]
+    # 
+    #     absolute_gradient_array = create_absolute_gradient_array(sticher.stiched_data, cutoff_percent / 100.0)
+    #     x_pos, y_gradient_rms = create_xy_rms_data(absolute_gradient_array, sticher.pixel_width,
+    #                                                moving_average_n)
+    #     x_pos = [x + x_offset for x in x_pos]
+    #     ax_compare_gradient_rms.plot(x_pos, y_gradient_rms, **graph_styler.dict, label=key)
+    #     graph_styler.next_style()
+    # 
+    #     ax_compare_gradient_rms.legend()
+    # # fig.suptitle(f"cutoff = {cutoff_percent}%")
+    # result.tight_layout()
+
 
 
 # def create_surface_plot(values: np.ndarray, pixel_width, max_figure_size=(4, 4), dpi=96) -> Optional[Figure]:

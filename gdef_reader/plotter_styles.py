@@ -3,6 +3,7 @@
 """
 from typing import Optional, Tuple
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import numpy as np
 
 
@@ -11,7 +12,64 @@ class PlotterStyle:
         self.dpi = dpi
         self.figure_size = figure_size
 
+        self.x_label = None
+        self.y_label = None
+        self.ax_title=None
+        self.grid = None
+
+        # self.ax_styler = AxStyler()
         self.graph_styler = None
+
+    def set(self, dpi=None, figure_size=None, x_label=None, y_label=None, ax_title=None, grid=None):
+        if dpi is not None:
+            self.dpi = dpi
+        if figure_size is not None:
+            self.figure_size = figure_size
+
+        if x_label is not None:
+            self.x_label = x_label
+        if y_label is not None:
+            self.y_label = y_label
+        if ax_title is not None:
+            self.ax_title = ax_title
+        if grid is not None:
+            self.grid = grid
+
+    def set_format_to_ax(self, ax: Axes):
+        if self.x_label is not None:
+            ax.set_xlabel(self.x_label)
+        if self.y_label is not None:
+            ax.set_ylabel(self.y_label)
+        if self.ax_title is not None:
+            ax.set_title(self.ax_title)
+        if self.grid is not None:
+            ax.grid(self.grid)
+
+    def create_preformated_figure(self, nrows=1, ncols=1):
+        fig, axs = plt.subplots(nrows, ncols, figsize=self.figure_size, dpi=self.dpi)
+
+        if (nrows==1) and (ncols==1):
+            self.set_format_to_ax(axs)
+        elif (nrows==1) or (ncols==1):
+            for ax in axs:
+                self.set_format_to_ax(ax)
+        else:
+            for ax in axs.flat:
+                self.set_format_to_ax(ax)
+
+        return fig, axs
+
+
+# class AxStyler:
+#     """
+#     Used to formt Axes
+#     """
+#     def __init__(self):
+#         self.x_label = None
+#         self.y_label = None
+#         self.ax_title=None
+#
+#         self.grid = None
 
 
 class GraphStyler:
@@ -70,19 +128,52 @@ class GraphStyler:
         self.next_marker()
         self.next_linestyle()
 
+    def reset(self):
+        self.current_color_index = 0
+        self.current_marker_index = 0
+        self.current_linestyle_index = 0
+        return self
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# ---------------------------------------------------- graph styles ----------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+def get_curve_style_bernhard_4(marker_size=5) -> GraphStyler:
+    result = GraphStyler()
+    result.linestyle_map = [""]
+    result.marker_map = ["o", "s", "<", ">"]  # ["x", "+", "1"]
+    result.marker_size = marker_size
+    result.cmap = [[0, 0, 0], # black
+                         [1, 0, 0],  # red
+                         [0, 0, 1],  # blue
+                         [0, 1, 0]  # green
+                        ]
+    result.graph_styler = result
+    return result
+
+def get_power_law_fit_curve_style() -> GraphStyler:
+    result = GraphStyler()
+    result.linestyle_map = ["--"]
+    result.marker_map = [""]  # ["x", "+", "1"]
+    result.marker_size = 0
+    result.cmap = [[1, 0.5, 0]]
+    return result
+
+
 # ---------------------------------------------------------------------------------
-# ---------------------- some default styles for gdef_reader ----------------------
+# -------------------------- plotter styls for AFM data ---------------------------
 # ---------------------------------------------------------------------------------
-def get_plotter_style_default() -> PlotterStyle:
+def get_plotter_style_default(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
     result = PlotterStyle(dpi=300, figure_size=(5.6, 5.0))
     return result
 
 
-def get_plotter_style_bernhard_4(marker_size=5) -> PlotterStyle:
+def get_plotter_style_bernhard_4(dpi=300, figure_size=(5.6, 5.0), marker_size=5) -> PlotterStyle:
     """
     Max. 4 different graphs (black, red, blue, green)
     """
     result = PlotterStyle()
+    result.set(dpi=dpi, figure_size=figure_size)
     graph_styler = GraphStyler()
     graph_styler.linestyle_map = [""]
     graph_styler.marker_map = ["o", "s", "<", ">"]  # ["x", "+", "1"]
@@ -96,10 +187,21 @@ def get_plotter_style_bernhard_4(marker_size=5) -> PlotterStyle:
     return result
 
 
-def get_power_law_fit_curve_style() -> GraphStyler:
-    result = GraphStyler()
-    result.linestyle_map = ["--"]
-    result.marker_map = [""]  # ["x", "+", "1"]
-    result.marker_size = 0
-    result.cmap = [[1, 0.5, 0]]
+def get_plotter_style_xy_data(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
+    result = get_plotter_style_default(dpi=dpi, figure_size=figure_size)
+    result.graph_styler = get_curve_style_bernhard_4()
+    return result
+
+
+def get_plotter_style_rms(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
+    result = get_plotter_style_xy_data(dpi=dpi, figure_size=figure_size)
+    result.x_label = "[µm]"
+    result.y_label = "rms roughness [µm]"
+    return result
+
+
+def get_plotter_style_sigma(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
+    result = get_plotter_style_xy_data(dpi=dpi, figure_size=figure_size)
+    result.x_label = "[µm]"
+    result.y_label = "Gaussian half width \u03C3 [µm]"
     return result

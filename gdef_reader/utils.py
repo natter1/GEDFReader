@@ -64,7 +64,8 @@ def create_png_for_nanoindents(path: Path, png_save_path: Optional[Path] = None)
         if figure is None:
             continue
         print(png_save_path.joinpath(f"{measurement.filename.stem + '.png'}"))
-        figure.savefig(png_save_path.joinpath(f"{measurement.filename.stem + '.png'}"), dpi=96)  # , transparent=transparent)
+        figure.savefig(png_save_path.joinpath(f"{measurement.filename.stem + '.png'}"),
+                       dpi=96)  # , transparent=transparent)
         indent_analyzer.add_indent_pile_up_mask_to_axes(figure.axes[0])
         print(png_save_path.joinpath(f"{measurement.filename.stem + '_masked.png'}"))
         figure.savefig(png_save_path.joinpath(f"{measurement.filename.stem + '_masked.png'}"), dpi=96)
@@ -84,26 +85,29 @@ def create_pptx_for_nanoindents(path, pptx_filename, pptx_template: Optional[Abs
         if figure is None:
             continue
         pptx.add_matplotlib_figure(figure, slide, position_2x2_00())
-        table_shape = pptx.add_table(slide, measurement.get_summary_table_data(), position_2x2_01(), table_style=summary_table())
+        table_shape = pptx.add_table(slide, measurement.get_summary_table_data(), position_2x2_01(),
+                                     table_style=summary_table())
         minimize_table_height(table_shape)
         # figure.savefig(f"{measurement.basename.with_suffix('.png')}")  # , transparent=transparent)
 
         indent_analyzer.add_indent_pile_up_mask_to_axes(figure.axes[0], roughness_part=0.05)
         # figure.savefig(f"{measurement.basename.with_name(measurement.basename.stem + '_masked.png')}", dpi=96)
         pptx.add_matplotlib_figure(figure, slide, position_2x2_10())
-        table_shape = pptx.add_table(slide, indent_analyzer.get_summary_table_data(), position_2x2_11(), table_style=summary_table())
+        table_shape = pptx.add_table(slide, indent_analyzer.get_summary_table_data(), position_2x2_11(),
+                                     table_style=summary_table())
         minimize_table_height(table_shape)
         figure.clear()
-    pptx.save(path.joinpath(f"{pptx_filename}.pptx"), overwrite=True)  # todo: remove overwrite=True when testing is finished
+    pptx.save(path.joinpath(f"{pptx_filename}.pptx"),
+              overwrite=True)  # todo: remove overwrite=True when testing is finished
 
 
 # get rms roughness
-def nanrms(x: np.ndarray, axis=None, subtract_average: bool=False):
+def nanrms(x: np.ndarray, axis=None, subtract_average: bool = False):
     """Returns root mean square of given numpy.ndarray x."""
     average = 0
     if subtract_average:
         np.nanmean(x)  # don't do this with rms for gradient field!
-    return np.sqrt(np.nanmean((x-average)**2, axis=axis))
+    return np.sqrt(np.nanmean((x - average) ** 2, axis=axis))
 
 
 def create_absolute_gradient_array(array2d, cutoff=1.0):
@@ -138,7 +142,7 @@ def create_xy_rms_data(values: np.ndarray, pixel_width, moving_average_n=1) -> T
     return x_pos, y_rms
 
 
-def save_figure(figure: Figure, output_path: Path, filename: str,  png: bool = True, pdf: bool = False) -> None:
+def save_figure(figure: Figure, output_path: Path, filename: str, png: bool = True, pdf: bool = False) -> None:
     """
     Helper function to save a matplotlib figure as png and or pdf. Automatically creates output_path, if necessary.
     Does nothing if given output_path is None.
@@ -153,26 +157,38 @@ def save_figure(figure: Figure, output_path: Path, filename: str,  png: bool = T
         figure.savefig(output_path.joinpath(f"{filename}.pdf"))
 
 
-def create_absolute_gradient_figures(values: np.ndarray, cutoff_percent_list, nan_color='red') -> Figure:
-    """
-    Creates a matplotlib figure, to show the influence of different cutoff values. The omitted values are represented
-    in the color nan_ccolor (default is red).
-    :param values:
-    :param cutoff_percent_list:
-    :param nan_color:
-    :return:
-    """
-    result, ax_list_cutoff = plt.subplots(len(cutoff_percent_list), 1, figsize=(len(cutoff_percent_list) * 0.4, 13))
-
-    cmap_gray_red_nan = copy.copy(plt.cm.gray)  # use copy to prevent unwanted changes to other plots somewhere else
-    cmap_gray_red_nan.set_bad(color=nan_color)
-
-    for i, percent in enumerate(cutoff_percent_list):
-        absolut_gradient_array = create_absolute_gradient_array(values, percent / 100.0)
-        ax_list_cutoff[i].imshow(absolut_gradient_array, cmap_gray_red_nan)
-        ax_list_cutoff[i].set_title(f'gradient cutoff {percent}%')
-        ax_list_cutoff[i].set_axis_off()
-    return result
+# def _create_figure(data_dict: Dict[str, dict], plotter_style: PlotterStyle, x_label: str, y_label: str,
+#                    title: str = None) -> Figure:
+#     """
+#
+#     :param data_dict:
+#     :param plotter_style:
+#     :param x_label:
+#     :param y_label:
+#     :param title:
+#     :return:
+#     """
+#     graph_styler = plotter_style.graph_styler
+#
+#     result, ax = plt.subplots(1, figsize=plotter_style.figure_size, dpi=plotter_style.dpi)
+#
+#     ax.set_xlabel(x_label)
+#     ax.set_ylabel(y_label)
+#     if title:
+#         result.suptitle(title)
+#     # ax.set_yticks([])
+#     for key, value in data_dict.items():
+#         x_pos, y_rms = create_xy_rms_data(value["data"], value["pixel_width"], moving_average_n)
+#         x_pos = [x + x_offset for x in x_pos]
+#
+#         ax.plot(x_pos, y_rms, **graph_styler.dict, label=key)
+#         graph_styler.next_style()
+#
+#         ax.legend()
+#
+#     # fig.suptitle(f"cutoff = {cutoff_percent}%")
+#     result.tight_layout()
+#     return result
 
 
 def _create_rms_figure(data_dict: Dict[str, dict], moving_average_n, x_offset,
@@ -196,7 +212,7 @@ def _create_rms_figure(data_dict: Dict[str, dict], moving_average_n, x_offset,
 
     for key, value in data_dict.items():
         x_pos, y_rms = create_xy_rms_data(value["data"], value["pixel_width"], moving_average_n)
-        x_pos = [x+x_offset for x in x_pos]
+        x_pos = [x + x_offset for x in x_pos]
 
         ax_rms.plot(x_pos, y_rms, **graph_styler.dict, label=key)
         graph_styler.next_style()
@@ -209,7 +225,7 @@ def _create_rms_figure(data_dict: Dict[str, dict], moving_average_n, x_offset,
 
 
 def create_rms_figure(sticher_dict: Dict[str, GDEFSticher], moving_average_n=1,
-                                    x_offset=0, plotter_style: PlotterStyle=None) -> Figure:
+                      x_offset=0, plotter_style: PlotterStyle = None) -> Figure:
     """
     Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
     data_dict. The key value in data_dict is used as label in the legend.
@@ -224,8 +240,7 @@ def create_rms_figure(sticher_dict: Dict[str, GDEFSticher], moving_average_n=1,
         plotter_style = PlotterStyle(300, (8, 4))
     y_label = f"roughness (moving average n = {moving_average_n})"
     data_dict = {}
-    for key in sticher_dict:
-        sticher = sticher_dict[key]
+    for key, sticher in sticher_dict.items():
         data_dict[key] = {"pixel_width": sticher.pixel_width, "data": sticher.stiched_data}
 
     result = _create_rms_figure(data_dict, moving_average_n, x_offset, plotter_style, y_label)
@@ -233,7 +248,7 @@ def create_rms_figure(sticher_dict: Dict[str, GDEFSticher], moving_average_n=1,
 
 
 def create_gradient_rms_figure(sticher_dict: Dict[str, GDEFSticher], cutoff_percent=8, moving_average_n=1,
-                                    x_offset=0, plotter_style: PlotterStyle=None) -> Figure:
+                               x_offset=0, plotter_style: PlotterStyle = None) -> Figure:
     """
     Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
     data_dict. The key value in data_dict is used as label in the legend.
@@ -249,32 +264,66 @@ def create_gradient_rms_figure(sticher_dict: Dict[str, GDEFSticher], cutoff_perc
     y_label = f"roughness(gradient) (moving average n = {moving_average_n})"
 
     data_dict = {}
-    for key in sticher_dict:
-        sticher = sticher_dict[key]
+    for key, sticher in sticher_dict.items():
         gradient_data = create_absolute_gradient_array(sticher.stiched_data, cutoff_percent / 100.0)
         data_dict[key] = {"pixel_width": sticher.pixel_width, "data": gradient_data}
     result = _create_rms_figure(data_dict, moving_average_n, x_offset, plotter_style, y_label)
     return result
 
 
-def create_z_histogram_from_ndarray(values2d: np.ndarray, label=""):
+def get_mu_sigma(values2d: np.ndarray) -> Tuple:
+    """
+    Returns mean and standard deviation of valus in valuees2d.
+    :param values2d:
+    :return:
+    """
     z_values = values2d.flatten()
+    z_values = z_values[~np.isnan(z_values)]
+    return norm.fit(z_values)
 
-    result = plt.figure()
-    labels = [label]
-    H = result.hist(z_values, label=labels)
+
+def get_mu_sigma_moving_average(values2d: np.ndarray, moving_average_n=200) -> Tuple[List[float], List[float]]:
+    """
+    Calculate mu and sigma values as moving average, averaging over moving_average_n data-columns.
+    :param values2d:
+    :param n_bins:
+    :return:
+    """
+    mu_list = []
+    sigma_list = []
+
+    for i in range(values2d.shape[1] - moving_average_n):
+        mu, sigma = get_mu_sigma(values2d[:, i:i + moving_average_n])
+        mu_list.append(mu)
+        sigma_list.append(sigma)
+    return mu_list, sigma_list
+
+
+def create_z_histogram_from_ndarray(values2d: np.ndarray, title="", n_bins=200):
+    z_values = values2d.flatten()
+    z_values = z_values[
+        ~np.isnan(z_values)]  # remove all NaN values (~ is bitwise NOT opperator - similar to numpy.logical_not)
+    z_values = z_values * 1e6  # m -> µm
+    mu, sigma = norm.fit(z_values)
+    norm_bins = np.linspace(z_values.min(), z_values.max(), 100)
+    best_fit_line = norm.pdf(norm_bins, mu, sigma)
+
+    result, ax = plt.subplots(1, 1, tight_layout=True)
+    H = ax.hist(z_values, density=True, bins=n_bins)
+    ax.plot(norm_bins, best_fit_line)
+    ax.set_xlabel('z [\u03BCm]')
+    ax.set_ylabel('Normalized counts')
+    ax.grid(True)
+    ax.set_title(f"{title} \n \u03BC={mu:.2f}, \u03C3={sigma:.2f}")
     # containers = H[-1]
-    # leg = plt.legend(frameon=False)
-    # plt.title("From a web browser, click on the legend\n"
-    #           "marker to toggle the corresponding histogram.")
+    # legend = ax.legend(frameon=False)
+
     return result
 
-
-
     # graph_styler = plotter_style.graph_styler
-    # 
+    #
     # result, ax_compare_gradient_rms = plt.subplots(1, figsize=plotter_style.figure_size, dpi=plotter_style.dpi)
-    # 
+    #
     # ax_compare_gradient_rms.set_xlabel("[µm]")
     # ax_compare_gradient_rms.set_ylabel(
     #     f"roughness(gradient) (moving average n = {moving_average_n})")
@@ -282,19 +331,17 @@ def create_z_histogram_from_ndarray(values2d: np.ndarray, label=""):
     # counter = 0
     # for key in data_dict:
     #     sticher = data_dict[key]
-    # 
+    #
     #     absolute_gradient_array = create_absolute_gradient_array(sticher.stiched_data, cutoff_percent / 100.0)
     #     x_pos, y_gradient_rms = create_xy_rms_data(absolute_gradient_array, sticher.pixel_width,
     #                                                moving_average_n)
     #     x_pos = [x + x_offset for x in x_pos]
     #     ax_compare_gradient_rms.plot(x_pos, y_gradient_rms, **graph_styler.dict, label=key)
     #     graph_styler.next_style()
-    # 
+    #
     #     ax_compare_gradient_rms.legend()
     # # fig.suptitle(f"cutoff = {cutoff_percent}%")
     # result.tight_layout()
-
-
 
 # def create_surface_plot(values: np.ndarray, pixel_width, max_figure_size=(4, 4), dpi=96) -> Optional[Figure]:
 #     def set_surface_to_axes(ax: Axes):

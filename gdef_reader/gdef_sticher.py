@@ -7,7 +7,6 @@ from matplotlib.figure import Figure
 from scipy import signal
 
 from gdef_reader.gdef_measurement import GDEFMeasurement
-from gdef_reader.utils import create_absolute_gradient_array, create_xy_rms_data
 
 
 class GDEFSticher:
@@ -126,30 +125,3 @@ class GDEFSticher:
 
         return result
 
-    def get_compare_gradient_rms_figure(pptx, sticher_dict, cutoff_percent=8, moving_average_n=1, figsize=(8, 4),
-                                               x_offset=0):
-        fig, ax_compare_gradient_rms = plt.subplots(1, figsize=figsize, dpi=300)
-
-        ax_compare_gradient_rms.set_xlabel("[µm]")
-        ax_compare_gradient_rms.set_ylabel(
-            f"roughness(gradient) (moving average n = {moving_average_n})")
-        ax_compare_gradient_rms.set_yticks([])
-        counter = 0
-        for key in sticher_dict:
-            sticher = sticher_dict[key]
-
-            absolute_gradient_array = create_absolute_gradient_array(sticher.stiched_data, cutoff_percent / 100.0)
-            x_pos, y_gradient_rms = create_xy_rms_data(absolute_gradient_array, sticher.pixel_width,
-                                                       moving_average_n)
-            x_pos = [x + x_offset for x in x_pos]
-            ax_compare_gradient_rms.plot(x_pos, y_gradient_rms, label=key)
-
-            # if counter == 0:
-            #     ax_compare_gradient_rms.plot(x_pos, y_gradient_rms, label=f"fatigued", color="black")  # f"{cutoff_percent}%")
-            #     counter = 1
-            # else:
-            #     ax_compare_gradient_rms.plot(x_pos, y_gradient_rms, label=f"pristine", color="red")  # f"{cutoff_percent}%")
-
-            ax_compare_gradient_rms.legend()
-        # fig.suptitle(f"cutoff = {cutoff_percent}%")
-        fig.tight_layout()

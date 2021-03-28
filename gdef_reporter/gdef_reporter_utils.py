@@ -11,8 +11,11 @@ def create_gdef_reporter(gdf_paths: Union[List[Path], Path], filter_dict: dict =
         gdf_paths = [gdf_paths]
 
     for gdf_path in gdf_paths:
-        for gdf_file in gdf_path.glob("*.gdf"):
-            gdf_container_list.append(GDEFContainer(gdf_file))
+        if gdf_path.is_file():
+            gdf_container_list.append(GDEFContainer(gdf_path))
+        else:
+            for gdf_file in gdf_path.glob("*.gdf"):
+                gdf_container_list.append(GDEFContainer(gdf_file))
     gdf_container_list.correct_backgrounds(use_gradient_plane, legendre_deg, keep_offset)
     gdf_container_list.set_filter_ids(filter_dict)
 

@@ -83,8 +83,8 @@ class GDEFSettings:
 
 class GDEFMeasurement:
     def __init__(self):
-        self.header: Optional[GDEFHeader] = None
-        self.spm_image_file_version = None
+        self._header: Optional[GDEFHeader] = None
+        self._spm_image_file_version = None
 
         self.settings = GDEFSettings()
 

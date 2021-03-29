@@ -34,14 +34,42 @@ class GDEFImporter:
         self._eof = None
         self.load(filename)
 
+    def export_measurements(self, path: Path = None, create_images: bool = False) -> List[GDEFMeasurement]:
+        """
+        Create a list of GDEFMeasurement-Objects from imported data.
+        :param path: Save path for GDEFMeasurement-objects. No saved files, if None.
+        :param create_images:
+        :return: list of GDEFMeasurement-Objects
+        """
+        result = []
+        for i, block in enumerate(self.blocks):
+            if block.n_data != 1 or block.n_variables != 50:
+                continue
+            measurement = self._get_measurement_from_block(block, create_images)
+            measurement.gdf_basename = self.basename
+            result.append(measurement)
+
+        for measurement in result:
+            if create_images:
+                fig = measurement.create_plot()
+                if fig:
+                    fig.show()
+            if path:
+                path.mkdir(parents=True, exist_ok=True)
+                if create_images:
+                    measurement.save_png(f"{path}\\{self.basename}_block_{measurement.gdf_block_id}", dpi=96)
+                measurement.save(f"{path}\\{self.basename}_block_{measurement.gdf_block_id:03}.pygdf")  # todo: what happens, when block.id > 999?
+
+        return result
+
     def load(self, filename: Union[str, Path]):
         self.buffer = open(filename, 'rb')
         self._eof = self.buffer.seek(0, 2)
         self.buffer.seek(0)
-        self.read_header()
-        self.read_variable_lists()
+        self._read_header()
+        self._read_variable_lists()
 
-    def read_header(self):
+    def _read_header(self):
         self.buffer.seek(0)  # sets the file's current position at the offset
         self.header.magic = self.buffer.read(4)
         self.header.version = int.from_bytes(self.buffer.read(2), 'little')
@@ -54,7 +82,7 @@ class GDEFImporter:
         self.header.description_length = int.from_bytes(self.buffer.read(4), 'little')
         self.header.description = self.buffer.read(self.header.description_length).decode("utf-8")
 
-    def read_control_block(self, block):
+    def _read_control_block(self, block):
         block.mark = self.buffer.read(2)
         if not block.mark == b'CB':
             assert block.mark == b'CB'
@@ -68,20 +96,20 @@ class GDEFImporter:
 
         return block
 
-    def read_variable(self, variable):
+    def _read_variable(self, variable):
         variable.name = self.buffer.read(50).decode("utf-8")
         self.buffer.read(2)
         variable.type = int.from_bytes(self.buffer.read(4), 'little')
         assert variable.type < GDEFVariableType.VAR_NVARS.value
         return variable
 
-    def read_variable_lists(self, depth: int = 0):
+    def _read_variable_lists(self, depth: int = 0):
         blocks = []
         break_flag = False
 
         while (not break_flag) and (self.buffer.tell() != self._eof):
             block = GDEFControlBlock()
-            block = self.read_control_block(block)
+            block = self._read_control_block(block)
 
             if block.next_byte == b'\x00':
                 break_flag = True
@@ -89,15 +117,15 @@ class GDEFImporter:
             # read variables
             for i in range(block.n_variables):
                 variable = GDEFVariable()
-                variable = self.read_variable(variable)
+                variable = self._read_variable(variable)
                 block.variables.append(variable)
 
                 if variable.type == GDEFVariableType.VAR_DATABLOCK.value:
-                    variable.data = self.read_variable_lists(depth+1)
+                    variable.data = self._read_variable_lists(depth + 1)
                     self.flow_offset = ' ' * 4 * depth
 
             if depth == 0:
-                self.read_variable_data(block, depth)
+                self._read_variable_data(block, depth)
 
             self.blocks.append(block)
             if depth == 0:
@@ -105,12 +133,12 @@ class GDEFImporter:
             blocks.append(block)
         return blocks  # measurement.blocks
 
-    def read_variable_data(self, block: GDEFControlBlock, depth: int):
+    def _read_variable_data(self, block: GDEFControlBlock, depth: int):
         for variable in block.variables:
             if variable.type == GDEFVariableType.VAR_DATABLOCK.value:
                 nestedblocks: GDEFControlBlock = variable.data
                 for block in nestedblocks:
-                    self.read_variable_data(block, depth+1)
+                    self._read_variable_data(block, depth + 1)
             else:
                 variable.data = self.buffer.read(block.n_data * type_sizes[variable.type])
                 if variable.type == GDEFVariableType.VAR_INTEGER.value:
@@ -147,34 +175,6 @@ class GDEFImporter:
                         pass  # variable.data = variable.data.decode("utf-8")
                 else:
                     print("should not happen")
-
-    def export_measurements(self, path: Path = None, create_images: bool = False) -> List[GDEFMeasurement]:
-        """
-        Create a list of GDEFMeasurement-Objects from imported data.
-        :param path: Save path for GDEFMeasurement-objects. No saved files, if None.
-        :param create_images:
-        :return: list of GDEFMeasurement-Objects
-        """
-        result = []
-        for i, block in enumerate(self.blocks):
-            if block.n_data != 1 or block.n_variables != 50:
-                continue
-            measurement = self._get_measurement_from_block(block, create_images)
-            measurement.gdf_basename = self.basename
-            result.append(measurement)
-
-        for measurement in result:
-            if create_images:
-                fig = measurement.create_plot()
-                if fig:
-                    fig.show()
-            if path:
-                path.mkdir(parents=True, exist_ok=True)
-                if create_images:
-                    measurement.save_png(f"{path}\\{self.basename}_block_{measurement.gdf_block_id}", dpi=96)
-                measurement.save(f"{path}\\{self.basename}_block_{measurement.gdf_block_id:03}.pygdf")  # todo: what happens, when block.id > 999?
-
-        return result
 
     def _get_measurement_from_block(self, block: GDEFControlBlock, create_image) -> GDEFMeasurement:
         result = GDEFMeasurement()

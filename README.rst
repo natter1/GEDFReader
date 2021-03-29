@@ -9,7 +9,7 @@ GDEFReader
 |
 
 .. figure:: https://github.com/natter1/gdef_reader/raw/master/docs/images/example_overview_image.png
-    :width: 500pt
+    :width: 800pt
 
 |
 

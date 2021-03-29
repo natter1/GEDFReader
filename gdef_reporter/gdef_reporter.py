@@ -9,8 +9,8 @@ import png
 from pptx_tools.creator import PPTXCreator
 from pptx_tools.position import PPTXPosition
 from pptx_tools.table_style import PPTXTableStyle
+from pptx_tools.templates import TemplateExample
 
-from gdef_reader.etit169_pptx_template import TemplateETIT169
 from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reader.gdef_measurement import GDEFMeasurement
 from gdef_reader.gdef_sticher import GDEFSticher
@@ -71,7 +71,7 @@ class GDEFReporter:
         self.pptx = None
         self.title_slide = None
 
-    def create_summary_pptx(self, filtered: bool = False, pptx_template=TemplateETIT169()):
+    def create_summary_pptx(self, filtered: bool = False, pptx_template=TemplateExample()):
         self.pptx = PPTXCreator(template=pptx_template)
         self.title_slide = self.pptx.add_title_slide(self.title)
 

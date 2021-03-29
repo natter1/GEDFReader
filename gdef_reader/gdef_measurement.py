@@ -149,32 +149,32 @@ class GDEFMeasurement:
 
     def set_topography_to_axes(self, ax: Axes):
         if self.values is None:
-            ax.set_title(self.comment)
+            ax.set_title(f"{self.gdf_block_id}: {self.comment}")
             print(f"GDEFMeasurement {self.name} has values==None")
             return
         # todo: refactor to extra method
         if self.settings.source_channel == 11:
-            title = "topography"
+            title = f"{self.gdf_block_id}: topography"
             unit = "nm"
             values = self.values * 1e9  # m -> nm
         elif self.settings.source_channel == 9:
-            title = "bending"
+            title = f"{self.gdf_block_id}: bending"
             unit = "N"
             values = self.values
         elif self.settings.source_channel == 12:
-            title = "phase"
+            title = f"{self.gdf_block_id}: phase"
             unit = "deg"
             # factor 18.0 from gwyddion - seems to create too large values (e.g. 600 degree)
             values = self.values  # * 18.0
         else:
-            title = f"SC: {self.settings.source_channel}"
+            title = f"{self.gdf_block_id}: SC: {self.settings.source_channel}"
             unit = f"SC: {self.settings.source_channel}"
             values = self.values
 
         extent = self.settings.size_in_um_for_plot()
         im = ax.imshow(values, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
         if self.comment:
-            title = self.comment
+            title = f"{self.gdf_block_id}: {self.comment}"
         ax.set_title(title)  # , pad=16)
         ax.set_xlabel("µm", labelpad=1.0)
         ax.set_ylabel("µm", labelpad=1.0)

@@ -1,14 +1,15 @@
-from typing import List, Optional, Tuple, Dict
 import copy
+from typing import Optional, Dict
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from gdef_reader.utils import create_xy_rms_data, create_absolute_gradient_array, get_mu_sigma_moving_average
-from gdef_reader.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
 from gdef_reader.gdef_sticher import GDEFSticher
+from gdef_reader.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
+from gdef_reader.utils import create_xy_rms_data, create_absolute_gradient_array, get_mu_sigma_moving_average
 
 
 class GDEFPlotter:
@@ -24,6 +25,30 @@ class GDEFPlotter:
         self.plotter_style_rms: PlotterStyle = get_plotter_style_rms(dpi=dpi, figure_size=figure_size)
         self.plotter_style_sigma: PlotterStyle = get_plotter_style_sigma(dpi=dpi, figure_size=figure_size)
         self.auto_show = auto_show
+
+    @property
+    def dpi(self):
+        return self.dpi
+
+    @property
+    def figure_size(self):
+        return self.figure_size
+
+    @dpi.setter
+    def dpi(self, value):
+        self.set_dpi_and_figure_size(dpi=value)
+
+    @figure_size.setter
+    def figure_size(self, value):
+        self.set_dpi_and_figure_size(figure_size=value)
+
+    def set_dpi_and_figure_size(self, dpi=None, figure_size=None):
+        if dpi is None:
+            dpi = self.dpi
+        if figure_size is None:
+            figure_size = self.figure_size
+        self.plotter_style_rms: PlotterStyle = get_plotter_style_rms(dpi=dpi, figure_size=figure_size)
+        self.plotter_style_sigma: PlotterStyle = get_plotter_style_sigma(dpi=dpi, figure_size=figure_size)
 
     def create_surface_figure(self, values: np.ndarray, pixel_width, cropped=True) -> Optional[Figure]:
         if values is None:
@@ -55,12 +80,13 @@ class GDEFPlotter:
 
         ax_rms.plot(x_pos, y_rms, **self.plotter_style_rms.graph_styler.dict)  # 'r')
         if title:
-            info = f"(moving average n={moving_average_n} ({moving_average_n*pixel_width*1e6:.1f} µm))"
+            info = f"(moving average n={moving_average_n} ({moving_average_n * pixel_width * 1e6:.1f} µm))"
             result.suptitle(f'{title} {info}')  # , fontsize=16)
         self._auto_show_figure(result)
         return result
 
-    def create_absolute_gradient_rms_figure(self, values: np.ndarray, cutoff_percent_list, pixel_width, moving_average_n=1) -> Figure:
+    def create_absolute_gradient_rms_figure(self, values: np.ndarray, cutoff_percent_list, pixel_width,
+                                            moving_average_n=1) -> Figure:
         result, (ax_gradient_rms) = plt.subplots(1, 1, figsize=self.figure_size)
         ax_gradient_rms.set_xlabel("[µm]")
         ax_gradient_rms.set_ylabel(f"rms(abs(grad(surface)))) (moving average over {moving_average_n} column(s))")
@@ -82,6 +108,7 @@ class GDEFPlotter:
         """
         Plot surface-values to given ax. Necessary, to use figures with subplots effectivly.
         """
+
         def extent_for_plot(shape, pixel_width):
             width_in_um = shape[1] * pixel_width * 1e6
             height_in_um = shape[0] * pixel_width * 1e6
@@ -113,7 +140,7 @@ class GDEFPlotter:
             for i in range(sticher.stiched_data.shape[1] - moving_average_n):
                 x_pos.append((i + max(moving_average_n - 1, 0) / 2.0) * pixel_width_in_um)
 
-            _, y_sigma = get_mu_sigma_moving_average(sticher.stiched_data*1e6, moving_average_n)
+            _, y_sigma = get_mu_sigma_moving_average(sticher.stiched_data * 1e6, moving_average_n)
 
             ax_sigma.plot(x_pos, y_sigma, **graph_styler.dict, label=key)
             graph_styler.next_style()
@@ -135,7 +162,8 @@ class GDEFPlotter:
         :param nan_color:
         :return:
         """
-        result, ax_list_cutoff = plt.subplots(len(cutoff_percent_list), 1, figsize=(self.figure_size[0], len(cutoff_percent_list)))
+        result, ax_list_cutoff = plt.subplots(len(cutoff_percent_list), 1,
+                                              figsize=(self.figure_size[0], len(cutoff_percent_list)))
 
         cmap_gray_red_nan = copy.copy(plt.cm.gray)  # use copy to prevent unwanted changes to other plots somewhere else
         cmap_gray_red_nan.set_bad(color=nan_color)
@@ -155,7 +183,7 @@ class GDEFPlotter:
 
         optimal_ratio = figure_size[0] / figure_size[1]
         dummy_fig = cls.get_plot_from_sticher(list(sticher_dict.values())[0], title='dummy',
-                                          max_figure_size=figure_size)  # measurements[0].create_plot()
+                                              max_figure_size=figure_size)  # measurements[0].create_plot()
         single_plot_ratio = dummy_fig.get_figwidth() / dummy_fig.get_figheight()
         optimal_ratio /= single_plot_ratio
 
@@ -230,7 +258,7 @@ class GDEFPlotter:
 
     @classmethod
     def get_compare_gradient_rms_figure(cls, pptx, sticher_dict, cutoff_percent=8, moving_average_n=1, figsize=(8, 4),
-                                               x_offset=0):
+                                        x_offset=0):
         fig, ax_compare_gradient_rms = plt.subplots(1, figsize=figsize, dpi=300)
 
         ax_compare_gradient_rms.set_xlabel("[µm]")
@@ -256,3 +284,7 @@ class GDEFPlotter:
             ax_compare_gradient_rms.legend()
         # fig.suptitle(f"cutoff = {cutoff_percent}%")
         fig.tight_layout()
+
+    @figure_size.setter
+    def figure_size(self, value):
+        self._figure_size = value

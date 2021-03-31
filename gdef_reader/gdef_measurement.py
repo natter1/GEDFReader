@@ -1,3 +1,8 @@
+"""
+A *.gdf file can contain many AFM measurements. To handle a single measurement the class GDEFMeasurement is used.
+All the settings used during that specific measurement are stored in a GDEFSettings object.
+@author: Nathanael Jöhrmann
+"""
 import pickle
 from pathlib import Path
 from typing import Optional, Tuple
@@ -82,6 +87,13 @@ class GDEFSettings:
 
 
 class GDEFMeasurement:
+    """
+    Class containing data of a single measurement from \*.gdf file.
+
+    Attributes:
+
+        * basename: Path.stem of the imported \*.gdf file.
+    """
     def __init__(self):
         self._header: Optional[GDEFHeader] = None
         self._spm_image_file_version = None
@@ -101,6 +113,8 @@ class GDEFMeasurement:
 
     @property
     def name(self) -> str:
+        if self.gdf_block_id is None:  # no measurement data loaded
+            return ""
         return f"{self.gdf_basename}_block_{self.gdf_block_id:03}"
 
     @property
@@ -208,7 +222,7 @@ class GDEFMeasurement:
         """
         Subtract legendre polynomial fit of degree legendre_deg from values_original and save the result in values.
         If keep_offset is true, the mean value of dataset is preserved. Right now only changes topographical data.
-         average value to zero and subtract tilted background-plane."""
+        average value to zero and subtract tilted background-plane."""
         if not self.settings.source_channel == 11:  # only correct topography data
             return
         if use_gradient_plane:

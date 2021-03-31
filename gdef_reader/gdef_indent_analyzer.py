@@ -1,3 +1,6 @@
+"""
+@author: Nathanael Jöhrmann
+"""
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes

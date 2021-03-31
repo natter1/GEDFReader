@@ -1,3 +1,6 @@
+"""
+@author: Nathanael Jöhrmann
+"""
 import warnings
 from typing import List
 

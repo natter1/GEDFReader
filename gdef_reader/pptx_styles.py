@@ -1,3 +1,6 @@
+"""
+@author: Nathanael Jöhrmann
+"""
 from pptx.shapes.autoshape import Shape
 from pptx_tools.font_style import PPTXFontStyle
 from pptx_tools.position import PPTXPosition

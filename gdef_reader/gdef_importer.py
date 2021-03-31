@@ -1,3 +1,6 @@
+"""
+@author: Nathanael Jöhrmann
+"""
 import io
 import struct
 from pathlib import Path
@@ -14,8 +17,20 @@ from gdef_reader.gdef_measurement import GDEFMeasurement
 
 
 class GDEFImporter:
-    def __init__(self, filename: Path):
-        self.basename = filename.stem
+    """
+    This class is used to read data from a \*.gdf file (DME AFM) into python. This can be done like:
+
+    .. code:: python
+
+        from gdef_reader.gdef_importer import GDEFImporter
+        impported_data = GDEFImporter(gdf_path)  # gdf_path should be a pathlib.Path to a *.gdf file
+
+    Attributes:
+
+        * basename: Path.stem of the imported \*.gdf file.
+    """
+    def __init__(self, filename: Optional[Path] = None):
+        self.basename = ""
 
         # def make_folder(folder):
         #     try:
@@ -32,11 +47,13 @@ class GDEFImporter:
         self.base_blocks: List[GDEFControlBlock] = []
 
         self._eof = None
-        self.load(filename)
+        if filename:
+            self.load(filename)
 
     def export_measurements(self, path: Path = None, create_images: bool = False) -> List[GDEFMeasurement]:
         """
-        Create a list of GDEFMeasurement-Objects from imported data.
+        Create a list of GDEFMeasurement-Objects from imported data. The optional parameter create_images
+        can be used to show a matplotlib Figure for each GDEFMeasurement (default value is False).
         :param path: Save path for GDEFMeasurement-objects. No saved files, if None.
         :param create_images:
         :return: list of GDEFMeasurement-Objects
@@ -63,6 +80,12 @@ class GDEFImporter:
         return result
 
     def load(self, filename: Union[str, Path]):
+        """
+        Import data from a \*.gdf file.
+        :param filename:
+        :return:
+        """
+        self.basename = filename.stem
         self.buffer = open(filename, 'rb')
         self._eof = self.buffer.seek(0, 2)
         self.buffer.seek(0)

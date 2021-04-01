@@ -1,7 +1,7 @@
 GDEFReader
 ==========
-.. image:: https://img.shields.io/pypi/v/gdef_reader.svg
-    :target: https://pypi.org/project/gdef_reader/
+.. image:: https://img.shields.io/pypi/v/GDEFReader.svg
+    :target: https://pypi.org/project/GDEFReader/
 
 .. image:: http://img.shields.io/:license-MIT-blue.svg?style=flat-square
     :target: http://badges.MIT-license.org
@@ -25,23 +25,23 @@ Features
 * stich measurements
 * create customizable output (e.g. \*.png or power point presentstions)
 
+
 Content
 -------
-  * `GDEFImporter <#class-gdefimporter>`__: Class to import \*.gdf files
-  * `Single measurements <single-measurements>`__
-     + `class GDEFMeasurement <#class-gdefmeasurement>`__: Class containing data of a single measurement from \*.gdf file.
-     + `class GDEFSettings <#class-gdefsettings>`__: Class containing all settings of a measurement.
-  * `class GDEFSticher <#class-gdefsticher>`__: Tool to stich several measurements together using cross correlation.
-  * `class GDEFReporter <#class-gdefreporter>`__: Tool to create reports (\*.pptx, \*.png(?), matplotlib figures(?))
-     + `class GDEFContainer <#class-gdefcontainer>`__: Helper class for measurement filtering and background correction.
-     + `class GDEFContainerList <#class-GDEFContainerList>`__
-  * `utils.py <#utilspy>`__: A collection of useful functions, eg. to generate PDF or PNG from \*.pptx (needs PowerPoint installed)
-  * `Examples <#example>`__: Collection of examples demonstrating how to use gdef_reader.
+* `Module gdef_reader.gdef_importer <#module-gdef-reader-gdef-importer>`__
+   * `class GDEFImporter <#class-gdefimporter>`__
+* `Module gdef_reader.gdef_measurement <#module-gdef-reader-gdef-measurement>`__
+   * `class GDEFMeasurement <#class-gdefmeasurement>`__
+   * `class GDEFSettings <#class-gdefsettings>`__
+* `Module gdef_reader.gdef_sticher <#module-gdef-reader-gdef-sticher>`__
+   * `class GDEFSticher <#class-gdefsticher>`__
 
+
+Module gdef_reader.gdef_importer
+--------------------------------
 
 class GDEFImporter
-------------------
-
+~~~~~~~~~~~~~~~~~~
 This class is used to read data from a \*.gdf file (DME AFM) into python. This can be done like:
 
 .. code:: python
@@ -49,38 +49,213 @@ This class is used to read data from a \*.gdf file (DME AFM) into python. This c
     from gdef_reader.gdef_importer import GDEFImporter
     impported_data = GDEFImporter(gdf_path)  # gdf_path should be a pathlib.Path to a *.gdf file
 
+Attributes:
 
-**Methods defined:**
+    * basename: Path.stem of the imported \*.gdf file.
 
-* export_measurements
-    Create a list of GDEFMeasurement-Objects from imported data. The optional parameter create_images can be used to
-    show a matplotlib Figure for each GDEFMeasurement (default value is False).
-* load
+**Methods:**
+
+* **export_measurements**
+
+    .. code:: python
+
+        export_measurements(self, path: pathlib.Path = None, create_images: bool = False) -> List[gdef_reader.gdef_measurement.GDEFMeasurement]
+
+    Create a list of GDEFMeasurement-Objects from imported data. The optional parameter create_images
+    can be used to show a matplotlib Figure for each GDEFMeasurement (default value is False).
+    :param path: Save path for GDEFMeasurement-objects. No saved files, if None.
+    :param create_images:
+    :return: list of GDEFMeasurement-Objects
+
+* **load**
+
+    .. code:: python
+
+        load(self, filename: Union[str, pathlib.Path])
+
     Import data from a \*.gdf file.
+    :param filename:
+    :return:
 
-**Properties defined:**
+**Instance Variables:**
 
-* **basename**: Path.stem of the imported \*.gdf file.
+* base_blocks
+* basename
+* blocks
+* buffer
+* header
 
-
-Single GDEFMeasurement
--------------------
-A \*.gdf file can contain many AFM measurements. To handle a single measurement the class GDEFMeasurement is used.
-All the settings used during that specific measurement are stored in a GDEFSettings object.
-
+Module gdef_reader.gdef_measurement
+-----------------------------------
 
 class GDEFMeasurement
 ~~~~~~~~~~~~~~~~~~~~~
 Class containing data of a single measurement from \*.gdf file.
 
-**Methods defined:**
+Attributes:
 
-* export_measurements
-    Create a list of GDEFMeasurement-Objects from imported data. The optional parameter create_images can be used to
-    show a matplotlib Figure for each GDEFMeasurement (default value is False).
-* load
-    Import data from a \*.gdf file.
+    * basename: Path.stem of the imported \*.gdf file.
 
-**Properties defined:**
+**Methods:**
 
-* **basename**: Path.stem of the imported \*.gdf file.
+* **correct_background**
+
+    .. code:: python
+
+        correct_background(self, use_gradient_plane: bool = True, legendre_deg: int = 1, keep_offset: bool = False)
+
+    Subtract legendre polynomial fit of degree legendre_deg from values_original and save the result in values.
+    If keep_offset is true, the mean value of dataset is preserved. Right now only changes topographical data.
+    average value to zero and subtract tilted background-plane.
+
+* **create_plot**
+
+    .. code:: python
+
+        create_plot(self, max_figure_size=(4, 4), dpi=96) -> Union[matplotlib.figure.Figure, NoneType]
+
+
+* **get_summary_table_data**
+
+    .. code:: python
+
+        get_summary_table_data(self)
+
+
+* **load**
+
+    .. code:: python
+
+        load(filename) -> 'GDEFMeasurement'
+
+
+* **save**
+
+    .. code:: python
+
+        save(self, filename)
+
+
+* **save_png**
+
+    .. code:: python
+
+        save_png(self, filename, max_figure_size=(4, 4), dpi: int = 300, transparent: bool = False)
+
+
+* **set_topography_to_axes**
+
+    .. code:: python
+
+        set_topography_to_axes(self, ax: matplotlib.axes._axes.Axes)
+
+
+**Instance Variables:**
+
+* background_corrected
+* comment
+* filename
+* gdf_basename
+* gdf_block_id
+* name
+* preview
+* settings
+* values
+* values_original
+
+class GDEFSettings
+~~~~~~~~~~~~~~~~~~
+
+**Methods:**
+
+* **pixel_area**
+
+    .. code:: python
+
+        pixel_area(self) -> float
+
+
+* **shape**
+
+    .. code:: python
+
+        shape(self) -> Tuple[int, int]
+
+
+* **size_in_um_for_plot**
+
+    .. code:: python
+
+        size_in_um_for_plot(self) -> Tuple[float, float, float, float]
+
+
+**Instance Variables:**
+
+* aux_gain
+* bias_voltage
+* calculated
+* columns
+* digital_loop
+* direct_ac
+* fft_type
+* fixed_max
+* fixed_min
+* fixed_palette
+* frequency_offset
+* id
+* invert_line_mean
+* invert_plane_corr
+* line_mean
+* line_mean_order
+* lines
+* loop_filter
+* loop_gain
+* loop_int
+* max_height
+* max_width
+* measured_amplitude
+* missing_lines
+* offset_pos
+* offset_x
+* offset_y
+* phase_shift
+* pixel_blend
+* pixel_width
+* q_boost
+* q_factor
+* retrace
+* retrace_type
+* scan_direction
+* scan_mode
+* scan_speed
+* scanner_range
+* set_point
+* source_channel
+* x_calib
+* xy_linearized
+* y_calib
+* z_calib
+* z_linearized
+* z_unit
+* zero_scan
+
+Module gdef_reader.gdef_sticher
+-------------------------------
+
+class GDEFSticher
+~~~~~~~~~~~~~~~~~
+
+**Methods:**
+
+* **stich**
+
+    .. code:: python
+
+        stich(self, initial_x_offset_fraction: float = 0.35, show_control_figures: bool = False) -> numpy.ndarray
+
+    Stiches a list of GDEFMeasurement.values using cross-correlation.
+    :param initial_x_offset_fraction: used to specify max. overlap area, thus increasing speed and reducing risk of wrong stiching
+    :return: stiched np.ndarray
+
+**Instance Variables:**
+

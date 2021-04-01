@@ -1,3 +1,6 @@
+"""
+@author: Nathanael Jöhrmann
+"""
 from pathlib import Path, PurePath
 from typing import List, Union
 

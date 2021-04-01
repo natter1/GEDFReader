@@ -1,3 +1,6 @@
+"""
+@author: Nathanael Jöhrmann
+"""
 import copy
 from typing import Optional, Dict
 

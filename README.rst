@@ -26,17 +26,10 @@ Features
 * create customizable output (e.g. \*.png or power point presentstions)
 
 
-Content
--------
-* `Module gdef_reader.gdef_importer <#module-gdef-reader-gdef-importer>`__
-   * `class GDEFImporter <#class-gdefimporter>`__
-* `Module gdef_reader.gdef_measurement <#module-gdef-reader-gdef-measurement>`__
-   * `class GDEFMeasurement <#class-gdefmeasurement>`__
-   * `class GDEFSettings <#class-gdefsettings>`__
-* `Module gdef_reader.gdef_sticher <#module-gdef-reader-gdef-sticher>`__
-   * `class GDEFSticher <#class-gdefsticher>`__
+.. contents:: Table of Contents
 
-
+API documentation
+=================
 Module gdef_reader.gdef_importer
 --------------------------------
 
@@ -84,6 +77,31 @@ Attributes:
 * blocks
 * buffer
 * header
+
+Module gdef_reader.gdef_indent_analyzer
+---------------------------------------
+
+class GDEFIndentAnalyzer
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Methods:**
+
+* **add_indent_pile_up_mask_to_axes**
+
+    .. code:: python
+
+        add_indent_pile_up_mask_to_axes(self, ax: matplotlib.axes._axes.Axes, roughness_part=0.05) -> matplotlib.axes._axes.Axes
+
+
+* **get_summary_table_data**
+
+    .. code:: python
+
+        get_summary_table_data(self)
+
+
+**Instance Variables:**
+
 
 Module gdef_reader.gdef_measurement
 -----------------------------------

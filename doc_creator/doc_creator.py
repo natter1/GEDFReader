@@ -9,15 +9,14 @@ from types import ModuleType
 from typing import Tuple
 
 import gdef_reader.gdef_importer as gdef_importer
-from gdef_reader import gdef_measurement, gdef_sticher
+from gdef_reader import gdef_measurement, gdef_sticher, gdef_indent_analyzer
 
 module_list = [
     gdef_importer,
+    gdef_indent_analyzer,
     gdef_measurement,
     gdef_sticher
 ]
-
-content_list = []
 
 
 def main():
@@ -27,7 +26,6 @@ def main():
         readme_api += get_module_doc(module)
 
     readme = get_readme_header()
-    readme += get_content()
     readme += readme_api
     with open('auto_readme.rst', 'w') as f:
         f.writelines(readme)
@@ -40,32 +38,7 @@ def get_readme_header():
     return result
 
 
-def get_content() -> str:
-    result = create_header_with_line("Content", "-", create_content_entry_flag=False)
-    result += "\n".join(content_list)
-    result += "\n\n"
-    return result
-
-
-def create_content_entry(header_text: str, line_char='-') -> str:
-    link_text = header_text.lower()
-    link_text = link_text.replace(".", "-")
-    link_text = link_text.replace(" ", "-")
-    link_text = link_text.replace("_", "-")
-    link_text = f"<#{link_text}>"
-    entry = f"* `{header_text} {link_text}`__"
-
-    indent = '   '
-    if line_char is '~':
-        entry = textwrap.indent(entry, 1 * indent)
-
-    content_list.append(entry)
-
-
-def create_header_with_line(header_text: str, line_char='-', create_content_entry_flag=True):
-    if create_content_entry_flag:
-        create_content_entry(header_text, line_char)
-
+def create_header_with_line(header_text: str, line_char='-'):
     result = f"\n{header_text}\n"
     result += len(header_text) * line_char + '\n'
     return result
@@ -112,7 +85,7 @@ def get_properties_doc(item):
     try:
         dummy_obj = item()
     except:
-        print(f"Instance of {item.__name__} could not be created. Therfore no class attributes where added to doc")
+        print(f"Instance of {item.__name__} could not be created. Therefore no class attributes where added to doc")
         return ""
 
     for attribute in inspect.getmembers(dummy_obj, lambda a: not (inspect.isroutine(a))):

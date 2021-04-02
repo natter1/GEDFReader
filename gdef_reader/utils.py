@@ -68,7 +68,7 @@ def create_png_for_nanoindents(path: Path, png_save_path: Optional[Path] = None)
         print(png_save_path.joinpath(f"{measurement.filename.stem + '.png'}"))
         figure.savefig(png_save_path.joinpath(f"{measurement.filename.stem + '.png'}"),
                        dpi=96)  # , transparent=transparent)
-        indent_analyzer.add_indent_pile_up_mask_to_axes(figure.axes[0])
+        indent_analyzer.add_map_with_indent_pile_up_mask_to_axes(figure.axes[0])
         print(png_save_path.joinpath(f"{measurement.filename.stem + '_masked.png'}"))
         figure.savefig(png_save_path.joinpath(f"{measurement.filename.stem + '_masked.png'}"), dpi=96)
         figure.clear()
@@ -92,7 +92,7 @@ def create_pptx_for_nanoindents(path, pptx_filename, pptx_template: Optional[Abs
         minimize_table_height(table_shape)
         # figure.savefig(f"{measurement.basename.with_suffix('.png')}")  # , transparent=transparent)
 
-        indent_analyzer.add_indent_pile_up_mask_to_axes(figure.axes[0], roughness_part=0.05)
+        indent_analyzer.add_map_with_indent_pile_up_mask_to_axes(figure.axes[0], roughness_part=0.05)
         # figure.savefig(f"{measurement.basename.with_name(measurement.basename.stem + '_masked.png')}", dpi=96)
         pptx.add_matplotlib_figure(figure, slide, position_2x2_10())
         table_shape = pptx.add_table(slide, indent_analyzer.get_summary_table_data(), position_2x2_11(),
@@ -415,3 +415,12 @@ def create_z_histogram_from_ndarray(values2d: np.ndarray, title="", n_bins=200):
 #         i += 1
 #     result.tight_layout()
 #     return result
+
+
+# def make_folder(folder):
+#     try:
+#         os.mkdir(folder)
+#     except OSError as exc:
+#         if exc.errno != errno.EEXIST:
+#             raise
+#         pass  # path already exit -> no error handling needed

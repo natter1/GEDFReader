@@ -1,5 +1,5 @@
 """
-This python script is meant to autocreate part of the documentation. This is work in progress right now.
+This python script is meant to auto-create part of the documentation (mainly the API documentation).
 @author: Nathanael Jöhrmann
 """
 import inspect
@@ -68,13 +68,14 @@ def get_python_module_header(module: ModuleType):
 def get_functions_doc(item):
     result = []
     for func in inspect.getmembers(item, inspect.isfunction):
-        if func[0].startswith("_"):  # Consider anything that starts with _ private and don't document it.
+        if func[0].startswith("_") and not func[0] == '__init__':  # Consider anything that starts with _ private and don't document it.
             continue
         result.append('\n* **' + func[0] + '**\n')  # Get the signature
 
         result.append(create_python_block(func[0] + str(inspect.signature(func[1])), n_indent=1))
         doc = inspect.getdoc(func[1])
         if doc:
+            doc = doc.replace(':param ', '\n:').replace(':return:', '\n:return:')
             doc = textwrap.indent(doc, '    ')
             result.append(doc + "\n")
     return "".join(result)

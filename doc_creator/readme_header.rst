@@ -23,7 +23,7 @@ Features
 * create maps using matplotlib
 * analyze nanoindents
 * stich measurements
-* create customizable output (e.g. \*.png or power point presentstions)
+* create customizable output (e.g. \*.png or power point presentations)
 
 
 .. contents:: Table of Contents

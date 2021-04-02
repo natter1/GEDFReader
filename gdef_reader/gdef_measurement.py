@@ -5,7 +5,7 @@ All the settings used during that specific measurement are stored in a GDEFSetti
 """
 import pickle
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,6 +18,9 @@ from gdef_reader.gdef_data_strucutres import GDEFHeader
 
 
 class GDEFSettings:
+    """
+    Stores all the settings used during measurement.
+    """
     def __init__(self):
         # Settings:
         self.lines = None
@@ -69,20 +72,33 @@ class GDEFSettings:
         self.offset_pos = None
 
         self._pixel_width = None
+        self._pixel_height = None
 
     @property
     def pixel_width(self) -> float:
+        """Return pixel-width [m]."""
         return self._pixel_width  # self.max_width / self.columns
 
+    @property
+    def pixel_height(self) -> float:
+        """Return pixel-height [m]."""
+        return self._pixel_height  # self.max_height / self.lines
+
     def pixel_area(self) -> float:
-        return self.pixel_width**2
+        """Return pixel-area [m^2]"""
+        return self.pixel_width * self._pixel_height
 
     def size_in_um_for_plot(self) -> Tuple[float, float, float, float]:
+        """Returns the size of the scanned area as a tuple for use with matplotlib."""
         width_in_um = self.max_width * 1e6
         height_in_um = self.max_height * (self.lines - self.missing_lines) / self.lines * 1e6
         return 0.0, width_in_um, 0.0, height_in_um
 
     def shape(self) -> Tuple[int, int]:
+        """
+        Returns the shape of the scanned area (columns, lines). In case of aborted measurements, lines is reduced
+        by the number of missing lines.
+        """
         return self.columns - self.missing_lines, self.lines
 
 
@@ -90,7 +106,7 @@ class GDEFMeasurement:
     """
     Class containing data of a single measurement from \*.gdf file.
 
-    Attributes:
+    :Attributes:
 
         * basename: Path.stem of the imported \*.gdf file.
     """
@@ -113,25 +129,50 @@ class GDEFMeasurement:
 
     @property
     def name(self) -> str:
+        """Returns a name of the measurement created from original \*.gdf filename and the gdf_block_id"""
         if self.gdf_block_id is None:  # no measurement data loaded
             return ""
-        return f"{self.gdf_basename}_block_{self.gdf_block_id:03}"
+        return f"{self.gdf_basename}_block_{self.gdf_block_id:04}"
 
     @property
     def values_original(self) -> np.ndarray:
+        """Returns an numpy.ndarray with the original measurement data (before background correction etc.)."""
         return self._values_original
 
     def save(self, filename):
+        """
+        Save the measurement object using pickle. This is useful for example, if the corresponding
+        \*.gdf file contains a lot of measurements, but only a few of them are needed. Take note, that pickle is not
+        a save module to load data. Make sure to only use files from trustworthy sources.
+
+        :param filename:
+        :return:
+        """
         with open(filename, 'wb') as file:
             pickle.dump(self, file, 3)
 
     @staticmethod
-    def load(filename) -> "GDEFMeasurement":
+    def load(filename: Path) -> "GDEFMeasurement":
+        """
+        Load a measurement object using pickle. Take note, that pickle is not a save module to load data.
+        Make sure to only use files from trustworthy sources.
+
+        :param filename:
+        :return:
+        """
         with open(filename, 'rb'):
             return pickle.load(filename)
 
     # todo: check possible types for filename (str, path, ...)
     def save_png(self, filename, max_figure_size=(4, 4), dpi: int = 300, transparent: bool = False):
+        """
+        Save a matplotlib.Figure aof the measurement as a \*.png.
+        :param filename:
+        :param max_figure_size: Max size of the Figure. The final size might be smaller in x or y.
+        :param dpi: (default 300)
+        :param transparent: Set background transparent (default False).
+        :return:
+        """
         figure = self.create_plot(max_figure_size=max_figure_size, dpi=dpi)
         if figure:
             figure.savefig(filename, transparent=transparent, dpi=dpi)
@@ -221,8 +262,15 @@ class GDEFMeasurement:
     def correct_background(self, use_gradient_plane: bool = True, legendre_deg: int = 1, keep_offset: bool = False):
         """
         Subtract legendre polynomial fit of degree legendre_deg from values_original and save the result in values.
-        If keep_offset is true, the mean value of dataset is preserved. Right now only changes topographical data.
-        average value to zero and subtract tilted background-plane."""
+        If keep_offset is true, the mean value of dataset is preserved. Otherwise the average value is set to zero.
+        Right now only changes topographical data. Also, the original data can be obtained again via
+        GDEFMeasurement.values_original.
+
+        :param use_gradient_plane: Background is corrected by subtracting tilted background-plane (using gradient).
+        :param legendre_deg: If use_gradient_plane is False, a legendre polynom is used to correct background.
+        :param keep_offset: If True (default) keeps average offset, otherwise average offset is reduced to 0.
+        :return:
+        """
         if not self.settings.source_channel == 11:  # only correct topography data
             return
         if use_gradient_plane:
@@ -252,7 +300,11 @@ class GDEFMeasurement:
         except ValueError:
             pass
 
-    def get_summary_table_data(self):  # todo: consider move method to utils.py
+    def get_summary_table_data(self) -> List[list]:  # todo: consider move method to utils.py
+        """
+        Create table data (list of list) summary of the measurement. The result can be used directly to fill a
+        pptx-table with `python-ppxt-interface <https://github.com/natter1/python_pptx_interface/>`_.
+        """
         result = [["source channel", self.settings.source_channel]]
         result.append(["retrace", self.settings.retrace])
         result.append(["missing lines", self.settings.missing_lines])

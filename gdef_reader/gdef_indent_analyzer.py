@@ -1,6 +1,10 @@
 """
+This module is used to analyze indents. Right now this includes ,indent area and volume,  pile-up area and volume and
+z-min/max. Right now it is still early work in progress, and major changes are likely.
 @author: Nathanael Jöhrmann
 """
+from typing import List
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
@@ -9,11 +13,17 @@ from gdef_reader.gdef_measurement import GDEFMeasurement
 
 
 class GDEFIndentAnalyzer:
+    """
+    Class to analyze a GDEFMeasurment with an indent.
+    """
     # speed optimization to reduce calculationtime of _is_pixel_in_radius()
     pixel_radius_distance_matrix = {}
     max_pixel_radius_value = 0
 
     def __init__(self, measurement: GDEFMeasurement):
+        """
+        :param measurement: GDEFMeasurement with the indent to analyze.
+        """
         self.measurement = measurement
         self.radius = 0
         self.pileup = []
@@ -77,7 +87,14 @@ class GDEFIndentAnalyzer:
                     result[index] = (0, 0, 0, 0.1)
         return result
 
-    def add_indent_pile_up_mask_to_axes(self, ax: Axes, roughness_part=0.05) -> Axes:
+    def add_map_with_indent_pile_up_mask_to_axes(self, ax: Axes, roughness_part=0.05) -> Axes:
+        """
+        Add a topography map with a color mask for pile-up to the given ax. Pile-up is determined as all pixels with
+        z>0 + roughness_part \* z_max
+        :param ax: Axes object, to whitch the masked map should be added
+        :param roughness_part:
+        :return: Axes
+        """
         data = self._get_indent_pile_up_area_mask(roughness_part=roughness_part)
         extent = self.measurement.settings.size_in_um_for_plot()
         ax.imshow(data, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
@@ -94,7 +111,12 @@ class GDEFIndentAnalyzer:
             volume += self.measurement.settings.pixel_area() * abs(self.measurement.values[index])
         return area, volume
 
-    def get_summary_table_data(self):  # todo: consider move method to utils.py
+    def get_summary_table_data(self) -> List[list]:  # todo: consider move method to utils.py
+        """
+        Returns a table (list of lists) with data of the indent. The result can be used directly to fill a pptx-table
+        with `python-ppxt-interface <https://github.com/natter1/python_pptx_interface/>`_.
+        :return:
+        """
         indent_area, indent_volume = self._calc_area_and_volume(self.indent)
         pileup_area, pileup_volume = self._calc_area_and_volume(self.pileup)
 

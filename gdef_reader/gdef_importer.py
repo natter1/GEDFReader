@@ -30,15 +30,10 @@ class GDEFImporter:
         * basename: Path.stem of the imported \*.gdf file.
     """
     def __init__(self, filename: Optional[Path] = None):
+        """
+        :param filename: Path to \*.gdf file. If it is None (default), a file has to be loaded via GDEFImporter.load().
+        """
         self.basename = ""
-
-        # def make_folder(folder):
-        #     try:
-        #         os.mkdir(folder)
-        #     except OSError as exc:
-        #         if exc.errno != errno.EEXIST:
-        #             raise
-        #         pass  # path already exit -> no error handling needed
 
         self.header: GDEFHeader = GDEFHeader()
         self.buffer: Optional[BinaryIO] = None
@@ -55,7 +50,7 @@ class GDEFImporter:
         Create a list of GDEFMeasurement-Objects from imported data. The optional parameter create_images
         can be used to show a matplotlib Figure for each GDEFMeasurement (default value is False).
         :param path: Save path for GDEFMeasurement-objects. No saved files, if None.
-        :param create_images:
+        :param create_images: Show a matplotlib Figure for each GDEFMeasurement; used for debugging (default: False)
         :return: list of GDEFMeasurement-Objects
         """
         result = []
@@ -75,14 +70,14 @@ class GDEFImporter:
                 path.mkdir(parents=True, exist_ok=True)
                 if create_images:
                     measurement.save_png(f"{path}\\{self.basename}_block_{measurement.gdf_block_id}", dpi=96)
-                measurement.save(f"{path}\\{self.basename}_block_{measurement.gdf_block_id:03}.pygdf")  # todo: what happens, when block.id > 999?
+                measurement.save(f"{path}\\{self.basename}_block_{measurement.gdf_block_id:04}.pygdf")  # todo: what happens, when block.id > 9999?
 
         return result
 
     def load(self, filename: Union[str, Path]):
         """
         Import data from a \*.gdf file.
-        :param filename:
+        :param filename: Path to \*.gdf file.
         :return:
         """
         self.basename = filename.stem
@@ -264,5 +259,6 @@ class GDEFImporter:
         except:
             result.values = None
         result.settings._pixel_width = result.settings.max_width / result.settings.columns
+        result.settings._pixel_height = result.settings.max_height / result.settings.lines
 
         return result

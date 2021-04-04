@@ -23,19 +23,19 @@ class GDEFPlotter:
         :param dpi:
         :param auto_show: automatically call figure.show(), when a figure is created
         """
-        self.dpi = dpi
-        self.figure_size = figure_size
+        self._dpi = dpi
+        self._figure_size = figure_size
         self.plotter_style_rms: PlotterStyle = get_plotter_style_rms(dpi=dpi, figure_size=figure_size)
         self.plotter_style_sigma: PlotterStyle = get_plotter_style_sigma(dpi=dpi, figure_size=figure_size)
         self.auto_show = auto_show
 
     @property
     def dpi(self):
-        return self.dpi
+        return self._dpi
 
     @property
     def figure_size(self):
-        return self.figure_size
+        return self._figure_size
 
     @dpi.setter
     def dpi(self, value):
@@ -50,6 +50,8 @@ class GDEFPlotter:
             dpi = self.dpi
         if figure_size is None:
             figure_size = self.figure_size
+        self._dpi = dpi
+        self._figure_size = figure_size
         self.plotter_style_rms: PlotterStyle = get_plotter_style_rms(dpi=dpi, figure_size=figure_size)
         self.plotter_style_sigma: PlotterStyle = get_plotter_style_sigma(dpi=dpi, figure_size=figure_size)
 

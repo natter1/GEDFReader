@@ -2,9 +2,10 @@
 @author: Nathanael Jöhrmann
 """
 from typing import Optional, Tuple
+
 import matplotlib.pyplot as plt
-from matplotlib.axes import Axes
 import numpy as np
+from matplotlib.axes import Axes
 
 
 class PlotterStyle:
@@ -14,7 +15,7 @@ class PlotterStyle:
 
         self.x_label = None
         self.y_label = None
-        self.ax_title=None
+        self.ax_title = None
         self.grid = None
 
         # self.ax_styler = AxStyler()
@@ -48,9 +49,9 @@ class PlotterStyle:
     def create_preformated_figure(self, nrows=1, ncols=1):
         fig, axs = plt.subplots(nrows, ncols, figsize=self.figure_size, dpi=self.dpi)
 
-        if (nrows==1) and (ncols==1):
+        if (nrows == 1) and (ncols == 1):
             self.set_format_to_ax(axs)
-        elif (nrows==1) or (ncols==1):
+        elif (nrows == 1) or (ncols == 1):
             for ax in axs:
                 self.set_format_to_ax(ax)
         else:
@@ -77,10 +78,11 @@ class GraphStyler:
     Used, to format graphs.
     Call next_style, whenever you want to change current style.
     """
+
     def __init__(self, n_colors=4):
         self.cmap = plt.cm.viridis(np.linspace(0, 1, n_colors))
         self.marker_map = ["."]  # my_styles.MARKER_BERNHARD
-        self.linestyle_map = [""]  #dict(linestyle='')
+        self.linestyle_map = [""]  # dict(linestyle='')
 
         self.marker_size = 4
         self.linewidth = 0
@@ -143,13 +145,14 @@ def get_curve_style_bernhard_4(marker_size=5) -> GraphStyler:
     result.linestyle_map = [""]
     result.marker_map = ["o", "s", "<", ">"]  # ["x", "+", "1"]
     result.marker_size = marker_size
-    result.cmap = [[0, 0, 0], # black
-                         [1, 0, 0],  # red
-                         [0, 0, 1],  # blue
-                         [0, 1, 0]  # green
-                        ]
+    result.cmap = [[0, 0, 0],  # black
+                   [1, 0, 0],  # red
+                   [0, 0, 1],  # blue
+                   [0, 1, 0]  # green
+                   ]
     result.graph_styler = result
     return result
+
 
 def get_power_law_fit_curve_style() -> GraphStyler:
     result = GraphStyler()
@@ -164,7 +167,7 @@ def get_power_law_fit_curve_style() -> GraphStyler:
 # -------------------------- plotter styls for AFM data ---------------------------
 # ---------------------------------------------------------------------------------
 def get_plotter_style_default(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
-    result = PlotterStyle(dpi=300, figure_size=(5.6, 5.0))
+    result = PlotterStyle(dpi=dpi, figure_size=figure_size)
     return result
 
 
@@ -178,11 +181,11 @@ def get_plotter_style_bernhard_4(dpi=300, figure_size=(5.6, 5.0), marker_size=5)
     graph_styler.linestyle_map = [""]
     graph_styler.marker_map = ["o", "s", "<", ">"]  # ["x", "+", "1"]
     graph_styler.marker_size = marker_size
-    graph_styler.cmap = [[0, 0, 0], # black
+    graph_styler.cmap = [[0, 0, 0],  # black
                          [1, 0, 0],  # red
                          [0, 0, 1],  # blue
                          [0, 1, 0]  # green
-                        ]
+                         ]
     result.graph_styler = graph_styler
     return result
 

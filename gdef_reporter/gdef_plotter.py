@@ -68,7 +68,9 @@ class GDEFPlotter:
 
         tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
         figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=self.dpi)
+
         self.plot_surface_to_axes(ax, values, pixel_width)
+        figure_tight.tight_layout()  # TODO: does this create new issues? (added to prevent cut axis titles
         self._auto_show_figure(figure_tight)
         return figure_tight
 

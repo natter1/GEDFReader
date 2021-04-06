@@ -5,7 +5,7 @@ This file contains tests for gdef_plotter.py.
 import pytest
 import numpy as np
 from gdef_reporter.gdef_plotter import GDEFPlotter
-
+from matplotlib.figure import Figure
 
 @pytest.fixture(scope="function", params=[-4, 0, 0.4, 1, 2])
 def _test_case(request):
@@ -21,7 +21,7 @@ def random_ndarray2d_data():
 
 @pytest.fixture(scope='session')
 def gdef_plotter():
-    gdef_plotter = GDEFPlotter(figure_size=(12, 9), dpi=300)
+    gdef_plotter = GDEFPlotter(figure_size=(12, 9), dpi=300, auto_show=True)
     yield gdef_plotter
 
 
@@ -59,6 +59,8 @@ class TestGDEFPlotter:
 
     def test_create_surface_figure(self, gdef_plotter, random_ndarray2d_data):
         assert gdef_plotter.create_surface_figure(None, 1e-6) is None
-        gdef_plotter.auto_show = True
         fig1 = gdef_plotter.create_surface_figure(random_ndarray2d_data, 1e-6)
         fig2 = gdef_plotter.create_surface_figure(random_ndarray2d_data, 1e-6, cropped=False)
+
+        assert type(fig1) is Figure
+        assert type(fig2) is Figure

@@ -301,7 +301,29 @@ def get_mu_sigma_moving_average(values2d: np.ndarray, moving_average_n=200) -> T
     return mu_list, sigma_list
 
 
-def create_z_histogram_from_ndarray(values2d: np.ndarray, title="", n_bins=200):
+def set_z_histogram_from_ndarray_to_ax(ax, values2d: np.ndarray, title="", n_bins=200):
+    z_values = values2d.flatten()
+    z_values = z_values[
+        ~np.isnan(z_values)]  # remove all NaN values (~ is bitwise NOT opperator - similar to numpy.logical_not)
+    z_values = z_values * 1e6  # m -> µm
+    mu, sigma = norm.fit(z_values)
+    norm_bins = np.linspace(z_values.min(), z_values.max(), 100)
+    best_fit_line = norm.pdf(norm_bins, mu, sigma)
+
+    # result, ax = plt.subplots(1, 1, tight_layout=True)
+    H = ax.hist(z_values, density=True, bins=n_bins)
+    ax.plot(norm_bins, best_fit_line)
+    ax.set_xlabel('z [\u03BCm]')
+    ax.set_ylabel('Normalized counts')
+    ax.grid(True)
+    ax.set_title(f"{title} \n \u03BC={mu:.2f}, \u03C3={sigma:.2f}")
+    # containers = H[-1]
+    # legend = ax.legend(frameon=False)
+
+    return ax
+
+
+def create_z_histogram_from_ndarray(values2d: np.ndarray, title="", n_bins=200):  # todo: use set_z_histogram_from_ndarray_to_ax
     z_values = values2d.flatten()
     z_values = z_values[
         ~np.isnan(z_values)]  # remove all NaN values (~ is bitwise NOT opperator - similar to numpy.logical_not)

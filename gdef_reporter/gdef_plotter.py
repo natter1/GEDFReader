@@ -132,7 +132,14 @@ class GDEFPlotter:
         cax.set_title("nm", y=1)  # bar.set_label("nm")
         plt.colorbar(im, cax=cax)
 
-    def create_sigma_moving_average_figure(self, sticher_dict: Dict[str, GDEFSticher], moving_average_n=200):
+    def create_sigma_moving_average_figure(self, sticher_dict: Dict[str, GDEFSticher], moving_average_n=200, step=1):
+        """
+
+        :param sticher_dict:
+        :param moving_average_n:
+        :param step: col step value between moving average values (default 1; moving avg. is calculated for each col)
+        :return:
+        """
         x_pos = []
         y_sigma = []
         pixel_width_in_um = None
@@ -144,10 +151,10 @@ class GDEFPlotter:
             x_pos = []
             y_sigma = []
             pixel_width_in_um = sticher.pixel_width * 1e6
-            for i in range(sticher.stiched_data.shape[1] - moving_average_n):
+            for i in range(0, sticher.stiched_data.shape[1] - moving_average_n, step):
                 x_pos.append((i + max(moving_average_n - 1, 0) / 2.0) * pixel_width_in_um)
 
-            _, y_sigma = get_mu_sigma_moving_average(sticher.stiched_data * 1e6, moving_average_n)
+            _, y_sigma = get_mu_sigma_moving_average(sticher.stiched_data * 1e6, moving_average_n, step)
 
             ax_sigma.plot(x_pos, y_sigma, **graph_styler.dict, label=key)
             graph_styler.next_style()

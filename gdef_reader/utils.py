@@ -1,6 +1,4 @@
-"""
-@author: Nathanael Jöhrmann
-"""
+import copy
 import pickle
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict
@@ -68,7 +66,7 @@ def create_png_for_nanoindents(path: Path, png_save_path: Optional[Path] = None)
         print(png_save_path.joinpath(f"{measurement.filename.stem + '.png'}"))
         figure.savefig(png_save_path.joinpath(f"{measurement.filename.stem + '.png'}"),
                        dpi=96)  # , transparent=transparent)
-        indent_analyzer.add_map_with_indent_pile_up_mask_to_axes(figure.axes[0])
+        indent_analyzer.add_indent_pile_up_mask_to_axes(figure.axes[0])
         print(png_save_path.joinpath(f"{measurement.filename.stem + '_masked.png'}"))
         figure.savefig(png_save_path.joinpath(f"{measurement.filename.stem + '_masked.png'}"), dpi=96)
         figure.clear()
@@ -92,7 +90,7 @@ def create_pptx_for_nanoindents(path, pptx_filename, pptx_template: Optional[Abs
         minimize_table_height(table_shape)
         # figure.savefig(f"{measurement.basename.with_suffix('.png')}")  # , transparent=transparent)
 
-        indent_analyzer.add_map_with_indent_pile_up_mask_to_axes(figure.axes[0], roughness_part=0.05)
+        indent_analyzer.add_indent_pile_up_mask_to_axes(figure.axes[0], roughness_part=0.05)
         # figure.savefig(f"{measurement.basename.with_name(measurement.basename.stem + '_masked.png')}", dpi=96)
         pptx.add_matplotlib_figure(figure, slide, position_2x2_10())
         table_shape = pptx.add_table(slide, indent_analyzer.get_summary_table_data(), position_2x2_11(),
@@ -108,7 +106,7 @@ def nanrms(x: np.ndarray, axis=None, subtract_average: bool = False):
     """Returns root mean square of given numpy.ndarray x."""
     average = 0
     if subtract_average:
-        np.nanmean(x)  # don't do this with rms for gradient field!
+        average = np.nanmean(x)  # don't do this with rms for gradient field!
     return np.sqrt(np.nanmean((x - average) ** 2, axis=axis))
 
 
@@ -129,7 +127,7 @@ def create_absolute_gradient_array(array2d, cutoff=1.0):
 #     array2d = 255 * array2d  # Now scale by 255
 #     return array2d.astype(np.uint8)
 
-def create_xy_rms_data(values: np.ndarray, pixel_width, moving_average_n=1) -> Tuple[list, list]:
+def create_xy_rms_data(values: np.ndarray, pixel_width, moving_average_n=1, subtract_average=False) -> Tuple[list, list]:
     """
     :param values: 2D array
     :param pixel_width:
@@ -140,7 +138,7 @@ def create_xy_rms_data(values: np.ndarray, pixel_width, moving_average_n=1) -> T
     y_rms = []
     for i in range(values.shape[1] - moving_average_n):
         x_pos.append((i + max(moving_average_n - 1, 0) / 2.0) * pixel_width * 1e6)
-        y_rms.append(nanrms(values[:, i:i + moving_average_n]))
+        y_rms.append(nanrms(values[:, i:i + moving_average_n], subtract_average=subtract_average))
     return x_pos, y_rms
 
 
@@ -194,7 +192,7 @@ def save_figure(figure: Figure, output_path: Path, filename: str, png: bool = Tr
 
 
 def _create_rms_figure(data_dict: Dict[str, dict], moving_average_n, x_offset,
-                       plotter_style: PlotterStyle, y_label: str) -> Figure:
+                       plotter_style: PlotterStyle, y_label: str, subtract_average=False) -> Figure:
     """
     Creates a matplotlib figure, showing a graph of the root meean square of the np.ndarray in
     data_dict. The key value in data_dict is used as label in the legend.
@@ -213,7 +211,7 @@ def _create_rms_figure(data_dict: Dict[str, dict], moving_average_n, x_offset,
     ax_rms.set_yticks([])
 
     for key, value in data_dict.items():
-        x_pos, y_rms = create_xy_rms_data(value["data"], value["pixel_width"], moving_average_n)
+        x_pos, y_rms = create_xy_rms_data(value["data"], value["pixel_width"], moving_average_n, subtract_average=subtract_average)
         x_pos = [x + x_offset for x in x_pos]
 
         ax_rms.plot(x_pos, y_rms, **graph_styler.dict, label=key)
@@ -245,7 +243,7 @@ def create_rms_figure(sticher_dict: Dict[str, GDEFSticher], moving_average_n=1,
     for key, sticher in sticher_dict.items():
         data_dict[key] = {"pixel_width": sticher.pixel_width, "data": sticher.stiched_data}
 
-    result = _create_rms_figure(data_dict, moving_average_n, x_offset, plotter_style, y_label)
+    result = _create_rms_figure(data_dict, moving_average_n, x_offset, plotter_style, y_label, subtract_average=True)
     return result
 
 
@@ -275,7 +273,7 @@ def create_gradient_rms_figure(sticher_dict: Dict[str, GDEFSticher], cutoff_perc
 
 def get_mu_sigma(values2d: np.ndarray) -> Tuple:
     """
-    Returns mean and standard deviation of valus in valuees2d.
+    Returns mean and standard deviation of valus in values2d.
     :param values2d:
     :return:
     """
@@ -284,7 +282,7 @@ def get_mu_sigma(values2d: np.ndarray) -> Tuple:
     return norm.fit(z_values)
 
 
-def get_mu_sigma_moving_average(values2d: np.ndarray, moving_average_n=200) -> Tuple[List[float], List[float]]:
+def get_mu_sigma_moving_average(values2d: np.ndarray, moving_average_n=200, step=1) -> Tuple[List[float], List[float]]:
     """
     Calculate mu and sigma values as moving average, averaging over moving_average_n data-columns.
     :param values2d:
@@ -294,7 +292,7 @@ def get_mu_sigma_moving_average(values2d: np.ndarray, moving_average_n=200) -> T
     mu_list = []
     sigma_list = []
 
-    for i in range(values2d.shape[1] - moving_average_n):
+    for i in range(0, values2d.shape[1] - moving_average_n, step):
         mu, sigma = get_mu_sigma(values2d[:, i:i + moving_average_n])
         mu_list.append(mu)
         sigma_list.append(sigma)
@@ -302,46 +300,67 @@ def get_mu_sigma_moving_average(values2d: np.ndarray, moving_average_n=200) -> T
 
 
 def set_z_histogram_from_ndarray_to_ax(ax, values2d: np.ndarray, title="", n_bins=200):
-    z_values = values2d.flatten()
-    z_values = z_values[
-        ~np.isnan(z_values)]  # remove all NaN values (~ is bitwise NOT opperator - similar to numpy.logical_not)
-    z_values = z_values * 1e6  # m -> µm
-    mu, sigma = norm.fit(z_values)
-    norm_bins = np.linspace(z_values.min(), z_values.max(), 100)
-    best_fit_line = norm.pdf(norm_bins, mu, sigma)
+    """
+     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
+     :param values2d:
+     :param title:
+     :param n_bins:
+     :return:
+     """
+    if isinstance(values2d, list):
+        values2d_list = values2d
+    else:
+        values2d_list = [values2d]
+    colors = []
+    z_values_list = []
+    best_filt_lines = []
+    for values2d in values2d_list:
+        z_values = values2d.flatten()
+        z_values = z_values[
+            ~np.isnan(z_values)]  # remove all NaN values (~ is bitwise NOT opperator - similar to numpy.logical_not)
+        z_values = z_values * 1e6  # m -> µm
+        mu, sigma = norm.fit(z_values)
+        norm_bins = np.linspace(z_values.min(), z_values.max(), 100)
+        best_fit_line = norm.pdf(norm_bins, mu, sigma)
+        z_values_list.append(z_values)
+        best_filt_lines.append(best_fit_line)
+        if len(colors) % 2 > 0:
+            colors.append("red")
+        else:
+            colors.append("black")
 
-    # result, ax = plt.subplots(1, 1, tight_layout=True)
-    H = ax.hist(z_values, density=True, bins=n_bins)
-    ax.plot(norm_bins, best_fit_line)
+    for i in range(len(z_values_list)):
+        _, _, patch = ax.hist(z_values_list[i], density=True, bins=n_bins, edgecolor=colors[i], lw=1,
+                              fc=to_rgba(colors[i], alpha=0.3), rwidth=1, histtype="bar", fill=True)  # color=colors[i]
+        # plt.setp(patch, edgecolor=to_rgba(colors[i], alpha=1), lw=2)
+
+    # # bars side by side:
+    # _, _, patches = ax.hist(z_values_list, density=True, bins=n_bins, color=colors, rwidth=1, histtype="bar", fill=False)#
+    # for i, patch in enumerate(patches):
+    #     plt.setp(patch, edgecolor=colors[i])  # , lw=2)
+    for i, line in enumerate(best_filt_lines):
+        ax.plot(norm_bins, line, c=colors[i])
     ax.set_xlabel('z [\u03BCm]')
     ax.set_ylabel('Normalized counts')
-    ax.grid(True)
-    ax.set_title(f"{title} \n \u03BC={mu:.2f}, \u03C3={sigma:.2f}")
-    # containers = H[-1]
-    # legend = ax.legend(frameon=False)
+    # ax.grid(True)
+    if title:
+        ax.set_title(f"{title}")
+    else:
+        ax.set_title(f"\u03BC={mu:.2f}, \u03C3={sigma:.2f}")
 
     return ax
 
 
-def create_z_histogram_from_ndarray(values2d: np.ndarray, title="", n_bins=200):  # todo: use set_z_histogram_from_ndarray_to_ax
-    z_values = values2d.flatten()
-    z_values = z_values[
-        ~np.isnan(z_values)]  # remove all NaN values (~ is bitwise NOT opperator - similar to numpy.logical_not)
-    z_values = z_values * 1e6  # m -> µm
-    mu, sigma = norm.fit(z_values)
-    norm_bins = np.linspace(z_values.min(), z_values.max(), 100)
-    best_fit_line = norm.pdf(norm_bins, mu, sigma)
-
-    result, ax = plt.subplots(1, 1, tight_layout=True)
-    H = ax.hist(z_values, density=True, bins=n_bins)
-    ax.plot(norm_bins, best_fit_line)
-    ax.set_xlabel('z [\u03BCm]')
-    ax.set_ylabel('Normalized counts')
-    ax.grid(True)
-    ax.set_title(f"{title} \n \u03BC={mu:.2f}, \u03C3={sigma:.2f}")
-    # containers = H[-1]
-    # legend = ax.legend(frameon=False)
-
+def create_z_histogram_from_ndarray(values2d: np.ndarray, title="", n_bins=200, figure_size=(6, 3)):
+    """
+    Also accepts a list of np.ndarray data (for plotting several histograms stacked)
+    :param values2d:
+    :param title:
+    :param n_bins:
+    :return:
+    """
+    result, ax = plt.subplots(1, 1, figsize=figure_size, tight_layout=True, dpi=300)
+    set_z_histogram_from_ndarray_to_ax(ax, values2d, title, n_bins)
     return result
 
     # graph_styler = plotter_style.graph_styler
@@ -437,12 +456,3 @@ def create_z_histogram_from_ndarray(values2d: np.ndarray, title="", n_bins=200):
 #         i += 1
 #     result.tight_layout()
 #     return result
-
-
-# def make_folder(folder):
-#     try:
-#         os.mkdir(folder)
-#     except OSError as exc:
-#         if exc.errno != errno.EEXIST:
-#             raise
-#         pass  # path already exit -> no error handling needed

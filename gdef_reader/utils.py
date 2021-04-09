@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import to_rgba
 from scipy.stats import norm
 from matplotlib.figure import Figure
 # todo: optional import:
@@ -314,6 +315,7 @@ def set_z_histogram_from_ndarray_to_ax(ax, values2d: np.ndarray, title="", n_bin
     colors = []
     z_values_list = []
     best_filt_lines = []
+    norm_bins_list = []
     for values2d in values2d_list:
         z_values = values2d.flatten()
         z_values = z_values[
@@ -324,6 +326,7 @@ def set_z_histogram_from_ndarray_to_ax(ax, values2d: np.ndarray, title="", n_bin
         best_fit_line = norm.pdf(norm_bins, mu, sigma)
         z_values_list.append(z_values)
         best_filt_lines.append(best_fit_line)
+        norm_bins_list.append(norm_bins)
         if len(colors) % 2 > 0:
             colors.append("red")
         else:
@@ -339,7 +342,7 @@ def set_z_histogram_from_ndarray_to_ax(ax, values2d: np.ndarray, title="", n_bin
     # for i, patch in enumerate(patches):
     #     plt.setp(patch, edgecolor=colors[i])  # , lw=2)
     for i, line in enumerate(best_filt_lines):
-        ax.plot(norm_bins, line, c=colors[i])
+        ax.plot(norm_bins_list[i], line, c=colors[i])
     ax.set_xlabel('z [\u03BCm]')
     ax.set_ylabel('Normalized counts')
     # ax.grid(True)

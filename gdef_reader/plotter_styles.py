@@ -206,5 +206,5 @@ def get_plotter_style_rms(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
 def get_plotter_style_sigma(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
     result = get_plotter_style_xy_data(dpi=dpi, figure_size=figure_size)
     result.x_label = "[µm]"
-    result.y_label = "Gaussian half width \u03C3 [µm]"
+    result.y_label = "standard deviation \u03C3 [µm]"
     return result

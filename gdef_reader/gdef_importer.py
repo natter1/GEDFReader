@@ -12,6 +12,7 @@ import numpy as np
 # CONTROL_BLOCK_SIZE = 2 + 2 + 4 + 4 + 1 + 3
 # VAR_NAME_SIZE = 50
 # VARIABLE_SIZE = 50 + 4
+from afm_tools.background_correction import BGCorrectionType
 from gdef_reader.gdef_data_strucutres import GDEFHeader, GDEFControlBlock, GDEFVariableType, GDEFVariable, type_sizes
 from gdef_reader.gdef_measurement import GDEFMeasurement
 
@@ -28,6 +29,8 @@ class GDEFImporter:
     Attributes:
 
         * basename: Path.stem of the imported \*.gdf file.
+        * keep_z_offset: If False (default), z-values for each imported measurement are corrected so that mean(z) == 0.
+        * bg_correction_type: BGCorrectionType for loaded measurements.
     """
     def __init__(self, filename: Optional[Path] = None):
         """
@@ -41,6 +44,8 @@ class GDEFImporter:
         self.blocks: List[GDEFControlBlock] = []
         self.base_blocks: List[GDEFControlBlock] = []
 
+        self.keep_offset = False
+        self.bg_correction_type = BGCorrectionType.legendre_1
         self._eof = None
         if filename:
             self.load(filename)
@@ -74,11 +79,11 @@ class GDEFImporter:
 
         return result
 
-    def load(self, filename: Union[str, Path]):
+    def load(self, filename: Union[str, Path]) -> None:
         """
         Import data from a \*.gdf file.
         :param filename: Path to \*.gdf file.
-        :return:
+        :return: None
         """
         self.basename = filename.stem
         self.buffer = open(filename, 'rb')
@@ -86,6 +91,7 @@ class GDEFImporter:
         self.buffer.seek(0)
         self._read_header()
         self._read_variable_lists()
+        return None
 
     def _read_header(self):
         self.buffer.seek(0)  # sets the file's current position at the offset
@@ -255,7 +261,7 @@ class GDEFImporter:
         try:
             result._values_original = np.reshape(value_data, shape)
             result.values = np.reshape(value_data, shape)
-            result.correct_background()
+            result.correct_background(correction_type=self.bg_correction_type, keep_offset=self.keep_offset)
         except:
             result.values = None
         result.settings._pixel_width = result.settings.max_width / result.settings.columns

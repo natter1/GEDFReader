@@ -45,6 +45,8 @@ This class is used to read data from a \*.gdf file (DME AFM) into python. This c
 Attributes:
 
     * basename: Path.stem of the imported \*.gdf file.
+    * keep_z_offset: If False (default), z-values for each imported measurement are corrected so that mean(z) == 0.
+    * legendre_deg: Legendre polynom degree for background-correction (default: 1).
 
 **Methods:**
 
@@ -76,13 +78,13 @@ Attributes:
 
     .. code:: python
 
-        load(self, filename: Union[str, pathlib.Path])
+        load(self, filename: Union[str, pathlib.Path]) -> None
 
     Import data from a \*.gdf file.
 
     :filename: Path to \*.gdf file.
 
-    :return:
+    :return: None
 
 **Instance Variables:**
 
@@ -91,6 +93,8 @@ Attributes:
 * blocks
 * buffer
 * header
+* keep_offset
+* legendre_deg
 
 Module gdef_reader.gdef_indent_analyzer
 ---------------------------------------
@@ -164,10 +168,10 @@ Class containing data of a single measurement from \*.gdf file.
 
     .. code:: python
 
-        correct_background(self, use_gradient_plane: bool = True, legendre_deg: int = 1, keep_offset: bool = False)
+        correct_background(self, use_gradient_plane: bool = False, legendre_deg: int = 1, keep_offset: bool = False)
 
     Subtract legendre polynomial fit of degree legendre_deg from values_original and save the result in values.
-    If keep_offset is true, the mean value of dataset is preserved. Otherwise the average value is set to zero.
+    If keep_offset is True, the mean value of dataset is preserved. Otherwise the average value is set to zero.
     Right now only changes topographical data. Also, the original data can be obtained again via
     GDEFMeasurement.values_original.
 
@@ -392,6 +396,18 @@ class GDEFSticher
     :initial_x_offset_fraction: used to specify max. overlap area, thus increasing speed and reducing risk of wrong stiching
 
     :return: stiched np.ndarray
+
+**Instance Variables:**
+
+
+Module afm_tools.background_correction
+--------------------------------------
+
+class BGCorrectionType
+~~~~~~~~~~~~~~~~~~~~~~
+An enumeration.
+
+**Methods:**
 
 **Instance Variables:**
 

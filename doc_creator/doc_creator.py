@@ -9,13 +9,15 @@ from types import ModuleType
 from typing import Tuple
 
 import gdef_reader.gdef_importer as gdef_importer
+from afm_tools import background_correction
 from gdef_reader import gdef_measurement, gdef_sticher, gdef_indent_analyzer
 
 module_list = [
     gdef_importer,
     gdef_indent_analyzer,
     gdef_measurement,
-    gdef_sticher
+    gdef_sticher,
+    background_correction
 ]
 
 

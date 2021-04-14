@@ -14,6 +14,7 @@ from pptx_tools.position import PPTXPosition
 from pptx_tools.table_style import PPTXTableStyle
 from pptx_tools.templates import TemplateExample
 
+from afm_tools.background_correction import BGCorrectionType
 from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reader.gdef_measurement import GDEFMeasurement
 from gdef_reader.gdef_sticher import GDEFSticher
@@ -40,9 +41,10 @@ class GDEFContainer:
     def filtered_measurements(self) -> List[GDEFMeasurement]:
         return [x for x in self.measurements if x.gdf_block_id not in self.filter_ids]
 
-    def correct_backgrounds(self, use_gradient_plane: bool = True, legendre_deg: int = 1, keep_offset: bool = False):
+    def correct_backgrounds(self, bg_correction_type: BGCorrectionType = BGCorrectionType.legendre_1,
+                            keep_offset: bool = False):
         for measurement in self.measurements:
-            measurement.correct_background(use_gradient_plane, legendre_deg, keep_offset)
+            measurement.correct_background(bg_correction_type, keep_offset)
 
 
 class GDEFContainerList(list):
@@ -56,9 +58,10 @@ class GDEFContainerList(list):
         elif containers:  # make sure containers is not None; todo: better check if containers is list of GDEFContainer
             self.extend(containers)
 
-    def correct_backgrounds(self, use_gradient_plane: bool = True, legendre_deg: int = 1, keep_offset: bool = False):
+    def correct_backgrounds(self, bg_correction_type: BGCorrectionType = BGCorrectionType.legendre_1,
+                            keep_offset: bool = False):
         for container in self:
-            container.correct_backgrounds(use_gradient_plane, legendre_deg, keep_offset)
+            container.correct_backgrounds(bg_correction_type, keep_offset)
 
     def set_filter_ids(self, filter_dict: dict):
         for container in self:

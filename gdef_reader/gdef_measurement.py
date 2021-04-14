@@ -13,7 +13,8 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from afm_tools.background_correction import subtract_legendre_fit, subtract_mean_gradient_plane
+from afm_tools.background_correction import subtract_legendre_fit, subtract_mean_gradient_plane, BGCorrectionType, \
+    correct_background
 from gdef_reader.gdef_data_strucutres import GDEFHeader
 
 
@@ -259,28 +260,21 @@ class GDEFMeasurement:
 
         return figure_tight
 
-    def correct_background(self, use_gradient_plane: bool = True, legendre_deg: int = 1, keep_offset: bool = False):
+    def correct_background(self, correction_type: BGCorrectionType = BGCorrectionType.legendre_1, keep_offset: bool = False):
         """
-        Subtract legendre polynomial fit of degree legendre_deg from values_original and save the result in values.
-        If keep_offset is true, the mean value of dataset is preserved. Otherwise the average value is set to zero.
+        Corrects background using the given correction_type on values_original and save the result in values.
+        If keep_offset is True, the mean value of dataset is preserved. Otherwise the average value is set to zero.
         Right now only changes topographical data. Also, the original data can be obtained again via
         GDEFMeasurement.values_original.
 
-        :param use_gradient_plane: Background is corrected by subtracting tilted background-plane (using gradient).
-        :param legendre_deg: If use_gradient_plane is False, a legendre polynom is used to correct background.
+        :param correction_type: select type of background correction
         :param keep_offset: If True (default) keeps average offset, otherwise average offset is reduced to 0.
-        :return:
+        :return: None
         """
         if not self.settings.source_channel == 11:  # only correct topography data
             return
-        if use_gradient_plane:
-            self.values = subtract_mean_gradient_plane(self.values_original, keep_offset)
-        else:
-            self.values = subtract_legendre_fit(self.values_original, legendre_deg, keep_offset)
+        self.values = correct_background(self.values_original, correction_type=correction_type, keep_offset=keep_offset)
 
-        # if not self.background_corrected:
-        #     self._do_median_level(subtract_mean_plane=True)
-        #     self.background_corrected = True
 
     def _subtract_mean_plane(self):
         try:

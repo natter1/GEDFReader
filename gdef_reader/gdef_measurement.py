@@ -109,7 +109,7 @@ class GDEFMeasurement:
 
     :Attributes:
 
-        * basename: Path.stem of the imported \*.gdf file.
+        * gdf_basename: Path.stem of the imported \*.gdf file.
     """
     def __init__(self):
         self._header: Optional[GDEFHeader] = None

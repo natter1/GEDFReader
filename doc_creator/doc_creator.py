@@ -5,7 +5,7 @@ This python script is meant to auto-create part of the documentation (mainly the
 import inspect
 import re
 import textwrap
-from types import ModuleType
+from types import ModuleType, DynamicClassAttribute
 from typing import Tuple
 
 import gdef_reader.gdef_importer as gdef_importer
@@ -13,16 +13,17 @@ from afm_tools import background_correction
 from gdef_reader import gdef_measurement, gdef_sticher, gdef_indent_analyzer
 
 module_list = [
-    gdef_importer,
-    gdef_indent_analyzer,
+    # gdef_importer,
+    # gdef_indent_analyzer,
     gdef_measurement,
-    gdef_sticher,
+    # gdef_sticher,
     background_correction
 ]
 
 
 def main():
     readme_api = ""
+    from afm_tools.background_correction import BGCorrectionType
 
     for module in module_list:
         readme_api += get_module_doc(module)
@@ -67,9 +68,9 @@ def get_python_module_header(module: ModuleType):
     return "".join(result)
 
 
-def get_functions_doc(item):
+def get_methods_from_class_doc(class_item):
     result = []
-    for func in inspect.getmembers(item, inspect.isfunction):
+    for func in inspect.getmembers(class_item, inspect.isfunction):
         if func[0].startswith("_") and not func[0] == '__init__':  # Consider anything that starts with _ private and don't document it.
             continue
         result.append('\n* **' + func[0] + '**\n')  # Get the signature
@@ -80,21 +81,43 @@ def get_functions_doc(item):
             doc = doc.replace(':param ', '\n:').replace(':return:', '\n:return:')
             doc = textwrap.indent(doc, '    ')
             result.append(doc + "\n")
+    if len(result) > 0:
+        result.insert(0, f"\n{'**Methods:**'}\n")
     return "".join(result)
 
 
-def get_properties_doc(item):
+def get_class_attributes_doc(item):
+    result = []
+    for attribute in inspect.getmembers(item, lambda a: not (inspect.isroutine(a))):
+        if attribute[0].startswith("_"):  # Consider anything that starts with _ private and don't document it.
+            continue
+
+        if isinstance(attribute[1], property):
+            continue
+
+        if type(attribute[1]) == DynamicClassAttribute:  # e.g. skip 'nme' and 'value' for Enum
+            print(attribute[0])
+            continue
+
+        result.append(f"* {attribute[0]}\n")
+    if len(result) > 0:
+        result.insert(0, f"\n{'**Class Attributes:**'}\n\n")
+    return "".join(result)
+
+def get_class_instance_attributes_doc(item):
     result = []
     try:
         dummy_obj = item()
     except:
-        print(f"Instance of {item.__name__} could not be created. Therefore no class attributes where added to doc")
+        print(f"Instance of {item.__name__} could not be created. Therefore no instance attributes where added to doc")
         return ""
 
     for attribute in inspect.getmembers(dummy_obj, lambda a: not (inspect.isroutine(a))):
         if attribute[0].startswith("_"):  # Consider anything that starts with _ private and don't document it.
             continue
         result.append(f"* {attribute[0]}\n")
+    if len(result) > 0:
+        result.insert(0, f"\n{'**Instance Attributes:**'}\n\n")
     return "".join(result)
 
 
@@ -104,15 +127,29 @@ def get_class_doc(cl: Tuple[str, type]) -> str:
     if inspect.getdoc(cl[1]):
         result.append(f"{inspect.getdoc(cl[1])}\n")
 
-    result.append(f"\n{'**Methods:**'}\n")
-    result.append(get_functions_doc(cl[1]))
-    result.append(f"\n{'**Instance Variables:**'}\n\n")
-    result.append(get_properties_doc(cl[1]))
+    result.append(get_class_attributes_doc(cl[1]))
+    result.append(get_methods_from_class_doc(cl[1]))
+    result.append(get_class_instance_attributes_doc(cl[1]))
     return "".join(result)
 
+#
+#
+# def is_mod_function(mod, func):
+#     ' checks that func is a function defined in module mod '
+#     return inspect.isfunction(func) and inspect.getmodule(func) == mod
 
 def get_module_doc(module: ModuleType):
     result = [get_python_module_header(module)]
+
+    for func in inspect.getmembers(module, inspect.isfunction):
+        # print(f"module: {module}")
+        # print(f"func: {func}")
+        # print(f"get_module: {inspect.getmodule(func)}")
+        if func[0].startswith("_"):  # Consider anything that starts with _ private and don't document it.
+            continue
+        if inspect.getmodule(func[1]) != module:
+            continue
+        result.append(get_methods_from_class_doc(func))
 
     for cl in inspect.getmembers(module, inspect.isclass):
         if not cl[1].__module__ == module.__name__:  # skip imported classes

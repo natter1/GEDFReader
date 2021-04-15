@@ -10,15 +10,12 @@ import numpy as np
 from numpy.polynomial import Legendre
 
 
-def subtract_mean_level(array2d: np.ndarray) -> Optional[np.ndarray]:
+def subtract_mean_level(array2d: np.ndarray) -> np.ndarray:
     """
     Correct an offset in the array2d by subtracting the mean level.
     :param array2d:
     :return: ndarray
     """
-    if array2d is None:
-        return None
-
     result = array2d - array2d.mean()
     return result
 
@@ -32,8 +29,6 @@ def subtract_legendre_fit(array2d: np.ndarray, keep_offset: bool = False, deg: i
     legendre_deg = 3 ... also corrects "s-shaped" distortion
     ...
     """
-    if array2d is None:
-        return None
     if deg == 0 and keep_offset:
         return array2d.copy()  # return a copy of input data
     n_row = np.linspace(-1, 1, array2d.shape[0])
@@ -61,8 +56,6 @@ def subtract_mean_gradient_plane(array2d: np.ndarray, keep_offset: bool = False)
                                   ____________________
     example: ____________________|                   |__
     """
-    if array2d is None:
-        return None
     # result = array2d[:] # !!! slicing of np.ndarray only cretes viw, not copy !!!
     result = array2d.copy()  # !!! slicing of np.ndarray only cretes viw, not copy !!!
 

@@ -30,119 +30,6 @@ Features
 
 API documentation
 =================
-Module gdef_reader.gdef_importer
---------------------------------
-
-class GDEFImporter
-~~~~~~~~~~~~~~~~~~
-This class is used to read data from a \*.gdf file (DME AFM) into python. This can be done like:
-
-.. code:: python
-
-    from gdef_reader.gdef_importer import GDEFImporter
-    impported_data = GDEFImporter(gdf_path)  # gdf_path should be a pathlib.Path to a *.gdf file
-
-Attributes:
-
-    * basename: Path.stem of the imported \*.gdf file.
-    * keep_z_offset: If False (default), z-values for each imported measurement are corrected so that mean(z) == 0.
-    * legendre_deg: Legendre polynom degree for background-correction (default: 1).
-
-**Methods:**
-
-* **__init__**
-
-    .. code:: python
-
-        __init__(self, filename: Union[pathlib.Path, NoneType] = None)
-
-
-    :filename: Path to \*.gdf file. If it is None (default), a file has to be loaded via GDEFImporter.load().
-
-* **export_measurements**
-
-    .. code:: python
-
-        export_measurements(self, path: pathlib.Path = None, create_images: bool = False) -> List[gdef_reader.gdef_measurement.GDEFMeasurement]
-
-    Create a list of GDEFMeasurement-Objects from imported data. The optional parameter create_images
-    can be used to show a matplotlib Figure for each GDEFMeasurement (default value is False).
-
-    :path: Save path for GDEFMeasurement-objects. No saved files, if None.
-
-    :create_images: Show a matplotlib Figure for each GDEFMeasurement; used for debugging (default: False)
-
-    :return: list of GDEFMeasurement-Objects
-
-* **load**
-
-    .. code:: python
-
-        load(self, filename: Union[str, pathlib.Path]) -> None
-
-    Import data from a \*.gdf file.
-
-    :filename: Path to \*.gdf file.
-
-    :return: None
-
-**Instance Variables:**
-
-* base_blocks
-* basename
-* blocks
-* buffer
-* header
-* keep_offset
-* legendre_deg
-
-Module gdef_reader.gdef_indent_analyzer
----------------------------------------
-
-class GDEFIndentAnalyzer
-~~~~~~~~~~~~~~~~~~~~~~~~
-Class to analyze a GDEFMeasurment with an indent.
-
-**Methods:**
-
-* **__init__**
-
-    .. code:: python
-
-        __init__(self, measurement: gdef_reader.gdef_measurement.GDEFMeasurement)
-
-
-    :measurement: GDEFMeasurement with the indent to analyze.
-
-* **add_map_with_indent_pile_up_mask_to_axes**
-
-    .. code:: python
-
-        add_map_with_indent_pile_up_mask_to_axes(self, ax: matplotlib.axes._axes.Axes, roughness_part=0.05) -> matplotlib.axes._axes.Axes
-
-    Add a topography map with a color mask for pile-up to the given ax. Pile-up is determined as all pixels with
-    z>0 + roughness_part \* z_max
-
-    :ax: Axes object, to whitch the masked map should be added
-
-    :roughness_part:
-
-    :return: Axes
-
-* **get_summary_table_data**
-
-    .. code:: python
-
-        get_summary_table_data(self) -> List[list]
-
-    Returns a table (list of lists) with data of the indent. The result can be used directly to fill a pptx-table
-    with `python-ppxt-interface <https://github.com/natter1/python_pptx_interface/>`_.
-
-    :return:
-
-**Instance Variables:**
-
-
 Module gdef_reader.gdef_measurement
 -----------------------------------
 
@@ -150,9 +37,9 @@ class GDEFMeasurement
 ~~~~~~~~~~~~~~~~~~~~~
 Class containing data of a single measurement from \*.gdf file.
 
-:Attributes:
-
-    * basename: Path.stem of the imported \*.gdf file.
+:InstanceAttributes:
+gdf_basename: Path.stem of the imported \*.gdf file.
+:EndInstanceAttributes:
 
 **Methods:**
 
@@ -168,21 +55,19 @@ Class containing data of a single measurement from \*.gdf file.
 
     .. code:: python
 
-        correct_background(self, use_gradient_plane: bool = False, legendre_deg: int = 1, keep_offset: bool = False)
+        correct_background(self, correction_type: afm_tools.background_correction.BGCorrectionType = <BGCorrectionType.legendre_1: 3>, keep_offset: bool = False)
 
-    Subtract legendre polynomial fit of degree legendre_deg from values_original and save the result in values.
+    Corrects background using the given correction_type on values_original and save the result in values.
     If keep_offset is True, the mean value of dataset is preserved. Otherwise the average value is set to zero.
     Right now only changes topographical data. Also, the original data can be obtained again via
     GDEFMeasurement.values_original.
 
 
-    :use_gradient_plane: Background is corrected by subtracting tilted background-plane (using gradient).
-
-    :legendre_deg: If use_gradient_plane is False, a legendre polynom is used to correct background.
+    :correction_type: select type of background correction
 
     :keep_offset: If True (default) keeps average offset, otherwise average offset is reduced to 0.
 
-    :return:
+    :return: None
 
 * **create_plot**
 
@@ -254,12 +139,12 @@ Class containing data of a single measurement from \*.gdf file.
         set_topography_to_axes(self, ax: matplotlib.axes._axes.Axes)
 
 
-**Instance Variables:**
+**Instance Attributes:**
 
 * background_corrected
 * comment
 * filename
-* gdf_basename
+* gdf_basename('', 'gdf_basename', ': Path.stem of the imported \\*.gdf file.')
 * gdf_block_id
 * name
 * preview
@@ -306,7 +191,7 @@ Stores all the settings used during measurement.
 
     Returns the size of the scanned area as a tuple for use with matplotlib.
 
-**Instance Variables:**
+**Instance Attributes:**
 
 * aux_gain
 * bias_voltage
@@ -357,49 +242,6 @@ Stores all the settings used during measurement.
 * z_unit
 * zero_scan
 
-Module gdef_reader.gdef_sticher
--------------------------------
-
-class GDEFSticher
-~~~~~~~~~~~~~~~~~
-
-**Methods:**
-
-* **__init__**
-
-    .. code:: python
-
-        __init__(self, measurements: List[gdef_reader.gdef_measurement.GDEFMeasurement], initial_x_offset_fraction: float = 0.35, show_control_figures: bool = False)
-
-    GDEFSticher combines/stich several AFM area-measurements using cross-corelation to find the best fit.
-    To reduce calculation time, the best overlap position is only searched in a fraction of the measurement area
-    (defined by parameter initial_x_offset_fraction), and each measutrement is added to the right side.
-    Make sure the given list of measurements is ordered from left to right, otherwise wrong results are to be expected.
-    To evaluate the stiching, show_control_figures can be set to True. This creates a summary image
-    for each stiching step (using matplotlib plt.show()).
-
-
-    :measurements:
-
-    :initial_x_offset_fraction: used to specify max. overlap area, thus increasing speed and reducing risk of wrong stiching
-
-    :show_control_figures:
-
-* **stich**
-
-    .. code:: python
-
-        stich(self, initial_x_offset_fraction: float = 0.35, show_control_figures: bool = False) -> numpy.ndarray
-
-    Stiches a list of GDEFMeasurement.values using cross-correlation.
-
-    :initial_x_offset_fraction: used to specify max. overlap area, thus increasing speed and reducing risk of wrong stiching
-
-    :return: stiched np.ndarray
-
-**Instance Variables:**
-
-
 Module afm_tools.background_correction
 --------------------------------------
 
@@ -407,7 +249,11 @@ class BGCorrectionType
 ~~~~~~~~~~~~~~~~~~~~~~
 An enumeration.
 
-**Methods:**
+**Class Attributes:**
 
-**Instance Variables:**
-
+* gradient
+* legendre_0
+* legendre_1
+* legendre_2
+* legendre_3
+* raw_data

@@ -22,17 +22,16 @@ measurement.comment = "imported (default settings)"
 #     fig = measurement.create_plot()
 #     fig.show()
 
-correction_summary_fig, axes = plt.subplots(4, 2, dpi=150, figsize=(8, 5))
+correction_summary_fig, axes = plt.subplots(3, 2, dpi=150, figsize=(8, 4.5))
 
 ax_list = axes.flatten()
-measurement.set_topography_to_axes(ax_list[0], add_id=False)
 
 for i, correction_type in enumerate(BGCorrectionType):
     measurement.correct_background(correction_type,keep_offset=True)
     measurement.comment = correction_type.name
-    measurement.set_topography_to_axes(ax_list[i+1], add_id=False)
+    measurement.set_topography_to_axes(ax_list[i], add_id=False)
 
-for ax in ax_list[len(BGCorrectionType)+1:]:
+for ax in ax_list[len(BGCorrectionType):]:
     ax.remove()
 correction_summary_fig.tight_layout()
 correction_summary_fig.show()

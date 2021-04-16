@@ -107,9 +107,9 @@ class GDEFMeasurement:
     """
     Class containing data of a single measurement from \*.gdf file.
 
-    :Attributes:
-
-        * gdf_basename: Path.stem of the imported \*.gdf file.
+    :InstanceAttributes:
+    gdf_basename: Path.stem of the imported \*.gdf file.
+    :EndInstanceAttributes:
     """
     def __init__(self):
         self._header: Optional[GDEFHeader] = None

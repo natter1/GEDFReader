@@ -83,7 +83,7 @@ def get_methods_from_class_doc(class_item):
             result.append(doc + "\n")
     if len(result) > 0:
         result.insert(0, f"\n{'**Methods:**'}\n")
-    return "".join(result)
+    return result  # "".join(result)
 
 
 def get_class_attributes_doc(item):
@@ -102,23 +102,33 @@ def get_class_attributes_doc(item):
         result.append(f"* {attribute[0]}\n")
     if len(result) > 0:
         result.insert(0, f"\n{'**Class Attributes:**'}\n\n")
-    return "".join(result)
+    return result  # "".join(result)
 
-def get_class_instance_attributes_doc(item):
+
+def get_class_instance_attributes_doc(class_object):
     result = []
     try:
-        dummy_obj = item()
+        class_instance = class_object()
     except:
-        print(f"Instance of {item.__name__} could not be created. Therefore no instance attributes where added to doc")
-        return ""
+        print(f"Instance of {class_object.__name__} could not be created. Therefore no instance attributes where added to doc")
+        return result
+    # todo: write function to read __init__ doc string and extract :param entries -> add it to matching attribute
+    attributes_text = class_object.__doc__.partition(":InstanceAttributes:")[2].partition(":EndInstanceAttributes:")[0]
+    attributes_text = list(inspect.cleandoc(attributes_text).split("\n"))  # list(attributes_text.split("\n"))
 
-    for attribute in inspect.getmembers(dummy_obj, lambda a: not (inspect.isroutine(a))):
+    print(attributes_text)
+    for attribute in inspect.getmembers(class_instance, lambda a: not (inspect.isroutine(a))):
         if attribute[0].startswith("_"):  # Consider anything that starts with _ private and don't document it.
             continue
-        result.append(f"* {attribute[0]}\n")
+        attribute_description = ""
+        for s in attributes_text:
+            if s.startswith(attribute[0]):
+                attribute_description = s.partition(attribute[0])
+
+        result.append(f"* {attribute[0]}{attribute_description}\n")
     if len(result) > 0:
         result.insert(0, f"\n{'**Instance Attributes:**'}\n\n")
-    return "".join(result)
+    return result  # "".join(result)
 
 
 def get_class_doc(cl: Tuple[str, type]) -> str:
@@ -127,9 +137,9 @@ def get_class_doc(cl: Tuple[str, type]) -> str:
     if inspect.getdoc(cl[1]):
         result.append(f"{inspect.getdoc(cl[1])}\n")
 
-    result.append(get_class_attributes_doc(cl[1]))
-    result.append(get_methods_from_class_doc(cl[1]))
-    result.append(get_class_instance_attributes_doc(cl[1]))
+    result.extend(get_class_attributes_doc(cl[1]))
+    result.extend(get_methods_from_class_doc(cl[1]))
+    result.extend(get_class_instance_attributes_doc(cl[1]))
     return "".join(result)
 
 #
@@ -158,7 +168,7 @@ def get_module_doc(module: ModuleType):
             continue
         result.append(get_class_doc(cl))
 
-    return "".join(result)
+    return "".join(filter(None, result))  # filter out empty entries []
 
 
 if __name__ == "__main__":

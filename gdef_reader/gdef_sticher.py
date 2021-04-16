@@ -13,16 +13,23 @@ from gdef_reader.gdef_measurement import GDEFMeasurement
 
 
 class GDEFSticher:
+    """
+    GDEFSticher combines/stiches several AFM area-measurements using cross-corelation to find the best fit.
+    To reduce calculation time, the best overlap position is only searched in a fraction of the measurement area
+    (defined by parameter initial_x_offset_fraction), and each measutrement is added to the right side.
+    Make sure the given list of measurements is ordered from left to right, otherwise wrong results are to be expected.
+    To evaluate the stiching, show_control_figures can be set to True. This creates a summary image
+    for each stiching step (using matplotlib plt.show()).
+
+    :InstanceAttributes:
+    measurements: list of GDEFMeasurements used for stiching
+    stiched_data: np.ndarray with stiched data
+    pixel_width: Pixel width taken from first GDEFMeasurement in measurements (varying pixel sizes are not supported).
+    :EndInstanceAttributes:
+    """
     def __init__(self, measurements: List[GDEFMeasurement],
                  initial_x_offset_fraction: float = 0.35, show_control_figures: bool = False):
         """
-        GDEFSticher combines/stich several AFM area-measurements using cross-corelation to find the best fit.
-        To reduce calculation time, the best overlap position is only searched in a fraction of the measurement area
-        (defined by parameter initial_x_offset_fraction), and each measutrement is added to the right side.
-        Make sure the given list of measurements is ordered from left to right, otherwise wrong results are to be expected.
-        To evaluate the stiching, show_control_figures can be set to True. This creates a summary image
-        for each stiching step (using matplotlib plt.show()).
-
         :param measurements:
         :param initial_x_offset_fraction: used to specify max. overlap area, thus increasing speed and reducing risk of wrong stiching
         :param show_control_figures:
@@ -55,7 +62,7 @@ class GDEFSticher:
         :param data01:
         :param data02:
         :param data01_x_offset: used to specify max. overlap area, thus increasing speed and reducing risk of wrong stiching
-        :return: np.2darray
+        :return: np.ndarray (2D)
         """
         # data01[:] = 10
         # data02[:] = 10

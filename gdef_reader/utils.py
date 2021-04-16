@@ -46,7 +46,7 @@ def load_pygdf_measurements(path: Path) -> List[GDEFMeasurement]:
         print(filename)
         with open(filename, 'rb') as file:
             measurement = pickle.load(file)
-            measurement.filename = filename
+            measurement.pygdf_filename = filename
             result.append(measurement)
     return result
 
@@ -64,12 +64,12 @@ def create_png_for_nanoindents(path: Path, png_save_path: Optional[Path] = None)
         figure = measurement.create_plot()
         if figure is None:
             continue
-        print(png_save_path.joinpath(f"{measurement.filename.stem + '.png'}"))
-        figure.savefig(png_save_path.joinpath(f"{measurement.filename.stem + '.png'}"),
+        print(png_save_path.joinpath(f"{measurement.pygdf_filename.stem + '.png'}"))
+        figure.savefig(png_save_path.joinpath(f"{measurement.pygdf_filename.stem + '.png'}"),
                        dpi=96)  # , transparent=transparent)
         indent_analyzer.add_indent_pile_up_mask_to_axes(figure.axes[0])
-        print(png_save_path.joinpath(f"{measurement.filename.stem + '_masked.png'}"))
-        figure.savefig(png_save_path.joinpath(f"{measurement.filename.stem + '_masked.png'}"), dpi=96)
+        print(png_save_path.joinpath(f"{measurement.pygdf_filename.stem + '_masked.png'}"))
+        figure.savefig(png_save_path.joinpath(f"{measurement.pygdf_filename.stem + '_masked.png'}"), dpi=96)
         figure.clear()
 
 

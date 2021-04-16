@@ -32,7 +32,7 @@ class GDEFHeader:
 
 
 class GDEFControlBlock:
-    _counter = 0  # total number of created blocks
+    _counter = 0  # total number of created _blocks
 
     def __init__(self):
         GDEFControlBlock._counter += 1

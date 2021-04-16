@@ -13,10 +13,10 @@ from afm_tools import background_correction
 from gdef_reader import gdef_measurement, gdef_sticher, gdef_indent_analyzer
 
 module_list = [
-    # gdef_importer,
-    # gdef_indent_analyzer,
+    gdef_importer,
+    gdef_indent_analyzer,
     gdef_measurement,
-    # gdef_sticher,
+    gdef_sticher,
     background_correction
 ]
 
@@ -123,7 +123,7 @@ def get_class_instance_attributes_doc(class_object):
         attribute_description = ""
         for s in attributes_text:
             if s.startswith(attribute[0]):
-                attribute_description = s.partition(attribute[0])
+                attribute_description = s.partition(attribute[0])[2]
 
         result.append(f"* {attribute[0]}{attribute_description}\n")
     if len(result) > 0:
@@ -131,11 +131,23 @@ def get_class_instance_attributes_doc(class_object):
     return result  # "".join(result)
 
 
+def get_cleaned_class_doc_string(class_type):
+    result = ""
+    if inspect.getdoc(class_type):
+        result = str(f"{inspect.getdoc(class_type)}\n")
+        result = result.partition(":InstanceAttributes:")[0] + result.partition(":EndInstanceAttributes:")[2]
+        # result.append(f"{inspect.getdoc(class_type)}\n")
+    return result
+
+
 def get_class_doc(cl: Tuple[str, type]) -> str:
     result = [create_header_with_line(f"class {cl[0]}", '~')]
-    # print(cl[1].__name__)
-    if inspect.getdoc(cl[1]):
-        result.append(f"{inspect.getdoc(cl[1])}\n")
+
+    # # print(cl[1].__name__)
+    # if inspect.getdoc(cl[1]):
+    #     result.append(f"{inspect.getdoc(cl[1])}\n")
+
+    result.append(get_cleaned_class_doc_string(cl[1]))
 
     result.extend(get_class_attributes_doc(cl[1]))
     result.extend(get_methods_from_class_doc(cl[1]))

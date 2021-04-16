@@ -21,6 +21,56 @@ from gdef_reader.gdef_data_strucutres import GDEFHeader
 class GDEFSettings:
     """
     Stores all the settings used during measurement.
+
+    :InstanceAttributes:
+    bias_voltage
+    calculated
+    columns
+    digital_loop
+    direct_ac
+    fft_type
+    fixed_max
+    fixed_min
+    fixed_palette
+    frequency_offset
+    id
+    invert_line_mean
+    invert_plane_corr
+    line_mean
+    line_mean_order
+    lines
+    loop_filter
+    loop_gain
+    loop_int
+    max_height
+    max_width
+    measured_amplitude
+    missing_lines
+    offset_pos
+    offset_x
+    offset_y
+    phase_shift
+    pixel_blend
+    pixel_height: Pixel-height [m] (read-only property)
+    pixel_width: Pixel-width [m] (read-only property)
+    q_boost
+    q_factor
+    retrace
+    retrace_type
+    scan_direction
+    scan_mode
+    scan_speed
+    scanner_range
+    set_point
+    source_channel
+    x_calib
+    xy_linearized
+    y_calib
+    z_calib
+    z_linearized
+    z_unit
+    zero_scan
+    :EndInstanceAttributes:
     """
     def __init__(self):
         # Settings:
@@ -108,7 +158,15 @@ class GDEFMeasurement:
     Class containing data of a single measurement from \*.gdf file.
 
     :InstanceAttributes:
+    comment: Comment text given for the measurement.
+    filename:  Path of \*.pygdf file (only if loaded from pickled file, else None).
     gdf_basename: Path.stem of the imported \*.gdf file.
+    gdf_block_id: Block ID in original \*.gdf file. Might be used to filter measurements.
+    name
+    preview
+    settings: GDEFSettings object
+    values: Measurement values including corrections for background, offset etc.
+    values_original: Original measurement data (read-only property)
     :EndInstanceAttributes:
     """
     def __init__(self):
@@ -123,7 +181,7 @@ class GDEFMeasurement:
         self.comment = ''
 
         self.gdf_basename = ""  # basename of original *.gdf file
-        self.filename: Optional[Path] = None  # basename of pickled *.pygdf
+        self.pygdf_filename: Optional[Path] = None  # basename of pickled *.pygdf
         self.gdf_block_id = None
 
         self.background_corrected = False
@@ -263,7 +321,7 @@ class GDEFMeasurement:
     def correct_background(self, correction_type: BGCorrectionType = BGCorrectionType.legendre_1, keep_offset: bool = False):
         """
         Corrects background using the given correction_type on values_original and save the result in values.
-        If keep_offset is True, the mean value of dataset is preserved. Otherwise the average value is set to zero.
+        If keep_z_offset is True, the mean value of dataset is preserved. Otherwise the average value is set to zero.
         Right now only changes topographical data. Also, the original data can be obtained again via
         GDEFMeasurement.values_original.
 
@@ -305,8 +363,8 @@ class GDEFMeasurement:
         result.append(["max width [m]", f"{self.settings.max_width:.2e}"])
         result.append(["max height [m]", f"{self.settings.max_height:.2e}"])
         result.append(["scan speed [µm/s]", f"{self.settings.scan_speed*1e6:.0f}"])
-        if self.filename:
-            result.append(["basename", f"{self.filename.stem}"])
+        if self.pygdf_filename:
+            result.append(["basename", f"{self.pygdf_filename.stem}"])
         else:
             result.append(["name", f"{self.gdf_basename}_block_{self.gdf_block_id:03}"])
 

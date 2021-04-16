@@ -26,11 +26,11 @@ class GDEFImporter:
         from gdef_reader.gdef_importer import GDEFImporter
         impported_data = GDEFImporter(gdf_path)  # gdf_path should be a pathlib.Path to a *.gdf file
 
-    Attributes:
-
-        * basename: Path.stem of the imported \*.gdf file.
-        * keep_z_offset: If False (default), z-values for each imported measurement are corrected so that mean(z) == 0.
-        * bg_correction_type: BGCorrectionType for loaded measurements.
+    :InstanceAttributes:
+    basename: Path.stem of the imported \*.gdf file.
+    keep_z_offset: If False (default), z-values for each imported measurement are corrected so that mean(z) == 0.
+    bg_correction_type: BGCorrectionType for loaded measurements.
+    :EndInstanceAttributes:
     """
     def __init__(self, filename: Optional[Path] = None):
         """
@@ -38,15 +38,16 @@ class GDEFImporter:
         """
         self.basename = ""
 
-        self.header: GDEFHeader = GDEFHeader()
-        self.buffer: Optional[BinaryIO] = None
+        self._header: GDEFHeader = GDEFHeader()
+        self._buffer: Optional[BinaryIO] = None
 
-        self.blocks: List[GDEFControlBlock] = []
-        self.base_blocks: List[GDEFControlBlock] = []
+        self._blocks: List[GDEFControlBlock] = []
+        self._base_blocks: List[GDEFControlBlock] = []
 
-        self.keep_offset = False
+        self.keep_z_offset = False
         self.bg_correction_type = BGCorrectionType.legendre_1
         self._eof = None
+
         if filename:
             self.load(filename)
 
@@ -59,7 +60,7 @@ class GDEFImporter:
         :return: list of GDEFMeasurement-Objects
         """
         result = []
-        for i, block in enumerate(self.blocks):
+        for i, block in enumerate(self._blocks):
             if block.n_data != 1 or block.n_variables != 50:
                 continue
             measurement = self._get_measurement_from_block(block, create_images)
@@ -86,44 +87,44 @@ class GDEFImporter:
         :return: None
         """
         self.basename = filename.stem
-        self.buffer = open(filename, 'rb')
-        self._eof = self.buffer.seek(0, 2)
-        self.buffer.seek(0)
+        self._buffer = open(filename, 'rb')
+        self._eof = self._buffer.seek(0, 2)
+        self._buffer.seek(0)
         self._read_header()
         self._read_variable_lists()
         return None
 
     def _read_header(self):
-        self.buffer.seek(0)  # sets the file's current position at the offset
-        self.header.magic = self.buffer.read(4)
-        self.header.version = int.from_bytes(self.buffer.read(2), 'little')
-        if self.header.version != 0x0200:
-            raise Exception(f"File version {self.header.version} is not supported")
+        self._buffer.seek(0)  # sets the file's current position at the offset
+        self._header.magic = self._buffer.read(4)
+        self._header.version = int.from_bytes(self._buffer.read(2), 'little')
+        if self._header.version != 0x0200:
+            raise Exception(f"File version {self._header.version} is not supported")
 
-        self.buffer.read(2)  # align
+        self._buffer.read(2)  # align
 
-        self.header.creation_time = int.from_bytes(self.buffer.read(4), 'little')
-        self.header.description_length = int.from_bytes(self.buffer.read(4), 'little')
-        self.header.description = self.buffer.read(self.header.description_length).decode("utf-8")
+        self._header.creation_time = int.from_bytes(self._buffer.read(4), 'little')
+        self._header.description_length = int.from_bytes(self._buffer.read(4), 'little')
+        self._header.description = self._buffer.read(self._header.description_length).decode("utf-8")
 
     def _read_control_block(self, block):
-        block.mark = self.buffer.read(2)
+        block.mark = self._buffer.read(2)
         if not block.mark == b'CB':
             assert block.mark == b'CB'
 
-        self.buffer.read(2)  # align
-        block.n_variables = int.from_bytes(self.buffer.read(4), 'little')
-        block.n_data = int.from_bytes(self.buffer.read(4), 'little')
+        self._buffer.read(2)  # align
+        block.n_variables = int.from_bytes(self._buffer.read(4), 'little')
+        block.n_data = int.from_bytes(self._buffer.read(4), 'little')
 
-        block.next_byte = self.buffer.read(1)
-        self.buffer.read(3)
+        block.next_byte = self._buffer.read(1)
+        self._buffer.read(3)
 
         return block
 
     def _read_variable(self, variable):
-        variable.name = self.buffer.read(50).decode("utf-8")
-        self.buffer.read(2)
-        variable.type = int.from_bytes(self.buffer.read(4), 'little')
+        variable.name = self._buffer.read(50).decode("utf-8")
+        self._buffer.read(2)
+        variable.type = int.from_bytes(self._buffer.read(4), 'little')
         assert variable.type < GDEFVariableType.VAR_NVARS.value
         return variable
 
@@ -131,7 +132,7 @@ class GDEFImporter:
         blocks = []
         break_flag = False
 
-        while (not break_flag) and (self.buffer.tell() != self._eof):
+        while (not break_flag) and (self._buffer.tell() != self._eof):
             block = GDEFControlBlock()
             block = self._read_control_block(block)
 
@@ -151,11 +152,11 @@ class GDEFImporter:
             if depth == 0:
                 self._read_variable_data(block, depth)
 
-            self.blocks.append(block)
+            self._blocks.append(block)
             if depth == 0:
-                self.base_blocks.append(block)
+                self._base_blocks.append(block)
             blocks.append(block)
-        return blocks  # measurement.blocks
+        return blocks  # measurement._blocks
 
     def _read_variable_data(self, block: GDEFControlBlock, depth: int):
         for variable in block.variables:
@@ -164,7 +165,7 @@ class GDEFImporter:
                 for block in nestedblocks:
                     self._read_variable_data(block, depth + 1)
             else:
-                variable.data = self.buffer.read(block.n_data * type_sizes[variable.type])
+                variable.data = self._buffer.read(block.n_data * type_sizes[variable.type])
                 if variable.type == GDEFVariableType.VAR_INTEGER.value:
                     variable.data = int.from_bytes(variable.data, 'little')
                 elif variable.type == GDEFVariableType.VAR_FLOAT.value:
@@ -261,7 +262,7 @@ class GDEFImporter:
         try:
             result._values_original = np.reshape(value_data, shape)
             result.values = np.reshape(value_data, shape)
-            result.correct_background(correction_type=self.bg_correction_type, keep_offset=self.keep_offset)
+            result.correct_background(correction_type=self.bg_correction_type, keep_offset=self.keep_z_offset)
         except:
             result.values = None
         result.settings._pixel_width = result.settings.max_width / result.settings.columns

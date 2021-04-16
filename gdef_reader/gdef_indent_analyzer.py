@@ -15,6 +15,10 @@ from gdef_reader.gdef_measurement import GDEFMeasurement
 class GDEFIndentAnalyzer:
     """
     Class to analyze a GDEFMeasurment with an indent.
+
+    :InstanceAttributes:
+    measurement: GDEFMeasurement with the indent to analyze.
+    :EndInstanceAttributes:
     """
     # speed optimization to reduce calculationtime of _is_pixel_in_radius()
     pixel_radius_distance_matrix = {}

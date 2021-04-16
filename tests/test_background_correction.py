@@ -8,15 +8,15 @@ import pytest
 from afm_tools.background_correction import BGCorrectionType, correct_background
 
 # -------------------------------------------------------------------------------------------------------------
-# --------------------------------------- immutable testtcases ------------------------------------------------
+# --------------------------------------- immutable testcases ------------------------------------------------
 # -------------------------------------------------------------------------------------------------------------
 
-# zero plane - should stay unchanged for all BG corrrections!
+# zero plane - should stay unchanged for all BG corrections!
 zero_plane = ((0, 0, 0),
               (0, 0, 0),
               (0, 0, 0))
 
-# offset plane - only offset - corrections should change nothing for keep_offset == True, else return zero_plane.
+# offset plane - only offset - corrections should change nothing for keep_z_offset == True, else return zero_plane.
 offset_plane = ((1., 1., 1.),
                 (1., 1., 1.),
                 (1., 1., 1.))

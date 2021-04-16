@@ -79,6 +79,10 @@ def subtract_mean_gradient_plane(array2d: np.ndarray, keep_offset: bool = False)
 
 
 class BGCorrectionType(Enum):
+    """
+    .. figure:: https://github.com/natter1/gdef_reader/raw/master/docs/images/BGCorrectionType_example01.png
+        :width: 800pt
+    """
     gradient = auto()
     legendre_0 = auto()
     legendre_1 = auto()

@@ -261,7 +261,7 @@ class GDEFMeasurement:
             result[nx, ny] = (value, value, value, 0)
         return result
 
-    def set_topography_to_axes(self, ax: Axes):
+    def set_topography_to_axes(self, ax: Axes, add_id: bool = True):
         if self.values is None:
             ax.set_title(f"{self.gdf_block_id}: {self.comment}")
             print(f"GDEFMeasurement {self.name} has values==None")
@@ -288,7 +288,10 @@ class GDEFMeasurement:
         extent = self.settings.size_in_um_for_plot()
         im = ax.imshow(values, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
         if self.comment:
-            title = f"{self.gdf_block_id}: {self.comment}"
+            if add_id:
+                title = f"{self.gdf_block_id}: {self.comment}"
+            else:
+                title = self.comment
         ax.set_title(title)  # , pad=16)
         ax.set_xlabel("µm", labelpad=1.0)
         ax.set_ylabel("µm", labelpad=1.0)
@@ -302,7 +305,7 @@ class GDEFMeasurement:
             cax.title.set_color("red")
         plt.colorbar(im, cax=cax)
 
-    def create_plot(self, max_figure_size=(4, 4), dpi=96) -> Optional[Figure]:
+    def create_plot(self, max_figure_size=(4, 4), dpi=96, add_id: bool = True) -> Optional[Figure]:
         if self.values is None:
             return
 
@@ -310,7 +313,7 @@ class GDEFMeasurement:
         #     return  # for now, only plot topography (-> source_channel == 11)
 
         figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
-        self.set_topography_to_axes(ax)
+        self.set_topography_to_axes(ax, add_id)
 
         tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
         figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=dpi)

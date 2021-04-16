@@ -180,7 +180,7 @@ Class containing data of a single measurement from \*.gdf file.
 
     .. code:: python
 
-        create_plot(self, max_figure_size=(4, 4), dpi=96) -> Union[matplotlib.figure.Figure, NoneType]
+        create_plot(self, max_figure_size=(4, 4), dpi=96, add_id: bool = True) -> Union[matplotlib.figure.Figure, NoneType]
 
 
 * **get_summary_table_data**
@@ -243,7 +243,7 @@ Class containing data of a single measurement from \*.gdf file.
 
     .. code:: python
 
-        set_topography_to_axes(self, ax: matplotlib.axes._axes.Axes)
+        set_topography_to_axes(self, ax: matplotlib.axes._axes.Axes, add_id: bool = True)
 
 
 **Instance Attributes:**
@@ -397,7 +397,8 @@ Module afm_tools.background_correction
 
 class BGCorrectionType
 ~~~~~~~~~~~~~~~~~~~~~~
-An enumeration.
+.. figure:: https://github.com/natter1/gdef_reader/raw/master/docs/images/BGCorrectionType_example01.png
+    :width: 800pt
 
 **Class Attributes:**
 

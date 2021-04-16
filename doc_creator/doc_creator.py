@@ -30,6 +30,7 @@ def main():
 
     readme = get_readme_header()
     readme += readme_api
+
     with open('auto_readme.rst', 'w') as f:
         f.writelines(readme)
     return

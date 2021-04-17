@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from gdef_reader.gdef_sticher import GDEFSticher
-from gdef_reader.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
+#from afm_tools.gdef_sticher import GDEFSticher
+from afm_tools.gdef_sticher import GDEFSticher
+from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
 from gdef_reader.utils import create_xy_rms_data, create_absolute_gradient_array, get_mu_sigma_moving_average, \
     get_mu_sigma
 from gdef_reporter.plotter_utils import plot_surface_to_axes
@@ -57,12 +57,14 @@ class GDEFPlotter:
         self.plotter_style_rms: PlotterStyle = get_plotter_style_rms(dpi=dpi, figure_size=figure_size)
         self.plotter_style_sigma: PlotterStyle = get_plotter_style_sigma(dpi=dpi, figure_size=figure_size)
 
-    def create_surface_figure(self, values: np.ndarray, pixel_width, cropped=True) -> Optional[Figure]:
+    def create_surface_figure(self, values: np.ndarray, pixel_width, title=None, cropped=True) -> Optional[Figure]:
         if values is None:
             return
 
         figure_max, ax = plt.subplots(figsize=self.figure_size, dpi=self.dpi)
         self.plot_surface_to_axes(ax, values, pixel_width)
+        if title:
+            figure_max.suptitle(f'{title}')
         figure_max.tight_layout()
         if not cropped:
             self._auto_show_figure(figure_max)
@@ -72,6 +74,8 @@ class GDEFPlotter:
         figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=self.dpi)
 
         self.plot_surface_to_axes(ax, values, pixel_width)
+        if title:
+            figure_tight.suptitle(f'{title}')
         figure_tight.tight_layout()  # TODO: does this create new issues? (added to prevent cut axis titles
         self._auto_show_figure(figure_tight)
         return figure_tight
@@ -89,22 +93,37 @@ class GDEFPlotter:
 
         ax_rms.plot(x_pos, y_rms, **self.plotter_style_rms.graph_styler.dict)  # 'r')
         if title:
-            info = f"(moving average n={moving_average_n} ({moving_average_n * pixel_width * 1e6:.1f} µm))"
-            result.suptitle(f'{title} {info}')  # , fontsize=16)
+            info = f"moving average n={moving_average_n} ({moving_average_n * pixel_width * 1e6:.1f} µm)"
+            result.suptitle(f'{title}\n{info}')  # , fontsize=16)
+        result.tight_layout()
         self._auto_show_figure(result)
         return result
 
-    def create_absolute_gradient_rms_figure(self, values: np.ndarray, cutoff_percent_list, pixel_width,
+    def create_absolute_gradient_rms_figure(self, values: np.ndarray, cutoff_percent_list, pixel_width, title=None,
                                             moving_average_n=1) -> Figure:
+        """
+        Creates a plot with a curve for each value in cutoff_percent_list, showing rms(abs(grad(z))) as
+        moving average over moving_average_n columns.
+        Candidate to become deprecated!
+        :param values:
+        :param cutoff_percent_list:
+        :param pixel_width:
+        :param title:
+        :param moving_average_n:
+        :return: Figure
+        """
         result, (ax_gradient_rms) = plt.subplots(1, 1, figsize=self.figure_size)
         ax_gradient_rms.set_xlabel("[µm]")
-        ax_gradient_rms.set_ylabel(f"rms(abs(grad(surface)))) (moving average over {moving_average_n} column(s))")
+        ax_gradient_rms.set_ylabel(f"rms(abs(grad(z))) (moving avg. n = {moving_average_n} column(s))")
 
         for i, percent in enumerate(cutoff_percent_list):
             absolut_gradient_array = create_absolute_gradient_array(values, percent / 100.0)
             x_pos, y_gradient_rms = create_xy_rms_data(absolut_gradient_array, pixel_width, moving_average_n)
             ax_gradient_rms.plot(x_pos, y_gradient_rms, label=f"{percent}%")
         ax_gradient_rms.legend()
+        if title:
+            result.suptitle(title)
+        result.tight_layout()
         self._auto_show_figure(result)
         return result
 
@@ -120,6 +139,7 @@ class GDEFPlotter:
         :param step: col step value between moving average values (default 1; moving avg. is calculated for each col)
         :return:
         """
+        # todo: how to make this work with [GDEFMeasurment] too?
         x_pos = []
         y_sigma = []
         pixel_width_in_um = None
@@ -168,10 +188,6 @@ class GDEFPlotter:
             ax_list_cutoff[i].set_title(f'gradient cutoff {percent}%')
             ax_list_cutoff[i].set_axis_off()
         return result
-
-    @figure_size.setter
-    def figure_size(self, value):
-        self._figure_size = value
 
     @classmethod
     def create_stich_summary_figure(cls, sticher_dict, figure_size=(16, 10)):

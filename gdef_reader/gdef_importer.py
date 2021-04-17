@@ -55,7 +55,7 @@ class GDEFImporter:
         """
         Create a list of GDEFMeasurement-Objects from imported data. The optional parameter create_images
         can be used to show a matplotlib Figure for each GDEFMeasurement (default value is False).
-        :param path: Save path for GDEFMeasurement-objects. No saved files, if None.
+        :param path: Save path for GDEFMeasurement-objects (and png's if create_images). No saved files, if None.
         :param create_images: Show a matplotlib Figure for each GDEFMeasurement; used for debugging (default: False)
         :return: list of GDEFMeasurement-Objects
         """
@@ -63,7 +63,7 @@ class GDEFImporter:
         for i, block in enumerate(self._blocks):
             if block.n_data != 1 or block.n_variables != 50:
                 continue
-            measurement = self._get_measurement_from_block(block, create_images)
+            measurement = self._get_measurement_from_block(block)
             measurement.gdf_basename = self.basename
             result.append(measurement)
 
@@ -76,7 +76,7 @@ class GDEFImporter:
                 path.mkdir(parents=True, exist_ok=True)
                 if create_images:
                     measurement.save_png(f"{path}\\{self.basename}_block_{measurement.gdf_block_id}", dpi=96)
-                measurement.save(f"{path}\\{self.basename}_block_{measurement.gdf_block_id:04}.pygdf")  # todo: what happens, when block.id > 9999?
+                measurement.save_as_pickle(f"{path}\\{self.basename}_block_{measurement.gdf_block_id:04}.pygdf")  # todo: what happens, when block.id > 9999?
 
         return result
 
@@ -201,7 +201,7 @@ class GDEFImporter:
                 else:
                     print("should not happen")
 
-    def _get_measurement_from_block(self, block: GDEFControlBlock, create_image) -> GDEFMeasurement:
+    def _get_measurement_from_block(self, block: GDEFControlBlock) -> GDEFMeasurement:
         result = GDEFMeasurement()
         result.gdf_block_id = block.id
 
@@ -261,6 +261,7 @@ class GDEFImporter:
         shape = (y, x)
         try:
             result._values_original = np.reshape(value_data, shape)
+            result._values_original.flags.writeable = False
             result.values = np.reshape(value_data, shape)
             result.correct_background(correction_type=self.bg_correction_type, keep_offset=self.keep_z_offset)
         except:

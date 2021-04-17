@@ -59,7 +59,7 @@ class GDEFIndentAnalyzer:
         if minimum is None:
             return 0
         self.radius = abs(7 * minimum)
-        minimum_position = self.measurement._get_minimum_position()
+        minimum_position = self._get_minimum_position()
         pixel_area = self.measurement.settings.pixel_area()
         result = 0
         for index, value in np.ndenumerate(self.measurement.values):
@@ -71,7 +71,7 @@ class GDEFIndentAnalyzer:
         self._check_pixel_radius_dict()
         minimum = np.min(self.measurement.values)
         self.radius = abs(7 * minimum)
-        minimum_position = self.measurement._get_minimum_position()
+        minimum_position = self._get_minimum_position()
 
         self.below_surface_limit = roughness_part * minimum
         self.above_surface_limit = abs(self.below_surface_limit)
@@ -136,3 +136,17 @@ class GDEFIndentAnalyzer:
         result.append(["pileup volume [m^3]", f"{pileup_volume:.2e}"])
 
         return result
+
+    def _get_minimum_position(self):
+        # ---------------------------------------------------------------------------------------------------
+        # this makes code actually slower (not this method, but other code parts ^^); so do not use np.where:
+        # delme = np.where(self.values == np.amin(self.values))
+        # return delme[0][0], delme[1][0]
+        # ---------------------------------------------------------------------------------------------------
+        minimum = np.min(self.measurement.values)
+        minimum_position = (0, 0)
+        for index, value in np.ndenumerate(self.measurement.values):
+            if value == minimum:
+                minimum_position = index
+                break
+        return minimum_position

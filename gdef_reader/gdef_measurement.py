@@ -9,11 +9,10 @@ from typing import Optional, Tuple, List
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib.figure import Figure
 
-from afm_tools.background_correction import subtract_legendre_fit, subtract_mean_gradient_plane, BGCorrectionType, \
+from afm_tools.background_correction import BGCorrectionType, \
     correct_background
 from gdef_reader.gdef_data_strucutres import GDEFHeader
 from gdef_reporter.plotter_utils import plot_surface_to_axes
@@ -202,7 +201,8 @@ class GDEFMeasurement:
         self.pygdf_filename: Optional[Path] = None  # basename of pickled *.pygdf
         self.gdf_block_id = None
 
-        self.background_corrected = False
+        self.background_correction_type = None
+        # self.background_corrected = False  # not implemented - might be better to save BGCorrectionType anyway
 
     @property
     def name(self) -> str:
@@ -213,10 +213,10 @@ class GDEFMeasurement:
 
     @property
     def values_original(self) -> np.ndarray:
-        """Returns a np.ndarray with the original measurement data (before background correction etc.)."""
+        """Returns a read-only np.ndarray with the original measurement data (before background correction etc.)."""
         return self._values_original
 
-    def save(self, filename):
+    def save_as_pickle(self, filename):
         """
         Save the measurement object using pickle. This is useful for example, if the corresponding
         \*.gdf file contains a lot of measurements, but only a few of them are needed. Take note, that pickle is not
@@ -229,7 +229,7 @@ class GDEFMeasurement:
             pickle.dump(self, file, 3)
 
     @staticmethod
-    def load(filename: Path) -> "GDEFMeasurement":
+    def load_from_pickle(filename: Path) -> "GDEFMeasurement":
         """
         Static method to load and return a measurement object using pickle. Take note, that pickle is not a save module
         to load data. Make sure to only use files from trustworthy sources.
@@ -254,31 +254,6 @@ class GDEFMeasurement:
         if figure:
             figure.savefig(filename, transparent=transparent, dpi=dpi)
 
-    def _get_minimum_position(self):
-        # ---------------------------------------------------------------------------------------------------
-        # this makes code actually slower (not this method, but other code parts ^^); so do not use np.where:
-        # delme = np.where(self.values == np.amin(self.values))
-        # return delme[0][0], delme[1][0]
-        # ---------------------------------------------------------------------------------------------------
-        minimum = np.min(self.values)
-        minimum_position = (0, 0)
-        for index, value in np.ndenumerate(self.values):
-            if value == minimum:
-                minimum_position = index
-                break
-        return minimum_position
-
-    def _get_greyscale_data(self):
-        # Normalised [0,1]
-        data_min = np.min(self.values)
-        data_ptp = np.ptp(self.values)
-
-        result = np.zeros((self.values.shape[0], self.values.shape[1], 4))
-        for (nx, ny), _ in np.ndenumerate(self.values):
-            value = (self.values[nx, ny] - data_min) / data_ptp
-            result[nx, ny] = (value, value, value, 0)
-        return result
-
     def set_topography_to_axes(self, ax: Axes, add_id: bool = False):
         """
         Sets the measurement data as diagram to a matplotlib Axes. If GDEFMeasurement.comment is not empty,
@@ -301,22 +276,27 @@ class GDEFMeasurement:
 
         plot_surface_to_axes(ax, self.values, self.settings.pixel_width, title, z_unit, z_factor)
 
-    def create_plot(self, max_figure_size=(4, 4), dpi=96, add_id: bool = False) -> Figure:
+    def create_plot(self, max_figure_size=(4, 4), dpi=96, add_id: bool = False, trim: bool = True) -> Figure:
         """
         Returns a matplotlib figure of measurment data. If GDEFMeasurement.comment is not empty,
         the comment is used as title. Otherwise a default title with the type of measurement data is created.
         :param max_figure_size: Max. figure size. The actual figure size might be smaller.
         :param dpi: dpi value for Figure
         :param add_id:
+        :param trim:
         :return: Figure
         """
         figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
-        self.set_topography_to_axes(ax, add_id)
+        self.set_topography_to_axes(ax=ax, add_id=add_id)
 
+        if not trim:
+            return figure_max
+
+        # remove unnecessary white areas (plot has a fixed aspect ratio due to scan area)
         tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
         figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=dpi)
-        self.set_topography_to_axes(ax)
-
+        self.set_topography_to_axes(ax=ax, add_id=add_id)
+        figure_tight.tight_layout()
         return figure_tight
 
     def correct_background(self, correction_type: BGCorrectionType = BGCorrectionType.legendre_1, keep_offset: bool = False):
@@ -333,6 +313,7 @@ class GDEFMeasurement:
         if not self.settings.source_channel == 11:  # only correct topography data
             return
         self.values = correct_background(self.values_original, correction_type=correction_type, keep_offset=keep_offset)
+        self.background_correction_type = correction_type
 
     def get_summary_table_data(self) -> List[list]:  # todo: consider move method to utils.py
         """

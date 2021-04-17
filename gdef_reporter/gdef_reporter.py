@@ -17,8 +17,8 @@ from pptx_tools.templates import TemplateExample
 from afm_tools.background_correction import BGCorrectionType
 from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reader.gdef_measurement import GDEFMeasurement
-from gdef_reader.gdef_sticher import GDEFSticher
-from gdef_reader.pptx_styles import summary_table, minimize_table_height
+from afm_tools.gdef_sticher import GDEFSticher
+from gdef_reporter.pptx_styles import summary_table, minimize_table_height
 
 
 # todo: class GDEFMeasurement_Collection
@@ -113,6 +113,7 @@ class GDEFReporter:
             result.append([f"{container.path.stem}.gdf", container.last_modification_datetime])
         return result
 
+    # todo: split up and move part to GDEF_Plotter or plotter_utils
     def create_summary_figure(self, measurements: List[GDEFMeasurement], figure_size=(16, 10)):
         n = len(measurements)
         if n == 0:

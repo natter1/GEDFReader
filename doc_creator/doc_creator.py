@@ -9,8 +9,8 @@ from types import ModuleType, DynamicClassAttribute
 from typing import Tuple
 
 import gdef_reader.gdef_importer as gdef_importer
-from afm_tools import background_correction
-from gdef_reader import gdef_measurement, gdef_sticher, gdef_indent_analyzer
+from afm_tools import background_correction, gdef_sticher, gdef_indent_analyzer
+from gdef_reader import gdef_measurement
 
 module_list = [
     gdef_importer,
@@ -23,7 +23,6 @@ module_list = [
 
 def main():
     readme_api = ""
-    from afm_tools.background_correction import BGCorrectionType
 
     for module in module_list:
         readme_api += get_module_doc(module)

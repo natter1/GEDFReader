@@ -16,6 +16,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from afm_tools.background_correction import subtract_legendre_fit, subtract_mean_gradient_plane, BGCorrectionType, \
     correct_background
 from gdef_reader.gdef_data_strucutres import GDEFHeader
+from gdef_reporter.plotter_utils import plot_surface_to_axes
 
 
 class GDEFSettings:
@@ -38,14 +39,14 @@ class GDEFSettings:
     invert_plane_corr
     line_mean
     line_mean_order
-    lines
+    lines: total number of scan lines (including missing lines)
     loop_filter
     loop_gain
     loop_int
-    max_height
-    max_width
+    max_height: scan area height [m]
+    max_width: scan area width [m]
     measured_amplitude
-    missing_lines
+    missing_lines: number of missing lines (e.g. due to aborted measurement)
     offset_pos
     offset_x
     offset_y
@@ -59,7 +60,7 @@ class GDEFSettings:
     retrace_type
     scan_direction
     scan_mode
-    scan_speed
+    scan_speed: [µm/s]
     scanner_range
     set_point
     source_channel
@@ -73,7 +74,6 @@ class GDEFSettings:
     :EndInstanceAttributes:
     """
     def __init__(self):
-        # Settings:
         self.lines = None
         self.columns = None
         self.missing_lines = None
@@ -152,6 +152,24 @@ class GDEFSettings:
         """
         return self.columns - self.missing_lines, self.lines
 
+    def _data_type_info(self) -> tuple:
+        """
+        Get information about the type of measurement data based on source_channel as a tuple.
+        If data:_type is still missing in data_type_dict, the source_channel (int) is returned as unit!
+        :return: tuple (data_type: str, unit: str, scaling_factor: float)
+        """
+        # todo: add more source_channel values to data_type_dict
+        data_type_dict = {
+            9: ("bending", "N", 1.0),
+            11: ("topography", "nm", 1e9),
+            12: ("phase", "deg", 1.0)  # factor 18.0 from gwyddion - seems to create too large values (e.g. 600 degree)
+        }
+        try:
+            return data_type_dict[self.source_channel]
+        except KeyError:
+            print(f"source_channel {self.source_channel} not implemented in data_type_dict.")
+            return ("SC", self.source_channel, 1.0)
+
 
 class GDEFMeasurement:
     """
@@ -162,7 +180,7 @@ class GDEFMeasurement:
     filename:  Path of \*.pygdf file (only if loaded from pickled file, else None).
     gdf_basename: Path.stem of the imported \*.gdf file.
     gdf_block_id: Block ID in original \*.gdf file. Might be used to filter measurements.
-    name
+    name: Returns a name of the measurement created from original \*.gdf filename and the gdf_block_id
     preview
     settings: GDEFSettings object
     values: Measurement values including corrections for background, offset etc.
@@ -195,7 +213,7 @@ class GDEFMeasurement:
 
     @property
     def values_original(self) -> np.ndarray:
-        """Returns an numpy.ndarray with the original measurement data (before background correction etc.)."""
+        """Returns a np.ndarray with the original measurement data (before background correction etc.)."""
         return self._values_original
 
     def save(self, filename):
@@ -205,7 +223,7 @@ class GDEFMeasurement:
         a save module to load data. Make sure to only use files from trustworthy sources.
 
         :param filename:
-        :return:
+        :return: None
         """
         with open(filename, 'wb') as file:
             pickle.dump(self, file, 3)
@@ -213,11 +231,11 @@ class GDEFMeasurement:
     @staticmethod
     def load(filename: Path) -> "GDEFMeasurement":
         """
-        Load a measurement object using pickle. Take note, that pickle is not a save module to load data.
-        Make sure to only use files from trustworthy sources.
+        Static method to load and return a measurement object using pickle. Take note, that pickle is not a save module
+        to load data. Make sure to only use files from trustworthy sources.
 
         :param filename:
-        :return:
+        :return: GDEFMeasurement
         """
         with open(filename, 'rb'):
             return pickle.load(filename)
@@ -225,7 +243,7 @@ class GDEFMeasurement:
     # todo: check possible types for filename (str, path, ...)
     def save_png(self, filename, max_figure_size=(4, 4), dpi: int = 300, transparent: bool = False):
         """
-        Save a matplotlib.Figure aof the measurement as a \*.png.
+        Save a matplotlib.Figure of the measurement as a \*.png.
         :param filename:
         :param max_figure_size: Max size of the Figure. The final size might be smaller in x or y.
         :param dpi: (default 300)
@@ -261,57 +279,37 @@ class GDEFMeasurement:
             result[nx, ny] = (value, value, value, 0)
         return result
 
-    def set_topography_to_axes(self, ax: Axes, add_id: bool = True):
+    def set_topography_to_axes(self, ax: Axes, add_id: bool = False):
+        """
+        Sets the measurement data as diagram to a matplotlib Axes. If GDEFMeasurement.comment is not empty,
+        the comment is used as title. Otherwise a default title with the type of measurement data is created.
+        :param ax: Axes object to witch the topography is written.
+        :param add_id: Adds block_id before title text (default False)
+        :return: None
+        """
+        data_type, z_unit, z_factor = self.settings._data_type_info()
+        if not isinstance(z_unit, str):
+            z_unit = f"SC: {z_unit}"  # source_channel not in data_type_dict -> z_unit contains source_channel
+
+        title = self.comment if self.comment else f"{data_type}"
+        if add_id:
+            title = f"{self.gdf_block_id}: {title}"
+
         if self.values is None:
-            ax.set_title(f"{self.gdf_block_id}: {self.comment}")
             print(f"GDEFMeasurement {self.name} has values==None")
             return
-        # todo: refactor to extra method
-        if self.settings.source_channel == 11:
-            title = f"{self.gdf_block_id}: topography"
-            unit = "nm"
-            values = self.values * 1e9  # m -> nm
-        elif self.settings.source_channel == 9:
-            title = f"{self.gdf_block_id}: bending"
-            unit = "N"
-            values = self.values
-        elif self.settings.source_channel == 12:
-            title = f"{self.gdf_block_id}: phase"
-            unit = "deg"
-            # factor 18.0 from gwyddion - seems to create too large values (e.g. 600 degree)
-            values = self.values  # * 18.0
-        else:
-            title = f"{self.gdf_block_id}: SC: {self.settings.source_channel}"
-            unit = f"SC: {self.settings.source_channel}"
-            values = self.values
 
-        extent = self.settings.size_in_um_for_plot()
-        im = ax.imshow(values, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
-        if self.comment:
-            if add_id:
-                title = f"{self.gdf_block_id}: {self.comment}"
-            else:
-                title = self.comment
-        ax.set_title(title)  # , pad=16)
-        ax.set_xlabel("µm", labelpad=1.0)
-        ax.set_ylabel("µm", labelpad=1.0)
+        plot_surface_to_axes(ax, self.values, self.settings.pixel_width, title, z_unit, z_factor)
 
-        divider = make_axes_locatable(ax)
-        cax = divider.append_axes("right", size="5%", pad=0.05)
-        if self.settings.source_channel in [9, 11, 12]:
-            cax.set_title(unit, y=1)  # bar.set_label("nm")
-        else:
-            cax.set_title(unit, y=0, pad=-15)  # -0.2)#1)  # bar.set_label("nm")
-            cax.title.set_color("red")
-        plt.colorbar(im, cax=cax)
-
-    def create_plot(self, max_figure_size=(4, 4), dpi=96, add_id: bool = True) -> Optional[Figure]:
-        if self.values is None:
-            return
-
-        # if self.settings.source_channel != 11:
-        #     return  # for now, only plot topography (-> source_channel == 11)
-
+    def create_plot(self, max_figure_size=(4, 4), dpi=96, add_id: bool = False) -> Figure:
+        """
+        Returns a matplotlib figure of measurment data. If GDEFMeasurement.comment is not empty,
+        the comment is used as title. Otherwise a default title with the type of measurement data is created.
+        :param max_figure_size: Max. figure size. The actual figure size might be smaller.
+        :param dpi: dpi value for Figure
+        :param add_id:
+        :return: Figure
+        """
         figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
         self.set_topography_to_axes(ax, add_id)
 
@@ -335,25 +333,6 @@ class GDEFMeasurement:
         if not self.settings.source_channel == 11:  # only correct topography data
             return
         self.values = correct_background(self.values_original, correction_type=correction_type, keep_offset=keep_offset)
-
-
-    def _subtract_mean_plane(self):
-        try:
-            value_gradient = np.gradient(self.values)
-        except ValueError:
-            return
-        mean_value_gradient_x = value_gradient[0].mean()
-        mean_value_gradient_y = value_gradient[1].mean()
-        for (nx, ny), _ in np.ndenumerate(self.values):
-            self.values[nx, ny] = self.values[nx, ny] - nx * mean_value_gradient_x - ny * mean_value_gradient_y
-
-    def _do_median_level(self, subtract_mean_plane: bool = True):
-        if subtract_mean_plane:
-            self._subtract_mean_plane()
-        try:
-            self.values = self.values - self.values.mean()
-        except ValueError:
-            pass
 
     def get_summary_table_data(self) -> List[list]:  # todo: consider move method to utils.py
         """

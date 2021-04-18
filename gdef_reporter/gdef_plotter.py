@@ -6,30 +6,36 @@ from typing import Optional, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-#from afm_tools.gdef_sticher import GDEFSticher
+# from afm_tools.gdef_sticher import GDEFSticher
 from afm_tools.gdef_sticher import GDEFSticher
-from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
 from gdef_reader.utils import create_xy_rms_data, create_absolute_gradient_array, get_mu_sigma_moving_average, \
     get_mu_sigma
-from gdef_reporter.plotter_utils import plot_surface_to_axes
+from gdef_reporter._code_utils import ClassOrInstanceMethod
+from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
+from gdef_reporter.plotter_utils import create_plot_from_sticher, plot_sticher_to_ax, plot_from_ndarray_to_ax, \
+    create_plot_from_ndarray
 
 
 class GDEFPlotter:
-    def __init__(self, figure_size=(12, 6), dpi=300, auto_show=False):
+    auto_show = False  # used for classmethod and as default for instance auto_show
+
+    def __init__(self, figure_size=(12, 6), dpi=300, auto_show=None):
         """
 
-        :param figure_size:
-        :param dpi:
-        :param auto_show: automatically call figure.show(), when a figure is created
+        :param figure_size: figure size for created Fiugres
+        :param dpi: dpi for created Figures
+        :param auto_show: automatically call figure.show(), when a figure is created. If None, class attribute is used.
         """
         self._dpi = dpi
         self._figure_size = figure_size
         self.plotter_style_rms: PlotterStyle = get_plotter_style_rms(dpi=dpi, figure_size=figure_size)
         self.plotter_style_sigma: PlotterStyle = get_plotter_style_sigma(dpi=dpi, figure_size=figure_size)
-        self.auto_show = auto_show
+        if auto_show is None:
+            self.auto_show = GDEFPlotter.auto_show
+        else:
+            self.auto_show = auto_show
 
     @property
     def dpi(self):
@@ -60,25 +66,10 @@ class GDEFPlotter:
     def create_surface_figure(self, values: np.ndarray, pixel_width, title=None, cropped=True) -> Optional[Figure]:
         if values is None:
             return
+        fig = create_plot_from_ndarray(values, pixel_width, title, cropped, self.figure_size, self.dpi)
 
-        figure_max, ax = plt.subplots(figsize=self.figure_size, dpi=self.dpi)
-        self.plot_surface_to_axes(ax, values, pixel_width)
-        if title:
-            figure_max.suptitle(f'{title}')
-        figure_max.tight_layout()
-        if not cropped:
-            self._auto_show_figure(figure_max)
-            return figure_max
-
-        tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
-        figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=self.dpi)
-
-        self.plot_surface_to_axes(ax, values, pixel_width)
-        if title:
-            figure_tight.suptitle(f'{title}')
-        figure_tight.tight_layout()  # TODO: does this create new issues? (added to prevent cut axis titles
-        self._auto_show_figure(figure_tight)
-        return figure_tight
+        self._auto_show_figure(fig)
+        return fig
 
     def create_rms_per_column_figure(self, values: np.ndarray, pixel_width, title=None, moving_average_n=1) -> Figure:
         """
@@ -127,8 +118,11 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def _auto_show_figure(self, fig):
-        if self.auto_show:
+    @ClassOrInstanceMethod
+    def _auto_show_figure(cls, instance, fig):
+        """Parameters cls and instance are set via decorator ClassOrInstance. So first parameter when calling is fig."""
+        auto_show = instance.auto_show if instance else cls.auto_show
+        if auto_show:
             fig.show()
 
     def create_sigma_moving_average_figure(self, sticher_dict: Dict[str, GDEFSticher], moving_average_n=200, step=1):
@@ -139,7 +133,7 @@ class GDEFPlotter:
         :param step: col step value between moving average values (default 1; moving avg. is calculated for each col)
         :return:
         """
-        # todo: how to make this work with [GDEFMeasurment] too?
+        # todo: how to make this work with [GDEFMeasurment] too? Split sticher_dict in List[ndarray] and list[label]?
         x_pos = []
         y_sigma = []
         pixel_width_in_um = None
@@ -167,7 +161,8 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def create_absolute_gradient_figures(self, values: np.ndarray, cutoff_percent_list, nan_color='red') -> Figure:
+    def create_absolute_gradient_figures(self, values: np.ndarray, cutoff_percent_list,
+                                         title=None, nan_color='red') -> Figure:
         """
         Creates a matplotlib figure, to show the influence of different cutoff values. The omitted values are represented
         in the color nan_color (default is red).
@@ -187,17 +182,27 @@ class GDEFPlotter:
             ax_list_cutoff[i].imshow(absolut_gradient_array, cmap_gray_red_nan)
             ax_list_cutoff[i].set_title(f'gradient cutoff {percent}%')
             ax_list_cutoff[i].set_axis_off()
+        if title:
+            result.suptitle(title)
+        result.tight_layout()
+        self._auto_show_figure(result)
         return result
 
-    @classmethod
-    def create_stich_summary_figure(cls, sticher_dict, figure_size=(16, 10)):
+    def create_stich_summary_figure(self, sticher_dict):  # , figure_size=(16, 10)):
+        """
+        Creates a Figure with stiched maps for each GDEFSticher in sticher_dict. The keys in sticher_dict
+        are used as titles for the corresponding Axes.
+        :param sticher_dict:
+        :return:
+        """
         n = len(sticher_dict)
         if n == 0:
-            return plt.subplots(1, figsize=figure_size, dpi=300)
+            return plt.subplots(1, figsize=self.figure_size, dpi=300)
 
-        optimal_ratio = figure_size[0] / figure_size[1]
-        dummy_fig = cls.get_plot_from_sticher(list(sticher_dict.values())[0], title='dummy',
-                                              max_figure_size=figure_size)  # measurements[0].create_plot()
+        # todo refactor in a seperate function
+        optimal_ratio = self.figure_size[0] / self.figure_size[1]
+        dummy_fig = create_plot_from_sticher(list(sticher_dict.values())[0], title='dummy',
+                                             max_figure_size=self.figure_size)  # measurements[0].create_plot()
         single_plot_ratio = dummy_fig.get_figwidth() / dummy_fig.get_figheight()
         optimal_ratio /= single_plot_ratio
 
@@ -213,18 +218,18 @@ class GDEFPlotter:
         possible_ratios[:] = sorted(possible_ratios, key=lambda ratio: abs(ratio[0] / ratio[1] - optimal_ratio))
         best_ratio = possible_ratios[0][1], possible_ratios[0][0]
 
-        result, ax_list = plt.subplots(*best_ratio, figsize=figure_size, dpi=300)
+        result, ax_list = plt.subplots(*best_ratio, figsize=self.figure_size, dpi=300)
         for i, key in enumerate(sticher_dict):
             y = i // best_ratio[0]
             x = i - (y * best_ratio[0])
             if (best_ratio[1] > 1) and (best_ratio[0] > 1):
-                cls.set_topography_to_axes(sticher_dict[key], ax_list[x, y], title=key)
+                plot_sticher_to_ax(sticher_dict[key], ax_list[x, y], title=key)
             elif best_ratio[0] > 1:
-                cls.set_topography_to_axes(sticher_dict[key], ax_list[x], title=key)
+                plot_sticher_to_ax(sticher_dict[key], ax_list[x], title=key)
             elif best_ratio[1] > 1:
-                cls.set_topography_to_axes(sticher_dict[key], ax_list[y], title=key)
+                plot_sticher_to_ax(sticher_dict[key], ax_list[y], title=key)
             else:
-                cls.set_topography_to_axes(sticher_dict[key], ax_list, title=key)
+                plot_sticher_to_ax(sticher_dict[key], ax_list, title=key)
         i = len(sticher_dict)
         while i < best_ratio[0] * best_ratio[1]:
             y = i // best_ratio[0]
@@ -232,6 +237,7 @@ class GDEFPlotter:
             ax_list[x, y].set_axis_off()
             i += 1
         result.tight_layout()
+        self._auto_show_figure(result)
         return result
 
     def create_rms_with_error_fig(self, sticher_dict, average_n=8 * 160, step=1):
@@ -281,31 +287,26 @@ class GDEFPlotter:
             result.show()
         return result
 
-    @classmethod
-    def get_plot_from_sticher(cls, sticher: GDEFSticher, title='', max_figure_size=(1, 1), dpi=300):
-        figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
-        cls.set_topography_to_axes(sticher, ax, title)
+    def create_plot_from_sticher(self, sticher: GDEFSticher, title=''):
+        """Calls create_plot_from_sticher() from plotter_utils using self.figure_size and self.dpi."""
+        fig = create_plot_from_sticher(sticher, title, max_figure_size=self.figure_size, dpi=self.dpi)
+        self._auto_show_figure(fig)
+        return fig
 
-        tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
-        figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=dpi)
-        cls.set_topography_to_axes(sticher, ax, title)
+    # @classmethod
+    # def plot_sticher_to_axes(cls, sticher: GDEFSticher, ax: Axes, title=''):
+    #     """
+    #     Deprecated - please use plot_surface_to_axes() from plotter_utils.
+    #     """
+    #     print("GDEFPlotter.set_topography_to_axes is deprecated. Please use plot_surface_to_axes() from plotter_utils.")
+    #     plot_surface_to_axes(ax=ax, values=sticher.stiched_data, pixel_width=sticher.pixel_width, title=title)
 
-        return figure_tight
-
-    @classmethod
-    def set_topography_to_axes(cls, sticher: GDEFSticher, ax: Axes, title=''):
-        """
-        Deprecated - please use plot_surface_to_axes() from plotter_utils.
-        """
-        print("GDEFPlotter.set_topography_to_axes is deprecated. Please use plot_surface_to_axes() from plotter_utils.")
-        plot_surface_to_axes(ax=ax, values=sticher.stiched_data, pixel_width=sticher.pixel_width, title=title)
-
-    @classmethod
-    def plot_surface_to_axes(cls, ax: Axes, values: np.ndarray, pixel_width: float,
-                             title="", z_unit="nm", z_factor=1e9):
-        """
-        Deprecated - please use plot_surface_to_axes() from plotter_utils.
-        """
-        print("GDEFPlotter.plot_surface_to_axes is deprecated. Please use plot_surface_to_axes() from plotter_utils.")
-        plot_surface_to_axes(ax=ax, values=values, pixel_width=pixel_width,
-                             title=title, z_unit=z_unit, z_factor=z_factor)
+    # @classmethod
+    # def plot_surface_to_axes(cls, ax: Axes, values: np.ndarray, pixel_width: float,
+    #                          title="", z_unit="nm", z_factor=1e9):
+    #     """
+    #     Deprecated - please use plot_surface_to_axes() from plotter_utils.
+    #     """
+    #     print("GDEFPlotter.plot_surface_to_axes is deprecated. Please use plot_surface_to_axes() from plotter_utils.")
+    #     plot_surface_to_axes(ax=ax, values=values, pixel_width=pixel_width,
+    #                          title=title, z_unit=z_unit, z_factor=z_factor)

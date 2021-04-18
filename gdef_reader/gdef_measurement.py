@@ -15,7 +15,7 @@ from matplotlib.figure import Figure
 from afm_tools.background_correction import BGCorrectionType, \
     correct_background
 from gdef_reader.gdef_data_strucutres import GDEFHeader
-from gdef_reporter.plotter_utils import plot_surface_to_axes
+from gdef_reporter.plotter_utils import plot_from_ndarray_to_ax
 
 
 class GDEFSettings:
@@ -274,7 +274,7 @@ class GDEFMeasurement:
             print(f"GDEFMeasurement {self.name} has values==None")
             return
 
-        plot_surface_to_axes(ax, self.values, self.settings.pixel_width, title, z_unit, z_factor)
+        plot_from_ndarray_to_ax(ax, self.values, self.settings.pixel_width, title, z_unit, z_factor)
 
     def create_plot(self, max_figure_size=(4, 4), dpi=96, add_id: bool = False, trim: bool = True) -> Figure:
         """

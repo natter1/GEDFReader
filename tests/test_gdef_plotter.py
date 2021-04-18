@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 
 from afm_tools.background_correction import BGCorrectionType
@@ -40,7 +41,8 @@ def gdef_measurement():
 
 @pytest.fixture(scope='session')
 def gdef_plotter():
-    gdef_plotter = GDEFPlotter(figure_size=ORIGINAL_FIGURE_SIZE, dpi=ORIGINAL_DPI, auto_show=AUTO_SHOW)
+    GDEFPlotter.auto_show = AUTO_SHOW
+    gdef_plotter = GDEFPlotter(figure_size=ORIGINAL_FIGURE_SIZE, dpi=ORIGINAL_DPI)
     yield gdef_plotter
 
 
@@ -106,8 +108,29 @@ class TestGDEFPlotter:
     def test_create_sigma_moving_average_figure(self, gdef_plotter, gdef_measurement, random_ndarray2d_data):
         # gdef_measurement.values = random_ndarray2d_data
         # gdef_measurement.correct_background(BGCorrectionType.raw_data)
-        sticher_dict = {"exxample01": GDEFSticher([gdef_measurement])}
+        sticher_dict = {"example01": GDEFSticher([gdef_measurement])}
         gdef_plotter.create_sigma_moving_average_figure(sticher_dict, 10)
         pass  # needs sticher_dict: Dict[str, GDEFSticher]
 
+    def test_create_absolute_gradient_figure(self, gdef_plotter, random_ndarray2d_data):
+        cutoff_list = [1, 10, 20, 50, 90, 100]
+        fig = gdef_plotter.create_absolute_gradient_figures(
+            random_ndarray2d_data, cutoff_list)
 
+    def test_create_stich_summary_figure(self, gdef_plotter, gdef_measurement):
+        sticher_dict = {
+            # "example01": GDEFSticher([gdef_measurement, gdef_measurement, gdef_measurement]),
+            "example02": GDEFSticher([gdef_measurement, gdef_measurement])
+        }
+        fig = gdef_plotter.create_stich_summary_figure(sticher_dict)
+
+    def test_create_plot_from_sticher(self, gdef_plotter, gdef_measurement):
+        sticher = GDEFSticher([gdef_measurement, gdef_measurement])
+        fig = gdef_plotter.create_plot_from_sticher(sticher)
+        assert type(fig) is Figure
+
+    # def test_plot_sticher_to_axes(self, gdef_measurement):
+    #     sticher = GDEFSticher([gdef_measurement, gdef_measurement])
+    #     fig, ax = plt.subplots(figsize=(4, 3), dpi=96)
+    #     GDEFPlotter.plot_sticher_to_axes(sticher, ax)
+    #     fig.show()

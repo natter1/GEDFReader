@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import numpy as np
@@ -8,11 +10,16 @@ from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import norm
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from afm_tools.gdef_sticher import GDEFSticher
 
-def plot_surface_to_axes(ax: Axes, values: np.ndarray, pixel_width: float,
-                         title="", z_unit="nm", z_factor=1e9) -> None:
+#GDEFSticher
+
+def plot_from_ndarray_to_ax(ax: Axes, values: np.ndarray, pixel_width: float,
+                            title="", z_unit="nm", z_factor=1e9) -> None:
     """
-    Plot surface-values to given ax. Necessary, to use figures with subplots effectivly.
+    Plot values to given ax. Necessary, to use figures with subplots effectivly.
 
     :param ax: Axes object to which the surface should be written
     :param values: np.ndarray (2D array) with surface data
@@ -40,7 +47,7 @@ def plot_surface_to_axes(ax: Axes, values: np.ndarray, pixel_width: float,
     plt.colorbar(im, cax=cax)
 
 
-def set_z_histogram_from_ndarray_to_ax(ax, values2d: np.ndarray, title="", n_bins=200, units="µm"):
+def plot_z_histogram_from_ndarray_to_ax(ax, values2d: np.ndarray, title="", n_bins=200, units="µm"):
     """
      Also accepts a list of np.ndarray data (for plotting several histograms stacked)
      :param values2d:
@@ -102,6 +109,45 @@ def set_z_histogram_from_ndarray_to_ax(ax, values2d: np.ndarray, title="", n_bin
     return ax
 
 
+def plot_sticher_to_ax(sticher: GDEFSticher, ax: Axes, title=''):
+    """
+    Plot sticher data to given ax.
+    """
+    plot_from_ndarray_to_ax(ax=ax, values=sticher.stiched_data, pixel_width=sticher.pixel_width, title=title)
+
+
+def create_plot_from_ndarray(values2d: np.ndarray, pixel_width: float, title='', cropped=True,
+                             max_figure_size=(1, 1), dpi=300) -> Figure:
+    figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
+    plot_from_ndarray_to_ax(ax=ax, values=values2d, pixel_width=pixel_width)
+    if title:
+        figure_max.suptitle(f'{title}')
+    if not cropped:
+        figure_max.tight_layout()
+        return figure_max
+
+    tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
+    figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=dpi)
+    plot_from_ndarray_to_ax(ax=ax, values=values2d, pixel_width=pixel_width)
+    if title:
+        figure_tight.suptitle(f'{title}')
+
+    figure_tight.tight_layout()
+    return figure_tight
+
+
+
+def create_plot_from_sticher(sticher: GDEFSticher, title='', max_figure_size=(1, 1), dpi=300) -> Figure:
+    figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
+    plot_from_ndarray_to_ax(ax=ax, values=sticher.stiched_data, pixel_width=sticher.pixel_width, title=title)
+
+    tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
+    figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=dpi)
+    plot_from_ndarray_to_ax(ax=ax, values=sticher.stiched_data, pixel_width=sticher.pixel_width, title=title)
+    figure_tight.tight_layout()
+    return figure_tight
+
+
 def create_z_histogram_from_ndarray(values2d: np.ndarray, title="", n_bins=200, figure_size=(6, 3)):
     """
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
@@ -111,20 +157,7 @@ def create_z_histogram_from_ndarray(values2d: np.ndarray, title="", n_bins=200, 
     :return:
     """
     result, ax = plt.subplots(1, 1, figsize=figure_size, tight_layout=True, dpi=300)
-    set_z_histogram_from_ndarray_to_ax(ax, values2d, title, n_bins)
-    return result
-
-
-# todo: used for what?
-def _get_greyscale_data(values2d: np.ndarray, alpha=0):
-    # Normalised [0,1]
-    data_min = np.min(values2d)
-    data_ptp = np.ptp(values2d)
-
-    result = np.zeros((values2d.shape[0], values2d.shape[1], 4))
-    for (nx, ny), _ in np.ndenumerate(values2d):
-        value = (values2d[nx, ny] - data_min) / data_ptp
-        result[nx, ny] = (value, value, value, 0)
+    plot_z_histogram_from_ndarray_to_ax(ax, values2d, title, n_bins)
     return result
 
 
@@ -142,9 +175,23 @@ def save_figure(figure: Figure, output_path: Path, filename: str, png: bool = Tr
     if pdf:
         figure.savefig(output_path.joinpath(f"{filename}.pdf"))
 
+
 # ----------------------------------------------
 # todo: below here functions still need clean up
 # ----------------------------------------------
+
+# todo: used for what?
+def _get_greyscale_data(values2d: np.ndarray, alpha=0):
+    # Normalised [0,1]
+    data_min = np.min(values2d)
+    data_ptp = np.ptp(values2d)
+
+    result = np.zeros((values2d.shape[0], values2d.shape[1], 4))
+    for (nx, ny), _ in np.ndenumerate(values2d):
+        value = (values2d[nx, ny] - data_min) / data_ptp
+        result[nx, ny] = (value, value, value, 0)
+    return result
+
 
 # def get_compare_gradient_rms_figure(cls, sticher_dict, cutoff_percent=8, moving_average_n=1, figsize=(8, 4),
 #                                     x_offset=0):
@@ -173,11 +220,6 @@ def save_figure(figure: Figure, output_path: Path, filename: str, png: bool = Tr
 #         ax_compare_gradient_rms.legend()
 #     # fig.suptitle(f"cutoff = {cutoff_percent}%")
 #     fig.tight_layout()
-
-
-
-
-
 
 #
 # def create_rms_figure(sticher_dict: Dict[str, GDEFSticher], moving_average_n=1,

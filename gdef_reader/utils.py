@@ -1,6 +1,9 @@
+"""
+@author: Nathanael Jöhrmann
+"""
 import pickle
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 from matplotlib.figure import Figure
@@ -16,7 +19,7 @@ from gdef_reporter.pptx_styles import summary_table, position_2x2_00, position_2
     minimize_table_height, position_2x2_11
 
 
-def create_pygdf_files(input_path: Path, output_path: Path = None, create_images: bool = False) -> List[Path]:
+def create_pygdf_files(input_path: Path, output_path: Path = None, create_images: bool = False) -> list[Path]:
     result = []
     gdf_filenames = input_path.glob("*.gdf")  # glob returns a generator, so gdf_filenames can only be used once!
 
@@ -33,7 +36,7 @@ def create_pygdf_files(input_path: Path, output_path: Path = None, create_images
     return result
 
 
-def load_pygdf_measurements(path: Path) -> List[GDEFMeasurement]:
+def load_pygdf_measurements(path: Path) -> list[GDEFMeasurement]:
     result = []
     # files = path.rglob("*.pygdf")  # includes subfolders
     files = path.glob("*.pygdf")
@@ -118,13 +121,13 @@ def create_absolute_gradient_array(array2d, cutoff=1.0):
     return result
 
 
-
-def create_xy_rms_data(values: np.ndarray, pixel_width, moving_average_n=1, subtract_average=False) -> Tuple[list, list]:
+def create_xy_rms_data(values: np.ndarray, pixel_width, moving_average_n=1, subtract_average=True) -> tuple[list, list]:
     """
     :param values: 2D array
     :param pixel_width:
     :param moving_average_n:
     :return: (x_pos, y_rms)
+    :param subtract_average:
     """
     x_pos = []
     y_rms = []
@@ -134,10 +137,7 @@ def create_xy_rms_data(values: np.ndarray, pixel_width, moving_average_n=1, subt
     return x_pos, y_rms
 
 
-
-
-
-def get_mu_sigma(values2d: np.ndarray) -> Tuple:
+def get_mu_sigma(values2d: np.ndarray) -> tuple:
     """
     Returns mean and standard deviation of valus in values2d.
     :param values2d:
@@ -148,7 +148,7 @@ def get_mu_sigma(values2d: np.ndarray) -> Tuple:
     return norm.fit(z_values)
 
 
-def get_mu_sigma_moving_average(values2d: np.ndarray, moving_average_n=200, step=1) -> Tuple[List[float], List[float]]:
+def get_mu_sigma_moving_average(values2d: np.ndarray, moving_average_n=200, step=1) -> tuple[list[float], list[float]]:
     """
     Calculate mu and sigma values as moving average, averaging over moving_average_n data-columns.
     :param values2d:

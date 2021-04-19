@@ -160,7 +160,7 @@ class GDEFReporter:
         values_list = []
         for measurement in measurements:
             values_list.append(measurement.values)
-        return GDEFSticher(values_list, initial_x_offset_fraction, show_control_plots).stiched_data
+        return GDEFSticher(values_list, initial_x_offset_fraction, show_control_plots).values
 
     @classmethod
     def _create_image_data(cls, data: np.ndarray):

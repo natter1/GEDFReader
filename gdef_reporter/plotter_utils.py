@@ -1,3 +1,13 @@
+"""
+plotter_utils.py contains functions to create diagrams for AFM measurements.
+There are a few naming conventions. Functions starting with 'create_' return a Figure object, while 'plot_ ... _to_ax'
+is used for functions expecting an Axes-object to which the data should be plotted. The letter is used e.g. if you
+intend to plot several diagrams on a single Figure. Also, by default most functions expect a 2D np.ndarray
+for a parameter named values2d, for example 'plot_to_ax'. But they work also when given a GDEFMeasurement or
+GDEFSticher. All functions expecting a different data type have to state this in the function name
+by adding '_from_...', e.g. ...
+@author: Nathanael Jöhrmann
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,19 +20,48 @@ from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import norm
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union, Literal
+
 if TYPE_CHECKING:
     from afm_tools.gdef_sticher import GDEFSticher
+    from gdef_reader.gdef_measurement import GDEFMeasurement
 
-#GDEFSticher
 
-def plot_from_ndarray_to_ax(ax: Axes, values: np.ndarray, pixel_width: float,
-                            title="", z_unit="nm", z_factor=1e9) -> None:
+def _get_tight_size(max_figure: Figure, title: str):
+    """get cropped size for max_figure after adding optional title"""
+    # first place suptitle close to axes
+    if title:
+        tight_bbox = max_figure.get_tightbbox(max_figure.canvas.get_renderer())
+        y_rel = tight_bbox.ymax / max_figure.bbox_inches.ymax
+        max_figure.suptitle(title, y=y_rel + 0.02, verticalalignment="bottom")
+
+    max_figure.tight_layout()
+    tight_bbox = max_figure.get_tightbbox(max_figure.canvas.get_renderer())
+    max_figure_size = max_figure.bbox_inches.size
+
+    # only crop in one direction
+    if tight_bbox.size[0] / max_figure_size[0] < tight_bbox.size[1] / max_figure_size[1]:
+        return tight_bbox.size[0], max_figure_size[1]
+    else:
+        return max_figure_size[0], tight_bbox.size[1]
+
+
+def _add_suptitle(figure, title) -> Figure:
+    if title:
+        figure.suptitle(title)
+    figure.tight_layout(pad=0.5)
+    return figure
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------- 2D area plots -----------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+def plot_to_ax(ax: Axes, values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher], pixel_width: float,
+               title="", z_unit="nm", z_factor=1e9) -> None:
     """
-    Plot values to given ax. Necessary, to use figures with subplots effectivly.
-
+    Plot values in values2d to given ax.
     :param ax: Axes object to which the surface should be written
-    :param values: np.ndarray (2D array) with surface data
+    :param values2d: np.ndarray (2D array) with surface data
     :param pixel_width: Pixel width/height in [m]
     :param title: Axes title
     :param z_unit: Units for z-Axis (color coded)
@@ -30,13 +69,15 @@ def plot_from_ndarray_to_ax(ax: Axes, values: np.ndarray, pixel_width: float,
     :return: None
     """
 
-    def extent_for_plot(shape, pixel_width):
-        width_in_um = shape[1] * pixel_width * 1e6
-        height_in_um = shape[0] * pixel_width * 1e6
+    def extent_for_plot(shape, px_width):
+        width_in_um = shape[1] * px_width * 1e6
+        height_in_um = shape[0] * px_width * 1e6
         return [0, width_in_um, 0, height_in_um]
 
-    extent = extent_for_plot(values.shape, pixel_width)
-    im = ax.imshow(values * z_factor, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
+    values2d, pixel_width = extract_ndarray_and_pixel_width(values2d, pixel_width)
+
+    extent = extent_for_plot(values2d.shape, pixel_width)
+    im = ax.imshow(values2d * z_factor, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
     ax.set_title(title)  # , pad=16)
     ax.set_xlabel("µm", labelpad=1.0)
     ax.set_ylabel("µm", labelpad=1.0)
@@ -44,18 +85,55 @@ def plot_from_ndarray_to_ax(ax: Axes, values: np.ndarray, pixel_width: float,
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
     cax.set_title(z_unit, y=1)  # bar.set_label("nm")
-    plt.colorbar(im, cax=cax)
+    plt.colorbar(im, cax=cax, ax=ax)
 
 
-def plot_z_histogram_from_ndarray_to_ax(ax, values2d: np.ndarray, title="", n_bins=200, units="µm"):
+def create_plot(values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher], pixel_width: float, title: str = '',
+                max_figure_size=(4, 4), dpi=96, cropped=True) -> Figure:
+    """
+    Creates a matplotlib Figure using given values2d-object. If cropped is True, the returned Figure has a smaller size
+    than specified in max_figure_size.
+    :param values2d: np.ndarray (2D array) with surface data
+    :param pixel_width: Pixel width/height in [m]
+    :param title: optional title (implemented as Axes title)
+    :param max_figure_size: Max. figure size of returned Figure (actual size might be smaller if cropped).
+    :param dpi: dpi value of returned Figure
+    :param cropped: Crop the result Figure (default is True). Useful if aspect ratio of Figure and plot differ.
+    :return: Figure
+    """
+    values2d, pixel_width = extract_ndarray_and_pixel_width(values2d, pixel_width)
+
+    figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
+    plot_to_ax(ax=ax, values2d=values2d, pixel_width=pixel_width)#, title=title)
+
+    if not cropped: # only add suptitle if not cropped, otherwise _get_tight_size() cannot get correct cropped size!
+        return _add_suptitle(figure_max, title)
+
+    cropped_size = _get_tight_size(figure_max, title)
+    return create_plot(values2d, pixel_width, title, max_figure_size=cropped_size, dpi=dpi, cropped=False)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# ------------------------------------------------- 1D plots over x ----------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+def plot_z_histogram_to_ax(ax, data2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher],
+                           title: str = "", n_bins: int = 200, units: Literal["µm", "nm"] = "µm") -> None:
     """
      Also accepts a list of np.ndarray data (for plotting several histograms stacked)
-     :param values2d:
-     :param title:
-     :param n_bins:
-     param units: Can be set tu µm or nm (default is µm).
-     :return:
+    :param ax: Axes object to which the surface should be written
+    :param data2d: np.ndarray (2D array) with surface data
+    :param title: Axes title
+     :param n_bins: number of equally spaced bins for histogram
+     :param units: Can be set tu µm or nm (default is µm).
+     :return: None
      """
+    values2d_list = []
+    if not isinstance(data2d, list):
+        data2d = [data2d]
+    for data in data2d:
+        ndarray_data, _ = extract_ndarray_and_pixel_width(data)
+        values2d_list.append(ndarray_data)
+
     if units == "nm":
         unit_factor = 1e9
         unit_label = "nm"
@@ -63,16 +141,12 @@ def plot_z_histogram_from_ndarray_to_ax(ax, values2d: np.ndarray, title="", n_bi
         unit_factor = 1e6
         unit_label = "\u03BCm"
 
-    if isinstance(values2d, list):
-        values2d_list = values2d
-    else:
-        values2d_list = [values2d]
     colors = []
     z_values_list = []
     best_filt_lines = []
     norm_bins_list = []
-    for values2d in values2d_list:
-        z_values = values2d.flatten()
+    for data2d in values2d_list:
+        z_values = data2d.flatten()
         z_values = z_values[
             ~np.isnan(z_values)]  # remove all NaN values (~ is bitwise NOT opperator - similar to numpy.logical_not)
         z_values = z_values * unit_factor  # m -> µm/nm
@@ -108,47 +182,35 @@ def plot_z_histogram_from_ndarray_to_ax(ax, values2d: np.ndarray, title="", n_bi
 
     return ax
 
-
-def plot_sticher_to_ax(sticher: GDEFSticher, ax: Axes, title=''):
+# todo - remove, because deprecated
+def plot_to_ax_from_sticher(sticher: GDEFSticher, ax: Axes, title=''):
     """
     Plot sticher data to given ax.
+    Deprecated! You can call plot_to_ax with a GDEFSticher object too
     """
-    plot_from_ndarray_to_ax(ax=ax, values=sticher.stiched_data, pixel_width=sticher.pixel_width, title=title)
+    print("Deprecated! You can call plot_to_ax with a GDEFSticher object too")
+    plot_to_ax(ax=ax, values2d=sticher.values, pixel_width=sticher.pixel_width, title=title)
 
 
-def create_plot_from_ndarray(values2d: np.ndarray, pixel_width: float, title='', cropped=True,
-                             max_figure_size=(1, 1), dpi=300) -> Figure:
-    figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
-    plot_from_ndarray_to_ax(ax=ax, values=values2d, pixel_width=pixel_width)
-    if title:
-        figure_max.suptitle(f'{title}')
-    if not cropped:
-        figure_max.tight_layout()
-        return figure_max
-
-    tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
-    figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=dpi)
-    plot_from_ndarray_to_ax(ax=ax, values=values2d, pixel_width=pixel_width)
-    if title:
-        figure_tight.suptitle(f'{title}')
-
-    figure_tight.tight_layout()
-    return figure_tight
-
-
-
+# todo - remove, because deprecated
 def create_plot_from_sticher(sticher: GDEFSticher, title='', max_figure_size=(1, 1), dpi=300) -> Figure:
+    """
+    Create Figure for sticher data.
+    Deprecated! You can call plot_to_ax with a GDEFSticher object too
+    """
+    print("Deprecated! You can call create_plot with a GDEFSticher object too")
     figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
-    plot_from_ndarray_to_ax(ax=ax, values=sticher.stiched_data, pixel_width=sticher.pixel_width, title=title)
+    plot_to_ax(ax=ax, values2d=sticher.values, pixel_width=sticher.pixel_width, title=title)
 
     tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
     figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=dpi)
-    plot_from_ndarray_to_ax(ax=ax, values=sticher.stiched_data, pixel_width=sticher.pixel_width, title=title)
+    plot_to_ax(ax=ax, values2d=sticher.values, pixel_width=sticher.pixel_width, title=title)
     figure_tight.tight_layout()
     return figure_tight
 
 
-def create_z_histogram_from_ndarray(values2d: np.ndarray, title="", n_bins=200, figure_size=(6, 3)):
+def create_z_histogram_plot(values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher], title: str = "",
+                            n_bins: int = 200, figure_size: tuple[float, float] = (6, 3)) -> Figure:
     """
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
     :param values2d:
@@ -156,9 +218,26 @@ def create_z_histogram_from_ndarray(values2d: np.ndarray, title="", n_bins=200, 
     :param n_bins:
     :return:
     """
+    values2d, _ = extract_ndarray_and_pixel_width(values2d, None)
+
     result, ax = plt.subplots(1, 1, figsize=figure_size, tight_layout=True, dpi=300)
-    plot_z_histogram_from_ndarray_to_ax(ax, values2d, title, n_bins)
+    plot_z_histogram_to_ax(ax, values2d, title, n_bins)
     return result
+
+
+def extract_ndarray_and_pixel_width(values_object: Union[np.ndarray, GDEFMeasurement, GDEFSticher],
+                                    pixel_width=None) -> (np.ndarray, float):
+    """
+    Tries to extract np.ndarrray and pixel_width from given values_object, by looking for attributes 'values' and
+    'pixel_width'.
+    :param values_object: np.ndarray or object with attribute values (and pixel_width, if parameter pixel_width is None)
+    :param pixel_width: pixel_width or None (is ignored, if values_object is not a np.ndarray)
+    :return: Tuple containing np.ndarray and pixel_width
+    """
+    if isinstance(values_object, np.ndarray):
+        return values_object, pixel_width
+
+    return values_object.values, values_object.pixel_width
 
 
 def save_figure(figure: Figure, output_path: Path, filename: str, png: bool = True, pdf: bool = False) -> None:

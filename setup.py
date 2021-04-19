@@ -15,6 +15,7 @@ setup(
     author_email='',
     description='Tool to read/process *.gdf AFM measurement files',
     long_description=long_description,
-    install_requires=['matplotlib', 'numpy', 'scipy', 'natsort'],
+    install_requires=['matplotlib', 'numpy', 'scipy'],
+    python_requires=">=3.9"
 )
 # python-pptx-interface

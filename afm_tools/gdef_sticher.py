@@ -23,10 +23,11 @@ class GDEFSticher:
 
     :InstanceAttributes:
     measurements: list of GDEFMeasurements used for stiching
-    stiched_data: np.ndarray with stiched data
+    values: np.ndarray with stiched data
     pixel_width: Pixel width taken from first GDEFMeasurement in measurements (varying pixel sizes are not supported).
     :EndInstanceAttributes:
     """
+
     def __init__(self, measurements: List[GDEFMeasurement],
                  initial_x_offset_fraction: float = 0.35, show_control_figures: bool = False):
         """
@@ -35,7 +36,7 @@ class GDEFSticher:
         :param show_control_figures:
         """
         self.measurements = measurements
-        self.stiched_data = None
+        self.values = None
         self.pixel_width = self.measurements[0].settings.pixel_width
         for measurement in self.measurements:
             if measurement.settings.pixel_width != self.pixel_width:
@@ -53,7 +54,7 @@ class GDEFSticher:
         x_offset_right = round(result.shape[1] * initial_x_offset_fraction)
         for measurement in self.measurements[1:]:
             result = self._stich(result, measurement.values, result.shape[1] - x_offset_right, show_control_figures)
-        self.stiched_data = result
+        self.values = result
         return result
 
     def _stich(self, data01: np.ndarray, data02:np.ndarray, data01_x_offset: int, show_control_figures: bool = True) -> np.ndarray:

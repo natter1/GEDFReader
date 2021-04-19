@@ -15,7 +15,7 @@ from matplotlib.figure import Figure
 from afm_tools.background_correction import BGCorrectionType, \
     correct_background
 from gdef_reader.gdef_data_strucutres import GDEFHeader
-from gdef_reporter.plotter_utils import plot_from_ndarray_to_ax
+from gdef_reporter.plotter_utils import plot_to_ax
 
 
 class GDEFSettings:
@@ -216,6 +216,10 @@ class GDEFMeasurement:
         """Returns a read-only np.ndarray with the original measurement data (before background correction etc.)."""
         return self._values_original
 
+    @property
+    def pixel_width(self) -> float:
+        return self.settings.pixel_width
+
     def save_as_pickle(self, filename):
         """
         Save the measurement object using pickle. This is useful for example, if the corresponding
@@ -274,7 +278,7 @@ class GDEFMeasurement:
             print(f"GDEFMeasurement {self.name} has values==None")
             return
 
-        plot_from_ndarray_to_ax(ax, self.values, self.settings.pixel_width, title, z_unit, z_factor)
+        plot_to_ax(ax, self.values, self.settings.pixel_width, title, z_unit, z_factor)
 
     def create_plot(self, max_figure_size=(4, 4), dpi=96, add_id: bool = False, trim: bool = True) -> Figure:
         """

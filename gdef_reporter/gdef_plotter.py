@@ -1,8 +1,9 @@
 """
+GDEFPlotter is used to create matplotlib Figures for AFM measurements.
 @author: Nathanael Jöhrmann
 """
 import copy
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,14 +15,12 @@ from gdef_reader.utils import create_xy_rms_data, create_absolute_gradient_array
     get_mu_sigma
 from gdef_reporter._code_utils import ClassOrInstanceMethod
 from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
-from gdef_reporter.plotter_utils import create_plot_from_sticher, plot_sticher_to_ax, plot_from_ndarray_to_ax, \
-    create_plot_from_ndarray
+from gdef_reporter.plotter_utils import create_plot_from_sticher, plot_to_ax_from_sticher, plot_to_ax, \
+    create_plot
 
 
 class GDEFPlotter:
-    auto_show = False  # used for classmethod and as default for instance auto_show
-
-    def __init__(self, figure_size=(12, 6), dpi=300, auto_show=None):
+    def __init__(self, figure_size=(12, 6), dpi: int = 300, auto_show: bool = False):
         """
 
         :param figure_size: figure size for created Fiugres
@@ -32,11 +31,12 @@ class GDEFPlotter:
         self._figure_size = figure_size
         self.plotter_style_rms: PlotterStyle = get_plotter_style_rms(dpi=dpi, figure_size=figure_size)
         self.plotter_style_sigma: PlotterStyle = get_plotter_style_sigma(dpi=dpi, figure_size=figure_size)
-        if auto_show is None:
-            self.auto_show = GDEFPlotter.auto_show
-        else:
-            self.auto_show = auto_show
+        self.auto_show = auto_show
 
+        #todo: iplement auto save functionality
+        self.auto_save = False
+        self.save_path = None
+        # method to save figures as pdf or png
     @property
     def dpi(self):
         return self._dpi
@@ -46,40 +46,67 @@ class GDEFPlotter:
         return self._figure_size
 
     @dpi.setter
-    def dpi(self, value):
+    def dpi(self, value: int):
         self.set_dpi_and_figure_size(dpi=value)
 
     @figure_size.setter
-    def figure_size(self, value):
+    def figure_size(self, value: tuple[float, float]):
         self.set_dpi_and_figure_size(figure_size=value)
 
-    def set_dpi_and_figure_size(self, dpi=None, figure_size=None):
+    def set_dpi_and_figure_size(self, dpi: Optional[int] = None, figure_size: Optional[tuple[float, float]] = None):
+        """
+        Used to set dpi and (max.) figure size for created matpoltlib Figures. This includes updating the PlotterStyles.
+        :param dpi:
+        :param figure_size:
+        :return: None
+        """
         if dpi is None:
             dpi = self.dpi
         if figure_size is None:
             figure_size = self.figure_size
         self._dpi = dpi
         self._figure_size = figure_size
-        self.plotter_style_rms: PlotterStyle = get_plotter_style_rms(dpi=dpi, figure_size=figure_size)
-        self.plotter_style_sigma: PlotterStyle = get_plotter_style_sigma(dpi=dpi, figure_size=figure_size)
+        self.plotter_style_rms.set(dpi=dpi, figure_size=figure_size)
+        self.plotter_style_sigma.set(dpi=dpi, figure_size=figure_size)
 
-    def create_surface_figure(self, values: np.ndarray, pixel_width, title=None, cropped=True) -> Optional[Figure]:
-        if values is None:
-            return
-        fig = create_plot_from_ndarray(values, pixel_width, title, cropped, self.figure_size, self.dpi)
+    # ------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------------ 2D area plots ---------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
+    def create_plot(self, values: np.ndarray, pixel_width, title=None, cropped=True) -> Optional[Figure]:
+        """
+        Create a matplotlib Figure using the 2D array values as input data.
+        :param values: np.ndarray (2D)
+        :param pixel_width: [m]
+        :param title: optional Figure title (not Axes subtitle)
+        :param cropped: Crop the result Figure (default is True). Useful if aspect ratio of Figure and plot differ.
+        :return: Figure
+        """
+        result = create_plot(values, pixel_width, title, cropped, self.figure_size, self.dpi)
 
+        self._auto_show_figure(result)
+        return result
+
+    def create_plot_from_sticher(self, sticher: GDEFSticher, title: str = '') -> Figure:
+        """Calls create_plot_from_sticher() from plotter_utils using self.figure_size and self.dpi."""
+        fig = create_plot_from_sticher(sticher, title, max_figure_size=self.figure_size, dpi=self.dpi)
         self._auto_show_figure(fig)
         return fig
 
-    def create_rms_per_column_figure(self, values: np.ndarray, pixel_width, title=None, moving_average_n=1) -> Figure:
+    # ------------------------------------------------------------------------------------------------------------------
+    # ------------------------------------------------ 1D plots over x -------------------------------------------------
+    # ------------------------------------------------------------------------------------------------------------------
+    def create_rms_per_column_plot(self, values: np.ndarray, pixel_width: float, title: str = "",
+                                   moving_average_n: int = 1) -> Figure:
         """
+        Calculate root mean square roughness for each column in values and plot them over x. If moving_averag_n
+         is larger than 1, the RMS values are averaged over n columns.
         :param values: 2D array
         :param pixel_width: in meter
         :param title: optional figure title
         :param moving_average_n: number of columns for moving average
         :return: matplotlib Figure
         """
-        x_pos, y_rms = create_xy_rms_data(values, pixel_width, moving_average_n)
+        x_pos, y_rms = create_xy_rms_data(values, pixel_width, moving_average_n, subtract_average=True)
         result, ax_rms = self.plotter_style_rms.create_preformated_figure()
 
         ax_rms.plot(x_pos, y_rms, **self.plotter_style_rms.graph_styler.dict)  # 'r')
@@ -90,8 +117,8 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def create_absolute_gradient_rms_figure(self, values: np.ndarray, cutoff_percent_list, pixel_width, title=None,
-                                            moving_average_n=1) -> Figure:
+    def create_absolute_gradient_rms_plot(self, values: np.ndarray, cutoff_percent_list, pixel_width, title=None,
+                                          moving_average_n=1) -> Figure:
         """
         Creates a plot with a curve for each value in cutoff_percent_list, showing rms(abs(grad(z))) as
         moving average over moving_average_n columns.
@@ -109,7 +136,7 @@ class GDEFPlotter:
 
         for i, percent in enumerate(cutoff_percent_list):
             absolut_gradient_array = create_absolute_gradient_array(values, percent / 100.0)
-            x_pos, y_gradient_rms = create_xy_rms_data(absolut_gradient_array, pixel_width, moving_average_n)
+            x_pos, y_gradient_rms = create_xy_rms_data(absolut_gradient_array, pixel_width, moving_average_n, subtract_average=False)
             ax_gradient_rms.plot(x_pos, y_gradient_rms, label=f"{percent}%")
         ax_gradient_rms.legend()
         if title:
@@ -118,14 +145,8 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    @ClassOrInstanceMethod
-    def _auto_show_figure(cls, instance, fig):
-        """Parameters cls and instance are set via decorator ClassOrInstance. So first parameter when calling is fig."""
-        auto_show = instance.auto_show if instance else cls.auto_show
-        if auto_show:
-            fig.show()
-
-    def create_sigma_moving_average_figure(self, sticher_dict: Dict[str, GDEFSticher], moving_average_n=200, step=1):
+    def create_sigma_moving_average_plot_from_sticher_dict(self, sticher_dict: Dict[str, GDEFSticher],
+                                                           moving_average_n=200, step=1) -> Figure:
         """
 
         :param sticher_dict:
@@ -145,10 +166,10 @@ class GDEFPlotter:
             x_pos = []
             y_sigma = []
             pixel_width_in_um = sticher.pixel_width * 1e6
-            for i in range(0, sticher.stiched_data.shape[1] - moving_average_n, step):
+            for i in range(0, sticher.values.shape[1] - moving_average_n, step):
                 x_pos.append((i + max(moving_average_n - 1, 0) / 2.0) * pixel_width_in_um)
 
-            _, y_sigma = get_mu_sigma_moving_average(sticher.stiched_data * 1e6, moving_average_n, step)
+            _, y_sigma = get_mu_sigma_moving_average(sticher.values * 1e6, moving_average_n, step)
 
             ax_sigma.plot(x_pos, y_sigma, **graph_styler.dict, label=key)
             graph_styler.next_style()
@@ -161,13 +182,14 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def create_absolute_gradient_figures(self, values: np.ndarray, cutoff_percent_list,
-                                         title=None, nan_color='red') -> Figure:
+    def create_absolute_gradient_maps_plot(self, values: np.ndarray, cutoff_percent_list: List[int],
+                                           title=None, nan_color='red') -> Figure:
         """
         Creates a matplotlib figure, to show the influence of different cutoff values. The omitted values are represented
         in the color nan_color (default is red).
         :param values:
         :param cutoff_percent_list:
+        :param title:
         :param nan_color:
         :return:
         """
@@ -188,7 +210,7 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def create_stich_summary_figure(self, sticher_dict):  # , figure_size=(16, 10)):
+    def create_stich_summary_plot(self, sticher_dict):  # , figure_size=(16, 10)):
         """
         Creates a Figure with stiched maps for each GDEFSticher in sticher_dict. The keys in sticher_dict
         are used as titles for the corresponding Axes.
@@ -223,13 +245,13 @@ class GDEFPlotter:
             y = i // best_ratio[0]
             x = i - (y * best_ratio[0])
             if (best_ratio[1] > 1) and (best_ratio[0] > 1):
-                plot_sticher_to_ax(sticher_dict[key], ax_list[x, y], title=key)
+                plot_to_ax_from_sticher(sticher_dict[key], ax_list[x, y], title=key)
             elif best_ratio[0] > 1:
-                plot_sticher_to_ax(sticher_dict[key], ax_list[x], title=key)
+                plot_to_ax_from_sticher(sticher_dict[key], ax_list[x], title=key)
             elif best_ratio[1] > 1:
-                plot_sticher_to_ax(sticher_dict[key], ax_list[y], title=key)
+                plot_to_ax_from_sticher(sticher_dict[key], ax_list[y], title=key)
             else:
-                plot_sticher_to_ax(sticher_dict[key], ax_list, title=key)
+                plot_to_ax_from_sticher(sticher_dict[key], ax_list, title=key)
         i = len(sticher_dict)
         while i < best_ratio[0] * best_ratio[1]:
             y = i // best_ratio[0]
@@ -240,12 +262,12 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def create_rms_with_error_fig(self, sticher_dict, average_n=8 * 160, step=1):
+    def create_rms_with_error_plot_from_sticher_dict(self, sticher_dict, average_n=8 * 160, step=1):
         graph_styler = self.plotter_style_sigma.graph_styler.reset()
         result, ax_rms = self.plotter_style_sigma.create_preformated_figure()
 
         for key, sticher in sticher_dict.items():
-            z_data = sticher.stiched_data
+            z_data = sticher.values
 
             # get mu for every column first:
             sigma_col_list = []
@@ -287,11 +309,12 @@ class GDEFPlotter:
             result.show()
         return result
 
-    def create_plot_from_sticher(self, sticher: GDEFSticher, title=''):
-        """Calls create_plot_from_sticher() from plotter_utils using self.figure_size and self.dpi."""
-        fig = create_plot_from_sticher(sticher, title, max_figure_size=self.figure_size, dpi=self.dpi)
-        self._auto_show_figure(fig)
-        return fig
+    @ClassOrInstanceMethod
+    def _auto_show_figure(cls, instance, fig):
+        """Parameters cls and instance are set via decorator ClassOrInstance. So first parameter when calling is fig."""
+        auto_show = instance.auto_show if instance else cls.auto_show
+        if auto_show:
+            fig.show()
 
     # @classmethod
     # def plot_sticher_to_axes(cls, sticher: GDEFSticher, ax: Axes, title=''):

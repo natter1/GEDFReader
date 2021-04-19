@@ -78,43 +78,42 @@ class TestGDEFPlotter:
 
         gdef_plotter.set_dpi_and_figure_size(ORIGINAL_DPI, ORIGINAL_FIGURE_SIZE)
 
-    def test_create_surface_figure(self, gdef_plotter, random_ndarray2d_data):
-        assert gdef_plotter.create_surface_figure(None, 1e-6) is None
-        fig1 = gdef_plotter.create_surface_figure(random_ndarray2d_data, 1e-6, title="create_surface_figure")
-        fig2 = gdef_plotter.create_surface_figure(random_ndarray2d_data, 1e-6,
-                                                  title="create_surface_figure with cropped=False", cropped=False)
+    def test_create_plot(self, gdef_plotter, random_ndarray2d_data):
+        fig1 = gdef_plotter.create_plot(random_ndarray2d_data, 1e-6, title="create_surface_figure")
+        fig2 = gdef_plotter.create_plot(random_ndarray2d_data, 1e-6,
+                                        title="create_surface_figure with cropped=False", cropped=False)
 
         assert type(fig1) is Figure
         assert type(fig2) is Figure
 
-    def test_create_rms_per_column_figure(self, gdef_plotter, random_ndarray2d_data):
-        fig = gdef_plotter.create_rms_per_column_figure(random_ndarray2d_data, 1e-6)
+    def test_create_rms_per_column_plot(self, gdef_plotter, random_ndarray2d_data):
+        fig = gdef_plotter.create_rms_per_column_plot(random_ndarray2d_data, 1e-6)
         assert type(fig) is Figure
 
-        fig = gdef_plotter.create_rms_per_column_figure(random_ndarray2d_data, 1e-6,
-                                                        title="create_rms_per_column_figure with title")
+        fig = gdef_plotter.create_rms_per_column_plot(random_ndarray2d_data, 1e-6,
+                                                      title="create_rms_per_column_figure with title")
         assert fig._suptitle.get_text() == "create_rms_per_column_figure with title\nmoving average n=1 (1.0 µm)"
 
-    def test_create_absolute_gradient_rms_figure(self, gdef_plotter, random_ndarray2d_data):
+    def test_create_absolute_gradient_rms_plot(self, gdef_plotter, random_ndarray2d_data):
         cutoff_list = [1, 10, 20, 50, 90, 100]
 
-        fig = gdef_plotter.create_absolute_gradient_rms_figure(
+        fig = gdef_plotter.create_absolute_gradient_rms_plot(
             random_ndarray2d_data, cutoff_list, 1e-6, moving_average_n=10)
         assert type(fig) is Figure
-        fig = gdef_plotter.create_absolute_gradient_rms_figure(
+        fig = gdef_plotter.create_absolute_gradient_rms_plot(
             random_ndarray2d_data, cutoff_list, 1e-6, moving_average_n=10, title="create_absolute_gradient_rms_figure")
         assert type(fig) is Figure
 
-    def test_create_sigma_moving_average_figure(self, gdef_plotter, gdef_measurement, random_ndarray2d_data):
+    def test_create_sigma_moving_average_plot(self, gdef_plotter, gdef_measurement, random_ndarray2d_data):
         # gdef_measurement.values = random_ndarray2d_data
         # gdef_measurement.correct_background(BGCorrectionType.raw_data)
         sticher_dict = {"example01": GDEFSticher([gdef_measurement])}
-        gdef_plotter.create_sigma_moving_average_figure(sticher_dict, 10)
+        gdef_plotter.create_sigma_moving_average_plot_from_sticher_dict(sticher_dict, 10)
         pass  # needs sticher_dict: Dict[str, GDEFSticher]
 
-    def test_create_absolute_gradient_figure(self, gdef_plotter, random_ndarray2d_data):
+    def test_create_absolute_gradient_plot(self, gdef_plotter, random_ndarray2d_data):
         cutoff_list = [1, 10, 20, 50, 90, 100]
-        fig = gdef_plotter.create_absolute_gradient_figures(
+        fig = gdef_plotter.create_absolute_gradient_maps_plot(
             random_ndarray2d_data, cutoff_list)
 
     def test_create_stich_summary_figure(self, gdef_plotter, gdef_measurement):
@@ -122,7 +121,7 @@ class TestGDEFPlotter:
             # "example01": GDEFSticher([gdef_measurement, gdef_measurement, gdef_measurement]),
             "example02": GDEFSticher([gdef_measurement, gdef_measurement])
         }
-        fig = gdef_plotter.create_stich_summary_figure(sticher_dict)
+        fig = gdef_plotter.create_stich_summary_plot(sticher_dict)
 
     def test_create_plot_from_sticher(self, gdef_plotter, gdef_measurement):
         sticher = GDEFSticher([gdef_measurement, gdef_measurement])

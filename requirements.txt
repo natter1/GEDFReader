@@ -1,6 +1,6 @@
-natsort
 numpy>=1.18.1
 scipy>=1.5.2
 matplotlib>=3.3.0
-pypng
-python-pptx-interface>=0.0.12
+
+pytest~=6.2.3
+setuptools~=56.0.0

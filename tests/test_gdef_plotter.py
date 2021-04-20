@@ -20,7 +20,7 @@ AUTO_SHOW = True
 
 
 @pytest.fixture(scope="function", params=[-4, 0, 0.4, 1, 2])
-def _test_case(request):
+def data_test_cases(request):
     yield request.param
 
 

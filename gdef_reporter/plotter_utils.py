@@ -6,11 +6,18 @@ intend to plot several diagrams on a single Figure. Also, by default most functi
 for a parameter named values2d, for example 'plot_to_ax'. But they work also when given a GDEFMeasurement or
 GDEFSticher. All functions expecting a different data type have to state this in the function name
 by adding '_from_...', e.g. ...
+
+For plot_ ... _to_ax, some functions have a default subtitle, which is shown if parameter title='' - to suppress it,
+set title=None.
+
+Note that there is a difference between setting a title for plot_ ... _to_ax and create_.... While the first one sets
+a subtitle for the Axes, the latter places a Figure suptitle (which might be bigger and placed somewhat different).
 @author: Nathanael Jöhrmann
 """
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING, Union, Literal, Optional
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -19,8 +26,6 @@ from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import norm
-
-from typing import TYPE_CHECKING, Union, Literal
 
 if TYPE_CHECKING:
     from afm_tools.gdef_sticher import GDEFSticher
@@ -57,13 +62,13 @@ def _add_suptitle(figure, title) -> Figure:
 # -------------------------------------------------- 2D area plots -----------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 def plot_to_ax(ax: Axes, values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher], pixel_width: float,
-               title="", z_unit="nm", z_factor=1e9) -> None:
+               title: str = "", z_unit="nm", z_factor=1e9) -> None:
     """
     Plot values in values2d to given ax.
     :param ax: Axes object to which the surface should be written
     :param values2d: np.ndarray (2D array) with surface data
     :param pixel_width: Pixel width/height in [m]
-    :param title: Axes title
+    :param title: Axes title (if '' -> shows mu and sigma (default); for no title set None)
     :param z_unit: Units for z-Axis (color coded)
     :param z_factor: scaling factor for z-values (e.g. 1e9 for m -> nm)
     :return: None
@@ -95,7 +100,7 @@ def create_plot(values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher], pixel
     than specified in max_figure_size.
     :param values2d: np.ndarray (2D array) with surface data
     :param pixel_width: Pixel width/height in [m]
-    :param title: optional title (implemented as Axes title)
+    :param title: optional title (implemented as Figure suptitle)
     :param max_figure_size: Max. figure size of returned Figure (actual size might be smaller if cropped).
     :param dpi: dpi value of returned Figure
     :param cropped: Crop the result Figure (default is True). Useful if aspect ratio of Figure and plot differ.
@@ -104,9 +109,9 @@ def create_plot(values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher], pixel
     values2d, pixel_width = extract_ndarray_and_pixel_width(values2d, pixel_width)
 
     figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
-    plot_to_ax(ax=ax, values2d=values2d, pixel_width=pixel_width)#, title=title)
+    plot_to_ax(ax=ax, values2d=values2d, pixel_width=pixel_width)  # , title=title)
 
-    if not cropped: # only add suptitle if not cropped, otherwise _get_tight_size() cannot get correct cropped size!
+    if not cropped:  # only add suptitle if not cropped, otherwise _get_tight_size() cannot get correct cropped size!
         return _add_suptitle(figure_max, title)
 
     cropped_size = _get_tight_size(figure_max, title)
@@ -116,24 +121,35 @@ def create_plot(values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher], pixel
 # ----------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------- 1D plots over x ----------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
-def plot_z_histogram_to_ax(ax, data2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher],
-                           title: str = "", n_bins: int = 200, units: Literal["µm", "nm"] = "µm") -> None:
+def plot_z_histogram_to_ax(ax, values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher],
+                           labels: Union[str, list[str]] = None, title: Optional[str] = "", n_bins: int = 200,
+                           units: Literal["µm", "nm"] = "µm", add_norm: bool = False) -> None:
     """
-     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
+    Also accepts a list of np.ndarray data (for plotting several histograms stacked)
     :param ax: Axes object to which the surface should be written
-    :param data2d: np.ndarray (2D array) with surface data
-    :param title: Axes title
-     :param n_bins: number of equally spaced bins for histogram
-     :param units: Can be set tu µm or nm (default is µm).
-     :return: None
-     """
+    :param values2d: np.ndarray (2D array) with surface data
+    :param labels: labels for plotted data from values2d
+    :param title: Axes title; if empty, mu and sigma will be shown; to prevent any subtitle, set title=None
+    :param n_bins: number of equally spaced bins for histogram
+    :param units: Can be set to µm or nm (default is µm).
+    :param add_norm: if True (default), show normal/gaussian probability density function for each distribution
+    :return: None
+    """
+    # todo: consider to refactor this in extra function
     values2d_list = []
-    if not isinstance(data2d, list):
-        data2d = [data2d]
-    for data in data2d:
+    if not isinstance(values2d, list):
+        values2d = [values2d]
+    for data in values2d:
         ndarray_data, _ = extract_ndarray_and_pixel_width(data)
         values2d_list.append(ndarray_data)
 
+    if labels is None:
+        labels = [None] * len(values2d_list)
+    if isinstance(labels, str):
+        labels = [labels]
+    assert len(labels) == len(values2d_list)
+
+    # todo: consider to refactor this in extra function
     if units == "nm":
         unit_factor = 1e9
         unit_label = "nm"
@@ -143,85 +159,75 @@ def plot_z_histogram_to_ax(ax, data2d: Union[np.ndarray, GDEFMeasurement, GDEFSt
 
     colors = []
     z_values_list = []
-    best_filt_lines = []
-    norm_bins_list = []
-    for data2d in values2d_list:
-        z_values = data2d.flatten()
+    norm_fit_lines = []
+    norm_x_values_list = []
+    for ndarray_data in values2d_list:
+        z_values = ndarray_data.flatten()
         z_values = z_values[
             ~np.isnan(z_values)]  # remove all NaN values (~ is bitwise NOT opperator - similar to numpy.logical_not)
         z_values = z_values * unit_factor  # m -> µm/nm
         mu, sigma = norm.fit(z_values)
-        norm_bins = np.linspace(z_values.min(), z_values.max(), 100)
-        best_fit_line = norm.pdf(norm_bins, mu, sigma)
+        norm_x_values = np.linspace(z_values.min(), z_values.max(), 100)
+        norm_fit_line = norm.pdf(norm_x_values, mu, sigma)
         z_values_list.append(z_values)
-        best_filt_lines.append(best_fit_line)
-        norm_bins_list.append(norm_bins)
+        norm_fit_lines.append(norm_fit_line)
+        norm_x_values_list.append(norm_x_values)
+        # todo: implement proper solution for colors
         if len(colors) % 2 > 0:
             colors.append("red")
         else:
             colors.append("black")
 
     for i in range(len(z_values_list)):
-        _, _, patch = ax.hist(z_values_list[i], density=True, bins=n_bins, edgecolor=colors[i], lw=1,
-                              fc=to_rgba(colors[i], alpha=0.3), rwidth=1, histtype="bar", fill=True)  # color=colors[i]
+        _, _, patch = ax.hist(z_values_list[i], density=True, bins=n_bins, edgecolor=colors[i], lw=1, label=labels[i],
+                              fc=to_rgba(colors[i], alpha=0.3), rwidth=1, histtype="bar", fill=True)
         # plt.setp(patch, edgecolor=to_rgba(colors[i], alpha=1), lw=2)
 
     # # bars side by side:
     # _, _, patches = ax.hist(z_values_list, density=True, bins=n_bins, color=colors, rwidth=1, histtype="bar", fill=False)#
     # for i, patch in enumerate(patches):
     #     plt.setp(patch, edgecolor=colors[i])  # , lw=2)
-    for i, line in enumerate(best_filt_lines):
-        ax.plot(norm_bins_list[i], line, c=colors[i])
+    if add_norm:
+        for i, line in enumerate(norm_fit_lines):
+            ax.plot(norm_x_values_list[i], line, c=colors[i])
+
+    # todo: consider a PlotterStyle instead
     ax.set_xlabel(f'z [{unit_label}]')
     ax.set_ylabel('Normalized counts')
     # ax.grid(True)
     if title:
         ax.set_title(f"{title}")
-    else:
+    elif title is not None and len(values2d) == 1:
         ax.set_title(f"\u03BC={mu:.2f}, \u03C3={sigma:.2f}")
+
+    if any(labels):
+        ax.legend()
 
     return ax
 
-# todo - remove, because deprecated
-def plot_to_ax_from_sticher(sticher: GDEFSticher, ax: Axes, title=''):
-    """
-    Plot sticher data to given ax.
-    Deprecated! You can call plot_to_ax with a GDEFSticher object too
-    """
-    print("Deprecated! You can call plot_to_ax with a GDEFSticher object too")
-    plot_to_ax(ax=ax, values2d=sticher.values, pixel_width=sticher.pixel_width, title=title)
 
-
-# todo - remove, because deprecated
-def create_plot_from_sticher(sticher: GDEFSticher, title='', max_figure_size=(1, 1), dpi=300) -> Figure:
-    """
-    Create Figure for sticher data.
-    Deprecated! You can call plot_to_ax with a GDEFSticher object too
-    """
-    print("Deprecated! You can call create_plot with a GDEFSticher object too")
-    figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
-    plot_to_ax(ax=ax, values2d=sticher.values, pixel_width=sticher.pixel_width, title=title)
-
-    tight_bbox = figure_max.get_tightbbox(figure_max.canvas.get_renderer())
-    figure_tight, ax = plt.subplots(figsize=tight_bbox.size, dpi=dpi)
-    plot_to_ax(ax=ax, values2d=sticher.values, pixel_width=sticher.pixel_width, title=title)
-    figure_tight.tight_layout()
-    return figure_tight
-
-
-def create_z_histogram_plot(values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher], title: str = "",
-                            n_bins: int = 200, figure_size: tuple[float, float] = (6, 3)) -> Figure:
+def create_z_histogram_plot(values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher],
+                            labels: Union[str, list[str]] = None, title: Optional[str] = "", n_bins: int = 200,
+                            units: Literal["µm", "nm"] = "µm", add_norm: bool = False,
+                            figure_size: tuple[float, float] = (6, 3), dpi: int = 96) -> Figure:
     """
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
-    :param values2d:
-    :param title:
-    :param n_bins:
-    :return:
+    :param values2d: np.ndarray (2D array) with surface data
+    :param labels: labels for plotted data from values2d
+    :param title: Figure title; if empty, mu and sigma will be shown as axes subtitle(use title=None to prevent this)
+    :param n_bins: number of equally spaced bins for histogram
+    :param units: Can be set to µm or nm (default is µm).
+    :param add_norm: if True (default), show normal/gaussian probability density function for each distribution
+    :param figure_size:
+    :param dpi:
+    :return: Figure
     """
-    values2d, _ = extract_ndarray_and_pixel_width(values2d, None)
+    result, ax = plt.subplots(1, 1, figsize=figure_size, tight_layout=True, dpi=dpi)
+    if title:
+        result.suptitle(title)
+        title = None
 
-    result, ax = plt.subplots(1, 1, figsize=figure_size, tight_layout=True, dpi=300)
-    plot_z_histogram_to_ax(ax, values2d, title, n_bins)
+    plot_z_histogram_to_ax(ax, values2d, labels, title, n_bins, units, add_norm)
     return result
 
 
@@ -270,7 +276,6 @@ def _get_greyscale_data(values2d: np.ndarray, alpha=0):
         value = (values2d[nx, ny] - data_min) / data_ptp
         result[nx, ny] = (value, value, value, 0)
     return result
-
 
 # def get_compare_gradient_rms_figure(cls, sticher_dict, cutoff_percent=8, moving_average_n=1, figsize=(8, 4),
 #                                     x_offset=0):

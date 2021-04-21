@@ -15,8 +15,7 @@ from gdef_reader.utils import create_xy_rms_data, create_absolute_gradient_array
     get_mu_sigma
 from gdef_reporter._code_utils import ClassOrInstanceMethod
 from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
-from gdef_reporter.plotter_utils import create_plot_from_sticher, plot_to_ax_from_sticher, plot_to_ax, \
-    create_plot
+from gdef_reporter.plotter_utils import plot_to_ax, create_plot
 
 
 class GDEFPlotter:
@@ -33,10 +32,11 @@ class GDEFPlotter:
         self.plotter_style_sigma: PlotterStyle = get_plotter_style_sigma(dpi=dpi, figure_size=figure_size)
         self.auto_show = auto_show
 
-        #todo: iplement auto save functionality
+        # todo: iplement auto save functionality
         self.auto_save = False
         self.save_path = None
         # method to save figures as pdf or png
+
     @property
     def dpi(self):
         return self._dpi
@@ -81,14 +81,14 @@ class GDEFPlotter:
         :param cropped: Crop the result Figure (default is True). Useful if aspect ratio of Figure and plot differ.
         :return: Figure
         """
-        result = create_plot(values, pixel_width, title, cropped, self.figure_size, self.dpi)
+        result = create_plot(values, pixel_width, title, self.figure_size, self.dpi, cropped=cropped)
 
         self._auto_show_figure(result)
         return result
 
     def create_plot_from_sticher(self, sticher: GDEFSticher, title: str = '') -> Figure:
         """Calls create_plot_from_sticher() from plotter_utils using self.figure_size and self.dpi."""
-        fig = create_plot_from_sticher(sticher, title, max_figure_size=self.figure_size, dpi=self.dpi)
+        fig = create_plot(sticher, title=title, max_figure_size=self.figure_size, dpi=self.dpi)
         self._auto_show_figure(fig)
         return fig
 
@@ -136,7 +136,8 @@ class GDEFPlotter:
 
         for i, percent in enumerate(cutoff_percent_list):
             absolut_gradient_array = create_absolute_gradient_array(values, percent / 100.0)
-            x_pos, y_gradient_rms = create_xy_rms_data(absolut_gradient_array, pixel_width, moving_average_n, subtract_average=False)
+            x_pos, y_gradient_rms = create_xy_rms_data(absolut_gradient_array, pixel_width, moving_average_n,
+                                                       subtract_average=False)
             ax_gradient_rms.plot(x_pos, y_gradient_rms, label=f"{percent}%")
         ax_gradient_rms.legend()
         if title:
@@ -223,8 +224,8 @@ class GDEFPlotter:
 
         # todo refactor in a seperate function
         optimal_ratio = self.figure_size[0] / self.figure_size[1]
-        dummy_fig = create_plot_from_sticher(list(sticher_dict.values())[0], title='dummy',
-                                             max_figure_size=self.figure_size)  # measurements[0].create_plot()
+        dummy_fig = create_plot(list(sticher_dict.values())[0], title='dummy',
+                                max_figure_size=self.figure_size)  # measurements[0].create_plot()
         single_plot_ratio = dummy_fig.get_figwidth() / dummy_fig.get_figheight()
         optimal_ratio /= single_plot_ratio
 
@@ -245,13 +246,13 @@ class GDEFPlotter:
             y = i // best_ratio[0]
             x = i - (y * best_ratio[0])
             if (best_ratio[1] > 1) and (best_ratio[0] > 1):
-                plot_to_ax_from_sticher(sticher_dict[key], ax_list[x, y], title=key)
+                plot_to_ax(ax_list[x, y], sticher_dict[key], title=key)
             elif best_ratio[0] > 1:
-                plot_to_ax_from_sticher(sticher_dict[key], ax_list[x], title=key)
+                plot_to_ax(ax_list[x], sticher_dict[key], title=key)
             elif best_ratio[1] > 1:
-                plot_to_ax_from_sticher(sticher_dict[key], ax_list[y], title=key)
+                plot_to_ax(ax_list[y], sticher_dict[key], title=key)
             else:
-                plot_to_ax_from_sticher(sticher_dict[key], ax_list, title=key)
+                plot_to_ax(ax_list, sticher_dict[key], title=key)
         i = len(sticher_dict)
         while i < best_ratio[0] * best_ratio[1]:
             y = i // best_ratio[0]

@@ -6,10 +6,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 
-from afm_tools.background_correction import BGCorrectionType
 from afm_tools.gdef_sticher import GDEFSticher
 from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reporter.gdef_plotter import GDEFPlotter

@@ -1,22 +1,25 @@
 """
 @author: Nathanael Jöhrmann
 """
+from __future__ import annotations
+
 import pickle
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import numpy as np
-from matplotlib.figure import Figure
 # todo: optional import:
 from pptx_tools.creator import PPTXCreator
 from pptx_tools.templates import AbstractTemplate
 from scipy.stats import norm
 
-from afm_tools.gdef_indent_analyzer import GDEFIndentAnalyzer
-from gdef_reader.gdef_importer import GDEFImporter
-from gdef_reader.gdef_measurement import GDEFMeasurement
 from gdef_reporter.pptx_styles import summary_table, position_2x2_00, position_2x2_10, position_2x2_01, \
     minimize_table_height, position_2x2_11
+
+if TYPE_CHECKING:
+    from afm_tools.gdef_indent_analyzer import GDEFIndentAnalyzer
+    from gdef_reader.gdef_importer import GDEFImporter
+    from gdef_reader.gdef_measurement import GDEFMeasurement
 
 
 def create_pygdf_files(input_path: Path, output_path: Path = None, create_images: bool = False) -> list[Path]:

@@ -12,7 +12,7 @@ from matplotlib.figure import Figure
 from afm_tools.gdef_sticher import GDEFSticher
 from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reporter.plotter_utils import plot_to_ax, create_plot, plot_z_histogram_to_ax, create_z_histogram_plot, \
-    extract_ndarray_and_pixel_width
+    _extract_ndarray_and_pixel_width, save_figure, create_rms_plot
 
 ORIGINAL_FIGURE_SIZE = (4, 3.5)
 ORIGINAL_DPI = 300
@@ -80,9 +80,9 @@ class TestAreaPlots:
         fig3, ax3 = plt.subplots(1, 1, dpi=ORIGINAL_DPI, figsize=ORIGINAL_FIGURE_SIZE)
         z_factor = 1.0
         title = f"{type(data_test_cases).__name__}\nz_unit: [m] - z_factor={z_factor}"
-        plot_to_ax(ax3, data_test_cases, pixel_width=5.0, z_unit="m", z_factor=z_factor, title=title)
+        plot_to_ax(ax3, data_test_cases, pixel_width=5.0, z_unit="µm", title=title)
         auto_show(fig3)
-        assert fig3.axes[1].get_title() == "m"
+        assert fig3.axes[1].get_title() == "\u03BCm"
 
     def test_create_plot(self, data_test_cases):
         fig1 = create_plot(data_test_cases, 1e-6, "default value for cropped (True)", ORIGINAL_FIGURE_SIZE,
@@ -176,11 +176,18 @@ class Test1DPlots:
         assert len(fig1.axes[0].containers) == len(data_list)
         assert len(fig1.axes[0].lines) == 2  # Gauss fits (add_norm=True)
 
+    def test_plot_rms_to_ax(self):
+        pass
+
+    def test_create_rms_plot(self, gdef_measurement):
+        fig = create_rms_plot(gdef_measurement, labels="schrott", title="schrott2", moving_average_n=100, subtract_average=True)
+        auto_show(fig)
+
 
 class TestSpecialFunctions:
     def test_extract_ndarray_and_pixel_width(self, data_test_cases):
         pixel_width = 1
-        ndarray2d, px_width = extract_ndarray_and_pixel_width(data_test_cases, pixel_width=pixel_width)
+        ndarray2d, px_width = _extract_ndarray_and_pixel_width(data_test_cases, pixel_width=pixel_width)
         assert type(ndarray2d) is np.ndarray
         if isinstance(data_test_cases, np.ndarray):
             assert np.all(data_test_cases == ndarray2d)
@@ -189,5 +196,40 @@ class TestSpecialFunctions:
             assert np.all(data_test_cases.values == ndarray2d)
             assert data_test_cases.pixel_width == px_width
 
-    def test_save_figure(self):
-        pass
+    def test_save_figure(self, tmp_path):
+        fig, _ = plt.subplots(1, 1, dpi=72, figsize=(1, 1), constrained_layout=True)
+
+        # first try saving in existing folder with default settings
+        assert tmp_path.exists()
+        filename = "default"
+        save_figure(fig, tmp_path, filename)
+        png_file = tmp_path / f"{filename}.png"  # should be saved by default
+        pdf_file = tmp_path / f"{filename}.pdf"  # should not be saved by default
+        assert png_file.exists()
+        assert not pdf_file.exists()
+
+        # second, save nothing:
+        filename = "save_nothing"
+        save_figure(fig, tmp_path, filename, png=False, pdf=False)
+        png_file = tmp_path / f"{filename}.png"  # should be saved by default
+        pdf_file = tmp_path / f"{filename}.pdf"  # should not be saved by default
+        assert not png_file.exists()
+        assert not pdf_file.exists()
+
+        # third, only save pdf
+        filename = "save_pdf"
+        save_figure(fig, tmp_path, filename, png=False, pdf=True)
+        png_file = tmp_path / f"{filename}.png"  # should be saved by default
+        pdf_file = tmp_path / f"{filename}.pdf"  # should not be saved by default
+        assert not png_file.exists()
+        assert pdf_file.exists()
+
+        # fourth, use folder that does not exist jet and save both png and pdf
+        new_tmp_path = tmp_path / "new/"
+        assert not new_tmp_path.exists()
+        filename = "save_pdf_and_png"
+        save_figure(fig, new_tmp_path, filename, png=True, pdf=True)
+        png_file = new_tmp_path / f"{filename}.png"  # should be saved by default
+        pdf_file = new_tmp_path / f"{filename}.pdf"  # should not be saved by default
+        assert png_file.exists()
+        assert pdf_file.exists()

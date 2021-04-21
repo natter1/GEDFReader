@@ -27,14 +27,29 @@ from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import norm
 
+from gdef_reader.utils import create_xy_rms_data
+
 if TYPE_CHECKING:
     from afm_tools.gdef_sticher import GDEFSticher
     from gdef_reader.gdef_measurement import GDEFMeasurement
 
+    DataObject = Union[np.ndarray, GDEFMeasurement, GDEFSticher]  # single data set
+    DataDict = dict[str: DataObject]
+    DataObjectList = Union[DataObject, DataDict, list[DataObject]]
+
+
+def _unit_factor_and_label(units: Literal["µm", "nm"]) -> tuple[float, str]:
+    units_dict = {
+        "nm": (1e9, "nm"),
+        "µm": (1e6, "\u03BCm")
+    }
+    _units = units.replace("\u03BC", "µ")  # \u03BC is not equal to µ!
+    return units_dict[_units]
+
 
 def _get_tight_size(max_figure: Figure, title: str):
     """get cropped size for max_figure after adding optional title"""
-    # first place suptitle close to axes
+    # first, place suptitle close to axes
     if title:
         tight_bbox = max_figure.get_tightbbox(max_figure.canvas.get_renderer())
         y_rel = tight_bbox.ymax / max_figure.bbox_inches.ymax
@@ -51,26 +66,81 @@ def _get_tight_size(max_figure: Figure, title: str):
         return max_figure_size[0], tight_bbox.size[1]
 
 
-def _add_suptitle(figure, title) -> Figure:
+def _add_suptitle_and_tighten(figure, title) -> Figure:
+    """
+    Add given title as suptitle to Figure, and finally calls tight_layout() on it.
+    :param figure:
+    :param title:
+    :return:
+    """
     if title:
         figure.suptitle(title)
     figure.tight_layout(pad=0.5)
     return figure
 
 
+def _extract_ndarray_and_pixel_width(data_object: DataObject,
+                                     pixel_width=None) -> (np.ndarray, float):
+    """
+    Tries to extract np.ndarrray and pixel_width from given values_object, by looking for attributes 'values' and
+    'pixel_width'.
+    :param data_object: np.ndarray or object with attribute values (and pixel_width, if parameter pixel_width is None)
+    :param pixel_width: pixel_width or None (is ignored, if values_object is not a np.ndarray)
+    :return: Tuple containing np.ndarray and pixel_width
+    """
+    if isinstance(data_object, np.ndarray):
+        return data_object, pixel_width
+
+    return data_object.values, data_object.pixel_width
+
+
+def _get_ndarray_pixel_width_and_label_lists(data_object_list: DataObjectList, pixel_width=None, label_list=None) \
+        -> (list[np.ndarray], list[float], list[str]):
+    """
+    Tries to extract a np.ndarray list and a pixel_width list from given values_object_list,
+    by looking for attributes 'values' and 'pixel_width'. Used when plotting more than one dataset.
+    If data_object_list is a dict, first extracts a key_list, used as label_list, if label_list is None.
+    """
+    final_label_list = label_list
+    if isinstance(data_object_list, dict):
+        data_object_list, key_list = split_dict_in_data_and_label_list(data_object_list)
+        if label_list is None:
+            final_label_list = key_list
+
+    ndarray2d_list = []
+    pixel_width_list = []
+    if not isinstance(data_object_list, list):
+        data_object_list = [data_object_list]
+    if not isinstance(pixel_width, list):
+        pixel_width = [pixel_width] * len(data_object_list)
+    for i, data in enumerate(data_object_list):
+        ndarray2d_data, px_width = _extract_ndarray_and_pixel_width(data, pixel_width)
+        ndarray2d_list.append(ndarray2d_data)
+        pixel_width_list.append(px_width)
+
+    if final_label_list is None:
+        final_label_list = [None] * len(ndarray2d_list)
+
+    if isinstance(final_label_list, str):
+        final_label_list = [final_label_list]
+
+    assert len(final_label_list) == len(ndarray2d_list)
+
+    return ndarray2d_list, pixel_width_list, final_label_list
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # -------------------------------------------------- 2D area plots -----------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
-def plot_to_ax(ax: Axes, values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher], pixel_width: float,
-               title: str = "", z_unit="nm", z_factor=1e9) -> None:
+def plot_to_ax(ax: Axes, data_object: DataObject, pixel_width: float = None,
+               title: str = "", z_unit: Literal["nm", "µm"] = "nm") -> None:
     """
     Plot values in values2d to given ax.
     :param ax: Axes object to which the surface should be written
-    :param values2d: np.ndarray (2D array) with surface data
+    :param data_object: DataObject with surface data
     :param pixel_width: Pixel width/height in [m]
     :param title: Axes title (if '' -> shows mu and sigma (default); for no title set None)
     :param z_unit: Units for z-Axis (color coded)
-    :param z_factor: scaling factor for z-values (e.g. 1e9 for m -> nm)
     :return: None
     """
 
@@ -79,26 +149,27 @@ def plot_to_ax(ax: Axes, values2d: Union[np.ndarray, GDEFMeasurement, GDEFStiche
         height_in_um = shape[0] * px_width * 1e6
         return [0, width_in_um, 0, height_in_um]
 
-    values2d, pixel_width = extract_ndarray_and_pixel_width(values2d, pixel_width)
+    z_factor, z_unit_label = _unit_factor_and_label(z_unit)
+    ndarray2d_data, pixel_width = _extract_ndarray_and_pixel_width(data_object, pixel_width)
 
-    extent = extent_for_plot(values2d.shape, pixel_width)
-    im = ax.imshow(values2d * z_factor, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
+    extent = extent_for_plot(ndarray2d_data.shape, pixel_width)
+    im = ax.imshow(ndarray2d_data * z_factor, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
     ax.set_title(title)  # , pad=16)
     ax.set_xlabel("µm", labelpad=1.0)
     ax.set_ylabel("µm", labelpad=1.0)
 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
-    cax.set_title(z_unit, y=1)  # bar.set_label("nm")
+    cax.set_title(z_unit_label, y=1)  # bar.set_label("nm")
     plt.colorbar(im, cax=cax, ax=ax)
 
 
-def create_plot(values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher], pixel_width: float, title: str = '',
+def create_plot(data_object: DataObject, pixel_width: float = None, title: str = '',
                 max_figure_size=(4, 4), dpi=96, cropped=True) -> Figure:
     """
     Creates a matplotlib Figure using given values2d-object. If cropped is True, the returned Figure has a smaller size
     than specified in max_figure_size.
-    :param values2d: np.ndarray (2D array) with surface data
+    :param data_object: DataObject with surface data
     :param pixel_width: Pixel width/height in [m]
     :param title: optional title (implemented as Figure suptitle)
     :param max_figure_size: Max. figure size of returned Figure (actual size might be smaller if cropped).
@@ -106,65 +177,49 @@ def create_plot(values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher], pixel
     :param cropped: Crop the result Figure (default is True). Useful if aspect ratio of Figure and plot differ.
     :return: Figure
     """
-    values2d, pixel_width = extract_ndarray_and_pixel_width(values2d, pixel_width)
-
     figure_max, ax = plt.subplots(figsize=max_figure_size, dpi=dpi)
-    plot_to_ax(ax=ax, values2d=values2d, pixel_width=pixel_width)  # , title=title)
+    plot_to_ax(ax=ax, data_object=data_object, pixel_width=pixel_width)  # , title=title)
 
     if not cropped:  # only add suptitle if not cropped, otherwise _get_tight_size() cannot get correct cropped size!
-        return _add_suptitle(figure_max, title)
+        return _add_suptitle_and_tighten(figure_max, title)
 
     cropped_size = _get_tight_size(figure_max, title)
-    return create_plot(values2d, pixel_width, title, max_figure_size=cropped_size, dpi=dpi, cropped=False)
+    return create_plot(data_object, pixel_width, title, max_figure_size=cropped_size, dpi=dpi, cropped=False)
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------- 1D plots over x ----------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
-def plot_z_histogram_to_ax(ax, values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher],
-                           labels: Union[str, list[str]] = None, title: Optional[str] = "", n_bins: int = 200,
-                           units: Literal["µm", "nm"] = "µm", add_norm: bool = False) -> None:
+def plot_z_histogram_to_ax(ax: Axes,
+                           data_object_list: DataObject,
+                           label_list: Union[str, list[str]] = None,
+                           title: Optional[str] = "",
+                           n_bins: int = 200,
+                           units: Literal["µm", "nm"] = "µm",
+                           add_norm: bool = False)\
+        -> None:
     """
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
     :param ax: Axes object to which the surface should be written
-    :param values2d: np.ndarray (2D array) with surface data
-    :param labels: labels for plotted data from values2d
+    :param data_object_list: DataObject or list[DataObject] with surface data
+    :param label_list: labels for plotted data from values2d
     :param title: Axes title; if empty, mu and sigma will be shown; to prevent any subtitle, set title=None
     :param n_bins: number of equally spaced bins for histogram
     :param units: Can be set to µm or nm (default is µm).
     :param add_norm: if True (default), show normal/gaussian probability density function for each distribution
     :return: None
     """
-    # todo: consider to refactor this in extra function
-    values2d_list = []
-    if not isinstance(values2d, list):
-        values2d = [values2d]
-    for data in values2d:
-        ndarray_data, _ = extract_ndarray_and_pixel_width(data)
-        values2d_list.append(ndarray_data)
-
-    if labels is None:
-        labels = [None] * len(values2d_list)
-    if isinstance(labels, str):
-        labels = [labels]
-    assert len(labels) == len(values2d_list)
-
-    # todo: consider to refactor this in extra function
-    if units == "nm":
-        unit_factor = 1e9
-        unit_label = "nm"
-    else:
-        unit_factor = 1e6
-        unit_label = "\u03BCm"
+    unit_factor, unit_label = _unit_factor_and_label(units)
+    ndarray2d_list, _, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list, label_list)
 
     colors = []
     z_values_list = []
     norm_fit_lines = []
     norm_x_values_list = []
-    for ndarray_data in values2d_list:
+    for ndarray_data in ndarray2d_list:
         z_values = ndarray_data.flatten()
         z_values = z_values[
-            ~np.isnan(z_values)]  # remove all NaN values (~ is bitwise NOT opperator - similar to numpy.logical_not)
+            ~np.isnan(z_values)]  # remove all NaN values (~ is bitwise NOT operator - similar to numpy.logical_not)
         z_values = z_values * unit_factor  # m -> µm/nm
         mu, sigma = norm.fit(z_values)
         norm_x_values = np.linspace(z_values.min(), z_values.max(), 100)
@@ -179,14 +234,10 @@ def plot_z_histogram_to_ax(ax, values2d: Union[np.ndarray, GDEFMeasurement, GDEF
             colors.append("black")
 
     for i in range(len(z_values_list)):
-        _, _, patch = ax.hist(z_values_list[i], density=True, bins=n_bins, edgecolor=colors[i], lw=1, label=labels[i],
+        _, _, patch = ax.hist(z_values_list[i], density=True, bins=n_bins, edgecolor=colors[i], lw=1,
+                              label=label_list[i],
                               fc=to_rgba(colors[i], alpha=0.3), rwidth=1, histtype="bar", fill=True)
-        # plt.setp(patch, edgecolor=to_rgba(colors[i], alpha=1), lw=2)
 
-    # # bars side by side:
-    # _, _, patches = ax.hist(z_values_list, density=True, bins=n_bins, color=colors, rwidth=1, histtype="bar", fill=False)#
-    # for i, patch in enumerate(patches):
-    #     plt.setp(patch, edgecolor=colors[i])  # , lw=2)
     if add_norm:
         for i, line in enumerate(norm_fit_lines):
             ax.plot(norm_x_values_list[i], line, c=colors[i])
@@ -197,22 +248,27 @@ def plot_z_histogram_to_ax(ax, values2d: Union[np.ndarray, GDEFMeasurement, GDEF
     # ax.grid(True)
     if title:
         ax.set_title(f"{title}")
-    elif title is not None and len(values2d) == 1:
+    elif title is not None and len(ndarray2d_list) == 1:
         ax.set_title(f"\u03BC={mu:.2f}, \u03C3={sigma:.2f}")
 
-    if any(labels):
+    if any(label_list):
         ax.legend()
 
-    return ax
+    return None
 
 
-def create_z_histogram_plot(values2d: Union[np.ndarray, GDEFMeasurement, GDEFSticher],
-                            labels: Union[str, list[str]] = None, title: Optional[str] = "", n_bins: int = 200,
-                            units: Literal["µm", "nm"] = "µm", add_norm: bool = False,
-                            figure_size: tuple[float, float] = (6, 3), dpi: int = 96) -> Figure:
+def create_z_histogram_plot(data_object_list: DataObjectList,
+                            labels: Union[str, list[str]] = None,
+                            title: Optional[str] = "",
+                            n_bins: int = 200,
+                            units: Literal["µm", "nm"] = "µm",
+                            add_norm: bool = False,
+                            figure_size: tuple[float, float] = (6, 3),
+                            dpi: int = 96) \
+        -> Figure:
     """
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
-    :param values2d: np.ndarray (2D array) with surface data
+    :param data_object_list:DataObjectList
     :param labels: labels for plotted data from values2d
     :param title: Figure title; if empty, mu and sigma will be shown as axes subtitle(use title=None to prevent this)
     :param n_bins: number of equally spaced bins for histogram
@@ -227,23 +283,83 @@ def create_z_histogram_plot(values2d: Union[np.ndarray, GDEFMeasurement, GDEFSti
         result.suptitle(title)
         title = None
 
-    plot_z_histogram_to_ax(ax, values2d, labels, title, n_bins, units, add_norm)
+    plot_z_histogram_to_ax(ax, data_object_list, labels, title, n_bins, units, add_norm)
     return result
 
 
-def extract_ndarray_and_pixel_width(values_object: Union[np.ndarray, GDEFMeasurement, GDEFSticher],
-                                    pixel_width=None) -> (np.ndarray, float):
-    """
-    Tries to extract np.ndarrray and pixel_width from given values_object, by looking for attributes 'values' and
-    'pixel_width'.
-    :param values_object: np.ndarray or object with attribute values (and pixel_width, if parameter pixel_width is None)
-    :param pixel_width: pixel_width or None (is ignored, if values_object is not a np.ndarray)
-    :return: Tuple containing np.ndarray and pixel_width
-    """
-    if isinstance(values_object, np.ndarray):
-        return values_object, pixel_width
+def plot_rms_to_ax(ax_rms: Axes,
+                   data_object_list: DataObjectList,
+                   label_list: Union[str, list[str]] = None,
+                   title: Optional[str] = "",
+                   moving_average_n: int = 200,
+                   x_offset=0,
+                   units: Literal["µm", "nm"] = "µm",
+                   subtract_average=True  # <- todo:should this be True or False?
+                   )\
+        -> None:
+    # graph_styler = plotter_style.graph_styler
 
-    return values_object.values, values_object.pixel_width
+    ax_rms.set_xlabel("[µm]")
+    y_label = f"roughness (moving average n = {moving_average_n})"
+    ax_rms.set_ylabel(y_label)
+    ax_rms.set_yticks([])
+    ax_rms.set_title(title)
+
+    ndarray2d_list, pixel_width_list, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list,
+                                                                                            label_list=label_list)
+    for i, ndarray_data in enumerate(ndarray2d_list):
+        x_pos, y_rms = create_xy_rms_data(ndarray_data, pixel_width_list[i], moving_average_n,
+                                          subtract_average=subtract_average)
+
+        x_pos = [x + x_offset for x in x_pos]
+        ax_rms.plot(x_pos, y_rms, label=label_list[i])
+        # ax_rms.plot(x_pos, y_rms, **graph_styler.dict, label=key)
+        # graph_styler.next_style()
+
+        if any(label_list):
+            ax_rms.legend()
+
+
+def create_rms_plot(data_object_list: DataObjectList,
+                    labels: Union[str, list[str]] = None,
+                    title: Optional[str] = "",
+                    moving_average_n: int = 200,
+                    x_offset=0,
+                    units: Literal["µm", "nm"] = "µm",
+                    subtract_average=True,
+                    figure_size: tuple[float, float] = (6, 3),
+                    dpi: int = 96)\
+        -> Figure:
+    """
+    Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
+    data_dict. The key value in data_dict is used as label in the legend.
+    :param data_object_list:
+    :param labels:
+    :param title:
+    :param moving_average_n:
+    :param x_offset:
+    :param subtract_average:
+    :param figure_size:
+    :param dpi:
+    :return:
+    """
+    result, ax = plt.subplots(1, 1, figsize=figure_size, tight_layout=True, dpi=dpi)
+    if title:
+        result.suptitle(title)
+        title = None
+
+    plot_rms_to_ax(ax, data_object_list, title=title, label_list=labels, moving_average_n=moving_average_n,
+                   x_offset=x_offset, subtract_average=subtract_average)
+    return result
+
+
+def split_dict_in_data_and_label_list(data_dict_list: dict[str: DataObject]):
+    label_list = []
+    data_object_list = []
+    for key, value in data_dict_list.items():
+        label_list.append(key)
+        data_object_list.append(value)
+    return data_object_list, label_list
 
 
 def save_figure(figure: Figure, output_path: Path, filename: str, png: bool = True, pdf: bool = False) -> None:
@@ -256,16 +372,16 @@ def save_figure(figure: Figure, output_path: Path, filename: str, png: bool = Tr
     if pdf or png:
         output_path.mkdir(parents=True, exist_ok=True)
     if png:
-        figure.savefig(output_path.joinpath(f"{filename}.png"), dpi=300)
+        figure.savefig(output_path.joinpath(f"{filename}.png"))  # , dpi=300)
     if pdf:
         figure.savefig(output_path.joinpath(f"{filename}.pdf"))
 
 
-# ----------------------------------------------
-# todo: below here functions still need clean up
-# ----------------------------------------------
+# -------------------------------------------------------------------
+# todo: below here functions still need clean up  or might be removed
+# -------------------------------------------------------------------
 
-# todo: used for what?
+# todo: used/intended for what?
 def _get_greyscale_data(values2d: np.ndarray, alpha=0):
     # Normalised [0,1]
     data_min = np.min(values2d)
@@ -274,7 +390,7 @@ def _get_greyscale_data(values2d: np.ndarray, alpha=0):
     result = np.zeros((values2d.shape[0], values2d.shape[1], 4))
     for (nx, ny), _ in np.ndenumerate(values2d):
         value = (values2d[nx, ny] - data_min) / data_ptp
-        result[nx, ny] = (value, value, value, 0)
+        result[nx, ny] = (value, value, value, alpha)
     return result
 
 # def get_compare_gradient_rms_figure(cls, sticher_dict, cutoff_percent=8, moving_average_n=1, figsize=(8, 4),
@@ -306,41 +422,8 @@ def _get_greyscale_data(values2d: np.ndarray, alpha=0):
 #     fig.tight_layout()
 
 #
-# def create_rms_figure(sticher_dict: Dict[str, GDEFSticher], moving_average_n=1,
-#                       x_offset=0, plotter_style: PlotterStyle = None) -> Figure:
-#     """
-#     Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
-#     data_dict. The key value in data_dict is used as label in the legend.
-#     :param sticher_dict:
-#     :param cutoff_percent:
-#     :param moving_average_n:
-#     :param x_offset:
-#     :param plotter_style:
-#     :return:
-#     """
-#     if plotter_style is None:
-#         plotter_style = PlotterStyle(300, (8, 4))
-#     y_label = f"roughness (moving average n = {moving_average_n})"
-#     data_dict = {}
-#     for key, sticher in sticher_dict.items():
-#         data_dict[key] = {"pixel_width": sticher.pixel_width, "data": sticher.stiched_data}
-#
-#     result = _create_rms_figure(data_dict, moving_average_n, x_offset, plotter_style, y_label, subtract_average=True)
-#     return result
 #
 #
-# def create_gdef_sticher_dict(gdf_containers: GDEFContainerList, reverse_flag_dict: dict, initial_x_offset_fraction,
-#                              show_control_figures=False, filter_below_to_nan_value = None):
-#     result = {}
-#     for gdf_container in gdf_containers:
-#         measurements = gdf_container.filtered_measurements
-#         if reverse_flag_dict[gdf_container.basename]:
-#             measurements.reverse()
-#         sticher = GDEFSticher(measurements, initial_x_offset_fraction, show_control_figures=show_control_figures)
-#         if filter_below_to_nan_value is not None:
-#             sticher.stiched_data[sticher.stiched_data < filter_below_to_nan_value] = np.nan
-#         result[gdf_container.basename] = sticher
-#     return result
 #
 #
 # def create_gradient_rms_figure(sticher_dict: Dict[str, GDEFSticher], cutoff_percent=8, moving_average_n=1,
@@ -368,37 +451,6 @@ def _get_greyscale_data(values2d: np.ndarray, alpha=0):
 #
 #
 #
-# def _create_rms_figure(data_dict: Dict[str, dict], moving_average_n, x_offset,
-#                        plotter_style: PlotterStyle, y_label: str, subtract_average=False) -> Figure:
-#     """
-#     Creates a matplotlib figure, showing a graph of the root meean square of the np.ndarray in
-#     data_dict. The key value in data_dict is used as label in the legend.
-#     :param data_dict: key: label for legend entry; value: dict with entries for pixel_width and data
-#     :param moving_average_n: n is the number of cols used for moving average.
-#     :param x_offset: moing graphs along x-axis if neccessary (e.g. to align different measurements)
-#     :param plotter_style:
-#     :return: Figure
-#     """
-#     graph_styler = plotter_style.graph_styler
-#
-#     result, ax_rms = plt.subplots(1, figsize=plotter_style.figure_size, dpi=plotter_style.dpi)
-#
-#     ax_rms.set_xlabel("[µm]")
-#     ax_rms.set_ylabel(y_label)
-#     ax_rms.set_yticks([])
-#
-#     for key, value in data_dict.items():
-#         x_pos, y_rms = create_xy_rms_data(value["data"], value["pixel_width"], moving_average_n, subtract_average=subtract_average)
-#         x_pos = [x + x_offset for x in x_pos]
-#
-#         ax_rms.plot(x_pos, y_rms, **graph_styler.dict, label=key)
-#         graph_styler.next_style()
-#
-#         ax_rms.legend()
-#
-#     # fig.suptitle(f"cutoff = {cutoff_percent}%")
-#     result.tight_layout()
-#     return result
 #
 #
 # # def create_image_data(array2d):

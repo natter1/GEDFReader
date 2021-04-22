@@ -27,7 +27,7 @@ from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import norm
 
-from gdef_reader.utils import create_xy_rms_data
+from gdef_reader.utils import create_xy_rms_data, unit_factor_and_label
 
 if TYPE_CHECKING:
     from afm_tools.gdef_sticher import GDEFSticher
@@ -36,15 +36,6 @@ if TYPE_CHECKING:
     DataObject = Union[np.ndarray, GDEFMeasurement, GDEFSticher]  # single data set
     DataDict = dict[str: DataObject]
     DataObjectList = Union[DataObject, DataDict, list[DataObject]]
-
-
-def _unit_factor_and_label(units: Literal["µm", "nm"]) -> tuple[float, str]:
-    units_dict = {
-        "nm": (1e9, "nm"),
-        "µm": (1e6, "\u03BCm")
-    }
-    _units = units.replace("\u03BC", "µ")  # \u03BC is not equal to µ!
-    return units_dict[_units]
 
 
 def _get_tight_size(max_figure: Figure, title: str):
@@ -149,7 +140,7 @@ def plot_to_ax(ax: Axes, data_object: DataObject, pixel_width: float = None,
         height_in_um = shape[0] * px_width * 1e6
         return [0, width_in_um, 0, height_in_um]
 
-    z_factor, z_unit_label = _unit_factor_and_label(z_unit)
+    z_factor, z_unit_label = unit_factor_and_label(z_unit)
     ndarray2d_data, pixel_width = _extract_ndarray_and_pixel_width(data_object, pixel_width)
 
     extent = extent_for_plot(ndarray2d_data.shape, pixel_width)
@@ -164,11 +155,17 @@ def plot_to_ax(ax: Axes, data_object: DataObject, pixel_width: float = None,
     plt.colorbar(im, cax=cax, ax=ax)
 
 
-def create_plot(data_object: DataObject, pixel_width: float = None, title: str = '',
-                max_figure_size=(4, 4), dpi=96, cropped=True) -> Figure:
+def create_plot(data_object: DataObject,
+                pixel_width: float = None,
+                title: str = '',
+                max_figure_size=(4, 4),
+                dpi=96,
+                cropped=True)\
+        -> Figure:
     """
     Creates a matplotlib Figure using given values2d-object. If cropped is True, the returned Figure has a smaller size
     than specified in max_figure_size.
+    :rtype: object
     :param data_object: DataObject with surface data
     :param pixel_width: Pixel width/height in [m]
     :param title: optional title (implemented as Figure suptitle)
@@ -191,7 +188,7 @@ def create_plot(data_object: DataObject, pixel_width: float = None, title: str =
 # ------------------------------------------------- 1D plots over x ----------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 def plot_z_histogram_to_ax(ax: Axes,
-                           data_object_list: DataObject,
+                           data_object_list: DataObjectList,
                            label_list: Union[str, list[str]] = None,
                            title: Optional[str] = "",
                            n_bins: int = 200,
@@ -209,7 +206,7 @@ def plot_z_histogram_to_ax(ax: Axes,
     :param add_norm: if True (default), show normal/gaussian probability density function for each distribution
     :return: None
     """
-    unit_factor, unit_label = _unit_factor_and_label(units)
+    unit_factor, unit_label = unit_factor_and_label(units)
     ndarray2d_list, _, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list, label_list)
 
     colors = []
@@ -298,8 +295,8 @@ def plot_rms_to_ax(ax_rms: Axes,
                    )\
         -> None:
     # graph_styler = plotter_style.graph_styler
-
-    ax_rms.set_xlabel("[µm]")
+    _, unit_label = unit_factor_and_label(units)
+    ax_rms.set_xlabel(f"[{unit_label}]")
     y_label = f"roughness (moving average n = {moving_average_n})"
     ax_rms.set_ylabel(y_label)
     ax_rms.set_yticks([])
@@ -309,7 +306,7 @@ def plot_rms_to_ax(ax_rms: Axes,
                                                                                             label_list=label_list)
     for i, ndarray_data in enumerate(ndarray2d_list):
         x_pos, y_rms = create_xy_rms_data(ndarray_data, pixel_width_list[i], moving_average_n,
-                                          subtract_average=subtract_average)
+                                          subtract_average=subtract_average, units=units)
 
         x_pos = [x + x_offset for x in x_pos]
         ax_rms.plot(x_pos, y_rms, label=label_list[i])
@@ -349,7 +346,7 @@ def create_rms_plot(data_object_list: DataObjectList,
         title = None
 
     plot_rms_to_ax(ax, data_object_list, title=title, label_list=labels, moving_average_n=moving_average_n,
-                   x_offset=x_offset, subtract_average=subtract_average)
+                   x_offset=x_offset, subtract_average=subtract_average, units=units)
     return result
 
 
@@ -382,16 +379,28 @@ def save_figure(figure: Figure, output_path: Path, filename: str, png: bool = Tr
 # -------------------------------------------------------------------
 
 # todo: used/intended for what?
-def _get_greyscale_data(values2d: np.ndarray, alpha=0):
+def _get_greyscale_data(data_object: DataObject, alpha=0):
+    ndarray2d_data, _ = _extract_ndarray_and_pixel_width(data_object)
     # Normalised [0,1]
-    data_min = np.min(values2d)
-    data_ptp = np.ptp(values2d)
+    data_min = np.min(ndarray2d_data)
+    data_ptp = np.ptp(ndarray2d_data)
 
-    result = np.zeros((values2d.shape[0], values2d.shape[1], 4))
-    for (nx, ny), _ in np.ndenumerate(values2d):
-        value = (values2d[nx, ny] - data_min) / data_ptp
+    result = np.zeros((ndarray2d_data.shape[0], ndarray2d_data.shape[1], 4))
+    for (nx, ny), _ in np.ndenumerate(ndarray2d_data):
+        value = (ndarray2d_data[nx, ny] - data_min) / data_ptp
         result[nx, ny] = (value, value, value, alpha)
     return result
+
+
+# todo: used/intended for what?
+def _create_image_data(data_object: DataObject):
+    ndarray2d_data, _ = _extract_ndarray_and_pixel_width(data_object)
+    data_min = np.nanmin(ndarray2d_data)
+    # normalize the data to 0 - 1:
+    array2d = (ndarray2d_data - min(0, data_min)) / (np.nanmax(ndarray2d_data) - min(0, data_min))
+    array2d = 255 * array2d  # Now scale by 255
+    return array2d.astype(np.uint8)
+
 
 # def get_compare_gradient_rms_figure(cls, sticher_dict, cutoff_percent=8, moving_average_n=1, figsize=(8, 4),
 #                                     x_offset=0):
@@ -453,8 +462,4 @@ def _get_greyscale_data(values2d: np.ndarray, alpha=0):
 #
 #
 #
-# # def create_image_data(array2d):
-# #     data_min = np.nanmin(array2d)
-# #     array2d = (array2d - min(0, data_min)) / (np.nanmax(array2d) - min(0, data_min))  # normalize the data to 0 - 1
-# #     array2d = 255 * array2d  # Now scale by 255
-# #     return array2d.astype(np.uint8)
+

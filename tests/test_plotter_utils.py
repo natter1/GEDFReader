@@ -180,7 +180,8 @@ class Test1DPlots:
         pass
 
     def test_create_rms_plot(self, gdef_measurement):
-        fig = create_rms_plot(gdef_measurement, labels="schrott", title="schrott2", moving_average_n=100, subtract_average=True)
+        fig = create_rms_plot(gdef_measurement, labels="schrott", title="schrott2", moving_average_n=100,
+                              subtract_average=True, units="µm")
         auto_show(fig)
 
 

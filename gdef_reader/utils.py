@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pickle
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Literal
 
 import numpy as np
 # todo: optional import:
@@ -20,6 +20,15 @@ if TYPE_CHECKING:
     from afm_tools.gdef_indent_analyzer import GDEFIndentAnalyzer
     from gdef_reader.gdef_importer import GDEFImporter
     from gdef_reader.gdef_measurement import GDEFMeasurement
+
+
+def unit_factor_and_label(units: Literal["µm", "nm"]) -> tuple[float, str]:
+    units_dict = {
+        "nm": (1e9, "nm"),
+        "µm": (1e6, "\u03BCm")
+    }
+    _units = units.replace("\u03BC", "µ")  # \u03BC is not equal to µ!
+    return units_dict[_units]
 
 
 def create_pygdf_files(input_path: Path, output_path: Path = None, create_images: bool = False) -> list[Path]:
@@ -124,18 +133,21 @@ def create_absolute_gradient_array(array2d, cutoff=1.0):
     return result
 
 
-def create_xy_rms_data(values: np.ndarray, pixel_width, moving_average_n=1, subtract_average=True) -> tuple[list, list]:
+def create_xy_rms_data(values: np.ndarray, pixel_width, moving_average_n=1, subtract_average=True,
+                       units: Literal["µm", "nm"] = "µm") -> tuple[list, list]:
     """
     :param values: 2D array
     :param pixel_width:
     :param moving_average_n:
-    :return: (x_pos, y_rms)
     :param subtract_average:
+    :param units:
+    :return: (x_pos, y_rms)
     """
+    factor, _ = unit_factor_and_label(units)
     x_pos = []
     y_rms = []
     for i in range(values.shape[1] - moving_average_n):
-        x_pos.append((i + max(moving_average_n - 1, 0) / 2.0) * pixel_width * 1e6)
+        x_pos.append((i + max(moving_average_n - 1, 0) / 2.0) * pixel_width * factor)
         y_rms.append(nanrms(values[:, i:i + moving_average_n], subtract_average=subtract_average))
     return x_pos, y_rms
 

@@ -2,8 +2,10 @@
 GDEFPlotter is used to create matplotlib Figures for AFM measurements.
 @author: Nathanael Jöhrmann
 """
+from __future__ import annotations
+
 import copy
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,6 +19,8 @@ from gdef_reporter._code_utils import ClassOrInstanceMethod
 from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
 from gdef_reporter.plotter_utils import plot_to_ax, create_plot
 
+if TYPE_CHECKING:
+    from gdef_reporter.plotter_utils import DataObject, DataObjectList
 
 class GDEFPlotter:
     def __init__(self, figure_size=(12, 6), dpi: int = 300, auto_show: bool = False):
@@ -72,25 +76,22 @@ class GDEFPlotter:
     # ------------------------------------------------------------------------------------------------------------------
     # ------------------------------------------------ 2D area plots ---------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
-    def create_plot(self, values: np.ndarray, pixel_width, title=None, cropped=True) -> Optional[Figure]:
+    def create_plot(self, data_object: DataObject,
+                    pixel_width: Optional[float] = None,
+                    title: str = "",
+                    cropped=True) -> Optional[Figure]:
         """
         Create a matplotlib Figure using the 2D array values as input data.
-        :param values: np.ndarray (2D)
+        :param data_object: data object containing a np.ndarray (2D)
         :param pixel_width: [m]
         :param title: optional Figure title (not Axes subtitle)
         :param cropped: Crop the result Figure (default is True). Useful if aspect ratio of Figure and plot differ.
         :return: Figure
         """
-        result = create_plot(values, pixel_width, title, self.figure_size, self.dpi, cropped=cropped)
+        result = create_plot(data_object, pixel_width, title, self.figure_size, self.dpi, cropped=cropped)
 
         self._auto_show_figure(result)
         return result
-
-    def create_plot_from_sticher(self, sticher: GDEFSticher, title: str = '') -> Figure:
-        """Calls create_plot_from_sticher() from plotter_utils using self.figure_size and self.dpi."""
-        fig = create_plot(sticher, title=title, max_figure_size=self.figure_size, dpi=self.dpi)
-        self._auto_show_figure(fig)
-        return fig
 
     # ------------------------------------------------------------------------------------------------------------------
     # ------------------------------------------------ 1D plots over x -------------------------------------------------
@@ -310,11 +311,15 @@ class GDEFPlotter:
             result.show()
         return result
 
-    @ClassOrInstanceMethod
-    def _auto_show_figure(cls, instance, fig):
-        """Parameters cls and instance are set via decorator ClassOrInstance. So first parameter when calling is fig."""
-        auto_show = instance.auto_show if instance else cls.auto_show
-        if auto_show:
+    # @ClassOrInstanceMethod
+    # def _auto_show_figure(cls, instance, fig):
+    #     """Parameters cls and instance are set via decorator ClassOrInstance. So first parameter when calling is fig."""
+    #     auto_show = instance.auto_show if instance else cls.auto_show
+    #     if auto_show:
+    #         fig.show()
+
+    def _auto_show_figure(self, fig):
+        if self.auto_show:
             fig.show()
 
     # @classmethod

@@ -38,9 +38,25 @@ def gdef_measurement():
 
 
 @pytest.fixture(scope='session')
+def gdef_sticher(gdef_measurement):
+    sticher = GDEFSticher([gdef_measurement, gdef_measurement])
+    yield sticher
+
+
+@pytest.fixture(scope="function", params=["GDEFMeasurement", "random_ndarray", "GDEFSticher"])
+def data_test_cases(request, gdef_measurement, random_ndarray2d_data, gdef_sticher):
+    case_dict = {
+        "GDEFMeasurement": gdef_measurement,
+        "random_ndarray": random_ndarray2d_data,
+        "GDEFSticher": gdef_sticher
+    }
+    yield case_dict[request.param]
+
+
+@pytest.fixture(scope='session')
 def gdef_plotter():
     GDEFPlotter.auto_show = AUTO_SHOW
-    gdef_plotter = GDEFPlotter(figure_size=ORIGINAL_FIGURE_SIZE, dpi=ORIGINAL_DPI)
+    gdef_plotter = GDEFPlotter(figure_size=ORIGINAL_FIGURE_SIZE, dpi=ORIGINAL_DPI, auto_show=AUTO_SHOW)
     yield gdef_plotter
 
 
@@ -76,9 +92,9 @@ class TestGDEFPlotter:
 
         gdef_plotter.set_dpi_and_figure_size(ORIGINAL_DPI, ORIGINAL_FIGURE_SIZE)
 
-    def test_create_plot(self, gdef_plotter, random_ndarray2d_data):
-        fig1 = gdef_plotter.create_plot(random_ndarray2d_data, 1e-6, title="create_surface_figure")
-        fig2 = gdef_plotter.create_plot(random_ndarray2d_data, 1e-6,
+    def test_create_plot(self, gdef_plotter, data_test_cases):
+        fig1 = gdef_plotter.create_plot(data_test_cases, 1e-6, title="create_surface_figure")
+        fig2 = gdef_plotter.create_plot(data_test_cases, 1e-6,
                                         title="create_surface_figure with cropped=False", cropped=False)
 
         assert type(fig1) is Figure
@@ -123,7 +139,7 @@ class TestGDEFPlotter:
 
     def test_create_plot_from_sticher(self, gdef_plotter, gdef_measurement):
         sticher = GDEFSticher([gdef_measurement, gdef_measurement])
-        fig = gdef_plotter.create_plot_from_sticher(sticher)
+        fig = gdef_plotter.create_plot(sticher)
         assert type(fig) is Figure
 
     # def test_plot_sticher_to_axes(self, gdef_measurement):

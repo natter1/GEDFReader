@@ -13,33 +13,78 @@ class PlotterStyle:
         self.dpi = dpi
         self.figure_size = figure_size
 
-        self.x_label = None
-        self.y_label = None
+        self._x_label = None
+        self._y_label = None
+        self._x_unit = None
+        self._y_unit = None
         self.ax_title = None
         self.grid = None
 
         # self.ax_styler = AxStyler()
         self.graph_styler = None
 
-    def set(self, dpi=None, figure_size=None, x_label=None, y_label=None, ax_title=None, grid=None):
+    @property
+    def x_label(self):
+        if self._x_label is None and self._x_unit is None:
+            return None
+        result = ""
+        if self._x_label:
+            result += self._x_label
+        if self._x_unit is not None:
+            result += f" [{self._x_unit}]"
+        return result
+
+    @property
+    def x_label(self):
+        if self._x_label is None and self._x_unit is None:
+            return None
+        result = ""
+        if self._x_label:
+            result += self._x_label
+        if self._x_unit is not None:
+            result += f" [{self._x_unit}]"
+        return result
+
+    @property
+    def y_label(self):
+        if self._y_label is None and self._y_unit is None:
+            return None
+        result = ""
+        if self._y_label:
+            result += self._y_label
+        if self._y_unit is not None:
+            result += f" [{self._y_unit}]"
+        return result
+
+    def set(self, dpi=None, figure_size=None, x_label=None, y_label=None,
+            x_unit = None, y_unit = None,
+            ax_title=None, grid=None) -> None:
+        """Set values for ..."""
+
         if dpi is not None:
             self.dpi = dpi
         if figure_size is not None:
             self.figure_size = figure_size
 
         if x_label is not None:
-            self.x_label = x_label
+            self._x_label = x_label
         if y_label is not None:
-            self.y_label = y_label
+            self._y_label = y_label
+
+        if x_unit is not None:
+            self._x_unit = x_unit
+        if y_unit is not None:
+            self._y_unit = y_unit
+
         if ax_title is not None:
             self.ax_title = ax_title
         if grid is not None:
             self.grid = grid
 
     def set_format_to_ax(self, ax: Axes):
-        if self.x_label is not None:
+        if self._x_label is not None:
             ax.set_xlabel(self.x_label)
-        if self.y_label is not None:
+        if self._y_label is not None:
             ax.set_ylabel(self.y_label)
         if self.ax_title is not None:
             ax.set_title(self.ax_title)
@@ -198,13 +243,16 @@ def get_plotter_style_xy_data(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
 
 def get_plotter_style_rms(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
     result = get_plotter_style_xy_data(dpi=dpi, figure_size=figure_size)
-    result.x_label = "[µm]"
-    result.y_label = "rms roughness [µm]"
+    result._x_label = "x"  # "[µm]"
+    result._x_unit = "µm"
+    result._y_label = "rms roughness"  # "[µm]"
+    result._y_unit = "µm"
+
     return result
 
 
 def get_plotter_style_sigma(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
     result = get_plotter_style_xy_data(dpi=dpi, figure_size=figure_size)
-    result.x_label = "[µm]"
-    result.y_label = "standard deviation \u03C3 [µm]"
+    result._x_label = "[µm]"
+    result._y_label = "standard deviation \u03C3 [µm]"
     return result

@@ -28,6 +28,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import norm
 
 from gdef_reader.utils import create_xy_rms_data, unit_factor_and_label
+from gdef_reporter.plotter_styles import get_plotter_style_rms
 
 if TYPE_CHECKING:
     from afm_tools.gdef_sticher import GDEFSticher
@@ -103,11 +104,11 @@ def _get_ndarray_pixel_width_and_label_lists(data_object_list: DataObjectList, p
     if not isinstance(data_object_list, list):
         data_object_list = [data_object_list]
     if not isinstance(pixel_width, list):
-        pixel_width = [pixel_width] * len(data_object_list)
+        pixel_width_list = [pixel_width] * len(data_object_list)
     for i, data in enumerate(data_object_list):
-        ndarray2d_data, px_width = _extract_ndarray_and_pixel_width(data, pixel_width)
+        ndarray2d_data, px_width = _extract_ndarray_and_pixel_width(data, pixel_width_list[i])
         ndarray2d_list.append(ndarray2d_data)
-        pixel_width_list.append(px_width)
+        pixel_width_list[i] = px_width
 
     if final_label_list is None:
         final_label_list = [None] * len(ndarray2d_list)
@@ -207,7 +208,7 @@ def plot_z_histogram_to_ax(ax: Axes,
     :return: None
     """
     unit_factor, unit_label = unit_factor_and_label(units)
-    ndarray2d_list, _, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list, label_list)
+    ndarray2d_list, _, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list, label_list=label_list)
 
     colors = []
     z_values_list = []
@@ -286,38 +287,46 @@ def create_z_histogram_plot(data_object_list: DataObjectList,
 
 def plot_rms_to_ax(ax_rms: Axes,
                    data_object_list: DataObjectList,
+                   pixel_width = None,
                    label_list: Union[str, list[str]] = None,
                    title: Optional[str] = "",
                    moving_average_n: int = 200,
                    x_offset=0,
                    units: Literal["µm", "nm"] = "µm",
-                   subtract_average=True  # <- todo:should this be True or False?
+                   subtract_average=True,  # <- todo:should this be True or False?
+                   plotter_style=None
                    )\
         -> None:
-    # graph_styler = plotter_style.graph_styler
+    """ ... """
     _, unit_label = unit_factor_and_label(units)
-    ax_rms.set_xlabel(f"[{unit_label}]")
-    y_label = f"roughness (moving average n = {moving_average_n})"
-    ax_rms.set_ylabel(y_label)
+
+    if plotter_style is None:
+        plotter_style = get_plotter_style_rms()
+    plotter_style.set(x_unit=unit_label, y_unit=unit_label)
+    graph_styler = plotter_style.graph_styler
+
+    plotter_style.set_format_to_ax(ax_rms)
+
     ax_rms.set_yticks([])
     ax_rms.set_title(title)
 
     ndarray2d_list, pixel_width_list, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list,
+                                                                                            pixel_width=pixel_width,
                                                                                             label_list=label_list)
     for i, ndarray_data in enumerate(ndarray2d_list):
         x_pos, y_rms = create_xy_rms_data(ndarray_data, pixel_width_list[i], moving_average_n,
                                           subtract_average=subtract_average, units=units)
 
         x_pos = [x + x_offset for x in x_pos]
-        ax_rms.plot(x_pos, y_rms, label=label_list[i])
-        # ax_rms.plot(x_pos, y_rms, **graph_styler.dict, label=key)
-        # graph_styler.next_style()
+        ax_rms.plot(x_pos, y_rms, **graph_styler.dict, label=label_list[i])
+        graph_styler.next_style()
 
         if any(label_list):
             ax_rms.legend()
 
 
 def create_rms_plot(data_object_list: DataObjectList,
+                    pixel_width = None,
                     labels: Union[str, list[str]] = None,
                     title: Optional[str] = "",
                     moving_average_n: int = 200,
@@ -331,6 +340,7 @@ def create_rms_plot(data_object_list: DataObjectList,
     Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
     data_dict. The key value in data_dict is used as label in the legend.
     :param data_object_list:
+    :param pixel_width: has to be set, if data_object_list contains 1 or more np.ndarry (for varying values, use a list)
     :param labels:
     :param title:
     :param moving_average_n:
@@ -345,8 +355,8 @@ def create_rms_plot(data_object_list: DataObjectList,
         result.suptitle(title)
         title = None
 
-    plot_rms_to_ax(ax, data_object_list, title=title, label_list=labels, moving_average_n=moving_average_n,
-                   x_offset=x_offset, subtract_average=subtract_average, units=units)
+    plot_rms_to_ax(ax, data_object_list, pixel_width=pixel_width, title=title, label_list=labels,
+                   moving_average_n=moving_average_n, x_offset=x_offset, subtract_average=subtract_average, units=units)
     return result
 
 

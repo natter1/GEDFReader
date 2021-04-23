@@ -28,7 +28,7 @@ def auto_show(fig):
 def random_ndarray2d_data():
     # np.random.seed(1)
     rs = np.random.RandomState(np.random.MT19937(np.random.SeedSequence(1)))
-    yield rs.random((256, 256)) * 1e-6
+    yield rs.random((256, 256)) * 1e-6 - 0.5e-6
 
 
 @pytest.fixture(scope='session')
@@ -171,7 +171,7 @@ class Test1DPlots:
         labels = []
         for i, data in enumerate(data_list):
             labels.append(f"{i} - {type(data).__name__}")
-        fig1 = create_z_histogram_plot(data_list, labels, title="", add_norm=True)
+        fig1 = create_z_histogram_plot(data_list, labels=labels, title="", add_norm=True)
         auto_show(fig1)
         assert len(fig1.axes[0].containers) == len(data_list)
         assert len(fig1.axes[0].lines) == 2  # Gauss fits (add_norm=True)
@@ -179,8 +179,11 @@ class Test1DPlots:
     def test_plot_rms_to_ax(self):
         pass
 
-    def test_create_rms_plot(self, gdef_measurement):
-        fig = create_rms_plot(gdef_measurement, labels="schrott", title="schrott2", moving_average_n=100,
+    def test_create_rms_plot(self, gdef_measurement, random_ndarray2d_data, gdef_sticher):
+        data_list = [gdef_measurement, gdef_sticher, random_ndarray2d_data*0.07]
+        pixel_width = gdef_measurement.pixel_width
+        labels = [f"{type(data).__name__}" for data in data_list]
+        fig = create_rms_plot(data_list, labels=labels, pixel_width=pixel_width, title="schrott2", moving_average_n=1,
                               subtract_average=True, units="µm")
         auto_show(fig)
 

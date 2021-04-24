@@ -17,10 +17,11 @@ from gdef_reader.utils import create_xy_rms_data, create_absolute_gradient_array
     get_mu_sigma
 from gdef_reporter._code_utils import ClassOrInstanceMethod
 from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
-from gdef_reporter.plotter_utils import plot_to_ax, create_plot
+from gdef_reporter.plotter_utils import plot_to_ax, create_plot, create_rms_plot
 
 if TYPE_CHECKING:
     from gdef_reporter.plotter_utils import DataObject, DataObjectList
+
 
 class GDEFPlotter:
     def __init__(self, figure_size=(12, 6), dpi: int = 300, auto_show: bool = False):
@@ -96,24 +97,24 @@ class GDEFPlotter:
     # ------------------------------------------------------------------------------------------------------------------
     # ------------------------------------------------ 1D plots over x -------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
-    def create_rms_per_column_plot(self, values: np.ndarray, pixel_width: float, title: str = "",
-                                   moving_average_n: int = 1) -> Figure:
+    def create_rms_per_column_plot(self, data_object_list: DataObjectList, pixel_width: Optional[float] = None,
+                                   title: str = "", moving_average_n: int = 1, x_offset=0, subtract_average=True)\
+            -> Figure:
         """
         Calculate root mean square roughness for each column in values and plot them over x. If moving_averag_n
          is larger than 1, the RMS values are averaged over n columns.
-        :param values: 2D array
+        :param data_object_list:
         :param pixel_width: in meter
         :param title: optional figure title
         :param moving_average_n: number of columns for moving average
+        :param x_offset:
+        :param subtract_average:
         :return: matplotlib Figure
         """
-        x_pos, y_rms = create_xy_rms_data(values, pixel_width, moving_average_n, subtract_average=True)
-        result, ax_rms = self.plotter_style_rms.create_preformated_figure()
+        result = create_rms_plot(data_object_list, pixel_width, title=title, moving_average_n=moving_average_n,
+                                 x_offset=x_offset, subtract_average=subtract_average,
+                                 plotter_style=self.plotter_style_rms)
 
-        ax_rms.plot(x_pos, y_rms, **self.plotter_style_rms.graph_styler.dict)  # 'r')
-        if title:
-            info = f"moving average n={moving_average_n} ({moving_average_n * pixel_width * 1e6:.1f} µm)"
-            result.suptitle(f'{title}\n{info}')  # , fontsize=16)
         result.tight_layout()
         self._auto_show_figure(result)
         return result

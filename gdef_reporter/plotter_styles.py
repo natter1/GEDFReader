@@ -12,6 +12,7 @@ class PlotterStyle:
     def __init__(self, dpi: Optional[int] = None, figure_size: Optional[Tuple[float, float]] = None):
         self.dpi = dpi
         self.figure_size = figure_size
+        self.fig_title = None
 
         self._x_label = None
         self._y_label = None
@@ -35,17 +36,6 @@ class PlotterStyle:
         return result
 
     @property
-    def x_label(self):
-        if self._x_label is None and self._x_unit is None:
-            return None
-        result = ""
-        if self._x_label:
-            result += self._x_label
-        if self._x_unit is not None:
-            result += f" [{self._x_unit}]"
-        return result
-
-    @property
     def y_label(self):
         if self._y_label is None and self._y_unit is None:
             return None
@@ -56,9 +46,18 @@ class PlotterStyle:
             result += f" [{self._y_unit}]"
         return result
 
+    @property
+    def x_unit(self):
+        return self._x_unit
+
+    @property
+    def y_unit(self):
+        return self._y_unit
+
     def set(self, dpi=None, figure_size=None, x_label=None, y_label=None,
-            x_unit = None, y_unit = None,
-            ax_title=None, grid=None) -> None:
+            x_unit=None, y_unit=None,
+            fig_title=None, ax_title=None,
+            grid=None) -> None:
         """Set values for ..."""
 
         if dpi is not None:
@@ -76,8 +75,11 @@ class PlotterStyle:
         if y_unit is not None:
             self._y_unit = y_unit
 
+        if fig_title is not None:
+            self.fig_title = fig_title
         if ax_title is not None:
             self.ax_title = ax_title
+
         if grid is not None:
             self.grid = grid
 
@@ -92,8 +94,9 @@ class PlotterStyle:
             ax.grid(self.grid)
 
     def create_preformated_figure(self, nrows=1, ncols=1):
-        fig, axs = plt.subplots(nrows, ncols, figsize=self.figure_size, dpi=self.dpi)
-
+        fig, axs = plt.subplots(nrows, ncols, figsize=self.figure_size, dpi=self.dpi, tight_layout=True)
+        if self.fig_title:
+            fig.suptitle(self.fig_title)
         if (nrows == 1) and (ncols == 1):
             self.set_format_to_ax(axs)
         elif (nrows == 1) or (ncols == 1):
@@ -246,7 +249,7 @@ def get_plotter_style_rms(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
     result._x_label = "x"  # "[µm]"
     result._x_unit = "µm"
     result._y_label = "rms roughness"  # "[µm]"
-    result._y_unit = "µm"
+    result._y_unit = "nm"
 
     return result
 

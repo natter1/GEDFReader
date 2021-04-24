@@ -3,9 +3,12 @@ plotter_utils.py contains functions to create diagrams for AFM measurements.
 There are a few naming conventions. Functions starting with 'create_' return a Figure object, while 'plot_ ... _to_ax'
 is used for functions expecting an Axes-object to which the data should be plotted. The letter is used e.g. if you
 intend to plot several diagrams on a single Figure. Also, by default most functions expect a 2D np.ndarray
-for a parameter named values2d, for example 'plot_to_ax'. But they work also when given a GDEFMeasurement or
-GDEFSticher. All functions expecting a different data type have to state this in the function name
-by adding '_from_...', e.g. ...
+for a parameter named data_object, for example 'plot_to_ax'. But they work also when given an Object like
+GDEFMeasurement or GDEFSticher. Generally they should work, as long as the given data_object has a values-attribute
+which holds the data as a np.ndarray and a pixel_width attribute.
+Functions that can plot more than one dataset expect a DataObjectList. That could be the same as DataObject or a List of
+DataObject. Additionally it also accepts a dictionary. Here the values have to be of type DataObject and the Keys should
+be string - they are used for labeling the corresponding graphs.
 
 For plot_ ... _to_ax, some functions have a default subtitle, which is shown if parameter title='' - to suppress it,
 set title=None.
@@ -16,6 +19,7 @@ a subtitle for the Axes, the latter places a Figure suptitle (which might be big
 """
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Union, Literal, Optional
 
@@ -28,7 +32,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import norm
 
 from gdef_reader.utils import create_xy_rms_data, unit_factor_and_label
-from gdef_reporter.plotter_styles import get_plotter_style_rms
+from gdef_reporter.plotter_styles import get_plotter_style_rms, PlotterStyle
 
 if TYPE_CHECKING:
     from afm_tools.gdef_sticher import GDEFSticher
@@ -292,22 +296,23 @@ def plot_rms_to_ax(ax_rms: Axes,
                    title: Optional[str] = "",
                    moving_average_n: int = 200,
                    x_offset=0,
-                   units: Literal["µm", "nm"] = "µm",
+                   x_units: Literal["µm", "nm"] = "µm",
                    subtract_average=True,  # <- todo:should this be True or False?
                    plotter_style=None
                    )\
         -> None:
     """ ... """
-    _, unit_label = unit_factor_and_label(units)
+    _, x_unit_label = unit_factor_and_label(x_units)
 
     if plotter_style is None:
         plotter_style = get_plotter_style_rms()
-    plotter_style.set(x_unit=unit_label, y_unit=unit_label)
+    else:
+        plotter_style = deepcopy(plotter_style)
+    plotter_style.set(x_unit=x_unit_label, ax_title=title)
     graph_styler = plotter_style.graph_styler
 
     plotter_style.set_format_to_ax(ax_rms)
 
-    ax_rms.set_yticks([])
     ax_rms.set_title(title)
 
     ndarray2d_list, pixel_width_list, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list,
@@ -315,7 +320,8 @@ def plot_rms_to_ax(ax_rms: Axes,
                                                                                             label_list=label_list)
     for i, ndarray_data in enumerate(ndarray2d_list):
         x_pos, y_rms = create_xy_rms_data(ndarray_data, pixel_width_list[i], moving_average_n,
-                                          subtract_average=subtract_average, units=units)
+                                          subtract_average=subtract_average, x_units=x_units,
+                                          y_units=plotter_style.y_unit)
 
         x_pos = [x + x_offset for x in x_pos]
         ax_rms.plot(x_pos, y_rms, **graph_styler.dict, label=label_list[i])
@@ -326,37 +332,45 @@ def plot_rms_to_ax(ax_rms: Axes,
 
 
 def create_rms_plot(data_object_list: DataObjectList,
-                    pixel_width = None,
-                    labels: Union[str, list[str]] = None,
-                    title: Optional[str] = "",
+                    pixel_width=None,
+                    label_list: Union[str, list[str]] = None,
+                    title: str = "",
                     moving_average_n: int = 200,
                     x_offset=0,
                     units: Literal["µm", "nm"] = "µm",
                     subtract_average=True,
-                    figure_size: tuple[float, float] = (6, 3),
-                    dpi: int = 96)\
+                    plotter_style: PlotterStyle = None)\
         -> Figure:
     """
     Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
     data_dict. The key value in data_dict is used as label in the legend.
     :param data_object_list:
     :param pixel_width: has to be set, if data_object_list contains 1 or more np.ndarry (for varying values, use a list)
-    :param labels:
+    :param label_list:
     :param title:
     :param moving_average_n:
     :param x_offset:
+    :param units:
     :param subtract_average:
-    :param figure_size:
-    :param dpi:
+    :param plotter_style:
     :return:
     """
-    result, ax = plt.subplots(1, 1, figsize=figure_size, tight_layout=True, dpi=dpi)
-    if title:
-        result.suptitle(title)
-        title = None
+    if plotter_style is None:
+        plotter_style = get_plotter_style_rms()
+    else:
+        plotter_style = deepcopy(plotter_style)  # do not change input parameter!
 
-    plot_rms_to_ax(ax, data_object_list, pixel_width=pixel_width, title=title, label_list=labels,
-                   moving_average_n=moving_average_n, x_offset=x_offset, subtract_average=subtract_average, units=units)
+    if title:
+        info = f"moving average n={moving_average_n} ({moving_average_n * pixel_width * 1e6:.1f} µm)"
+        title = f'{title}\n{info}'
+
+    plotter_style.set(fig_title=title)
+
+    result, ax = plotter_style.create_preformated_figure()
+
+    plot_rms_to_ax(ax, data_object_list, pixel_width=pixel_width, label_list=label_list,
+                   moving_average_n=moving_average_n, x_offset=x_offset, subtract_average=subtract_average,
+                   x_units=units, plotter_style=plotter_style)
     return result
 
 

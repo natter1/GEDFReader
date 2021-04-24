@@ -149,7 +149,7 @@ class Test1DPlots:
     def test_create_z_histogram_plot__set_paramaters(self, data_test_cases):
         # first, check setting label, a title, selecting units µm, set n_bins and draw normal distribution fit
         labels = type(data_test_cases).__name__
-        title = "Use [µm] and Gauss fit"
+        title = "Use [nm] and Gauss fit"
         n_bins = 20
         fig1 = create_z_histogram_plot(data_test_cases, labels, n_bins=n_bins, title=title, units="nm",
                                        add_norm=True, figure_size=ORIGINAL_FIGURE_SIZE, dpi=ORIGINAL_DPI)
@@ -183,8 +183,11 @@ class Test1DPlots:
         data_list = [gdef_measurement, gdef_sticher, random_ndarray2d_data*0.07]
         pixel_width = gdef_measurement.pixel_width
         labels = [f"{type(data).__name__}" for data in data_list]
-        fig = create_rms_plot(data_list, labels=labels, pixel_width=pixel_width, title="schrott2", moving_average_n=1,
-                              subtract_average=True, units="µm")
+        fig = create_rms_plot(data_list, label_list=labels, pixel_width=pixel_width, moving_average_n=1,
+                              subtract_average=True, units="nm")
+        auto_show(fig)
+        fig = create_rms_plot(data_list, label_list=labels, pixel_width=pixel_width, moving_average_n=1,
+                              subtract_average=True)
         auto_show(fig)
 
 

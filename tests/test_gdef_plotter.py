@@ -38,6 +38,14 @@ def gdef_measurement():
 
 
 @pytest.fixture(scope='session')
+def gdef_measurements():
+    example_01_path = Path.cwd().parent.joinpath("resources").joinpath("example_01.gdf")
+    importer = GDEFImporter(example_01_path)
+    gdef_measurements = importer.export_measurements()
+    yield gdef_measurements
+
+
+@pytest.fixture(scope='session')
 def gdef_sticher(gdef_measurement):
     sticher = GDEFSticher([gdef_measurement, gdef_measurement])
     yield sticher
@@ -55,7 +63,6 @@ def data_test_cases(request, gdef_measurement, random_ndarray2d_data, gdef_stich
 
 @pytest.fixture(scope='session')
 def gdef_plotter():
-    GDEFPlotter.auto_show = AUTO_SHOW
     gdef_plotter = GDEFPlotter(figure_size=ORIGINAL_FIGURE_SIZE, dpi=ORIGINAL_DPI, auto_show=AUTO_SHOW)
     yield gdef_plotter
 
@@ -100,13 +107,17 @@ class TestGDEFPlotter:
         assert type(fig1) is Figure
         assert type(fig2) is Figure
 
-    def test_create_rms_per_column_plot(self, gdef_plotter, random_ndarray2d_data):
-        fig = gdef_plotter.create_rms_per_column_plot(random_ndarray2d_data, 1e-6)
+    def test_create_rms_per_column_plot(self, gdef_plotter, data_test_cases):
+        fig = gdef_plotter.create_rms_per_column_plot(data_test_cases, 1e-6)
         assert type(fig) is Figure
 
-        fig = gdef_plotter.create_rms_per_column_plot(random_ndarray2d_data, 1e-6,
+        fig = gdef_plotter.create_rms_per_column_plot(data_test_cases, 1e-6,
                                                       title="create_rms_per_column_figure with title")
         assert fig._suptitle.get_text() == "create_rms_per_column_figure with title\nmoving average n=1 (1.0 µm)"
+
+    def test_create_rms_per_column_plot__multiple(self, gdef_plotter, gdef_measurements):
+        fig = gdef_plotter.create_rms_per_column_plot(gdef_measurements)
+        assert type(fig) is Figure
 
     def test_create_absolute_gradient_rms_plot(self, gdef_plotter, random_ndarray2d_data):
         cutoff_list = [1, 10, 20, 50, 90, 100]

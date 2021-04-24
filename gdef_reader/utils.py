@@ -134,21 +134,22 @@ def create_absolute_gradient_array(array2d, cutoff=1.0):
 
 
 def create_xy_rms_data(values: np.ndarray, pixel_width, moving_average_n=1, subtract_average=True,
-                       units: Literal["µm", "nm"] = "µm") -> tuple[list, list]:
+                       x_units: Literal["µm", "nm"] = "µm", y_units: Literal["µm", "nm"] = "Nm") -> tuple[list, list]:
     """
     :param values: 2D array
     :param pixel_width:
     :param moving_average_n:
     :param subtract_average:
-    :param units:
+    :param x_units:
     :return: (x_pos, y_rms)
     """
-    factor, _ = unit_factor_and_label(units)
+    x_factor, _ = unit_factor_and_label(x_units)
+    Y_factor, _ = unit_factor_and_label(y_units)
     x_pos = []
     y_rms = []
     for i in range(values.shape[1] - moving_average_n):
-        x_pos.append((i + max(moving_average_n - 1, 0) / 2.0) * pixel_width * factor)
-        y_rms.append(nanrms(values[:, i:i + moving_average_n], subtract_average=subtract_average))
+        x_pos.append((i + max(moving_average_n - 1, 0) / 2.0) * pixel_width * x_factor)
+        y_rms.append(nanrms(values[:, i:i + moving_average_n], subtract_average=subtract_average)*Y_factor)
     return x_pos, y_rms
 
 

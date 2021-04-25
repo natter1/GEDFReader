@@ -17,11 +17,6 @@ ORIGINAL_DPI = 300
 AUTO_SHOW = True
 
 
-@pytest.fixture(scope="function", params=[-4, 0, 0.4, 1, 2])
-def data_test_cases(request):
-    yield request.param
-
-
 @pytest.fixture(scope='session')
 def random_ndarray2d_data():
     # np.random.seed(1)
@@ -44,6 +39,13 @@ def gdef_measurements():
     gdef_measurements = importer.export_measurements()
     yield gdef_measurements
 
+@pytest.fixture(scope='session')
+def gdef_measurements():
+    example_01_path = Path.cwd().parent.joinpath("resources").joinpath("example_01.gdf")
+    importer = GDEFImporter(example_01_path)
+    gdef_measurements = importer.export_measurements()
+    yield gdef_measurements
+
 
 @pytest.fixture(scope='session')
 def gdef_sticher(gdef_measurement):
@@ -57,6 +59,29 @@ def data_test_cases(request, gdef_measurement, random_ndarray2d_data, gdef_stich
         "GDEFMeasurement": gdef_measurement,
         "random_ndarray": random_ndarray2d_data,
         "GDEFSticher": gdef_sticher
+    }
+    yield case_dict[request.param]
+
+
+@pytest.fixture(scope='function')
+def data_dict(gdef_measurement, random_ndarray2d_data, gdef_sticher):
+    data_dict = {
+        "GDEFMeasurement": gdef_measurement,
+        "random_ndarray": random_ndarray2d_data,
+        "GDEFSticher": gdef_sticher
+    }
+    yield data_dict
+
+
+@pytest.fixture(scope="function",
+                params=["empty", "single ndarray", "single gdef_sticher", "GDEFMeasurements", "mixed dict"])
+def data_test_cases_multiple(request, random_ndarray2d_data, gdef_sticher, gdef_measurements, data_dict):
+    case_dict = {
+        "empty": [],
+        "single ndarray": random_ndarray2d_data,
+        "single gdef_sticher": gdef_sticher,
+        "GDEFMeasurements": gdef_measurements,
+        "mixed dict": data_dict
     }
     yield case_dict[request.param]
 
@@ -115,38 +140,58 @@ class TestGDEFPlotter:
                                                       title="create_rms_per_column_figure with title")
         assert fig._suptitle.get_text() == "create_rms_per_column_figure with title\nmoving average n=1 (1.0 µm)"
 
-    def test_create_rms_per_column_plot__multiple(self, gdef_plotter, gdef_measurements):
-        fig = gdef_plotter.create_rms_per_column_plot(gdef_measurements)
-        assert type(fig) is Figure
+    def test_create_rms_per_column_plot__multiple(self, gdef_plotter, gdef_measurements, data_dict):
+        fig1 = gdef_plotter.create_rms_per_column_plot(gdef_measurements, title="List of GDEFMeasurement")
+        assert type(fig1) is Figure
 
-    def test_create_absolute_gradient_rms_plot(self, gdef_plotter, random_ndarray2d_data):
+        # Note: all 3 variants of pixel_width should lead to the same result
+        # pixel_width = [None, 0.5e-6, None]
+        # pixel_width = [10, 0.5e-6, 10]
+        pixel_width = 0.5e-6
+        fig2 = gdef_plotter.create_rms_per_column_plot(data_dict, pixel_width=pixel_width, title="Dict of DataObject")
+        assert type(fig2) is Figure
+
+    def test__create_absolute_gradient_rms_plot(self, gdef_plotter, random_ndarray2d_data):
         cutoff_list = [1, 10, 20, 50, 90, 100]
 
-        fig = gdef_plotter.create_absolute_gradient_rms_plot(
+        fig = gdef_plotter._create_absolute_gradient_rms_plot(
             random_ndarray2d_data, cutoff_list, 1e-6, moving_average_n=10)
         assert type(fig) is Figure
-        fig = gdef_plotter.create_absolute_gradient_rms_plot(
+        fig = gdef_plotter._create_absolute_gradient_rms_plot(
             random_ndarray2d_data, cutoff_list, 1e-6, moving_average_n=10, title="create_absolute_gradient_rms_figure")
         assert type(fig) is Figure
 
-    def test_create_sigma_moving_average_plot(self, gdef_plotter, gdef_measurement, random_ndarray2d_data):
-        # gdef_measurement.values = random_ndarray2d_data
-        # gdef_measurement.correct_background(BGCorrectionType.raw_data)
-        sticher_dict = {"example01": GDEFSticher([gdef_measurement])}
-        gdef_plotter.create_sigma_moving_average_plot_from_sticher_dict(sticher_dict, 10)
-        pass  # needs sticher_dict: Dict[str, GDEFSticher]
-
-    def test_create_absolute_gradient_plot(self, gdef_plotter, random_ndarray2d_data):
+    def test__create_absolute_gradient_maps_plot(self, gdef_plotter, random_ndarray2d_data):
         cutoff_list = [1, 10, 20, 50, 90, 100]
-        fig = gdef_plotter.create_absolute_gradient_maps_plot(
+        fig = gdef_plotter._create_absolute_gradient_maps_plot(
             random_ndarray2d_data, cutoff_list)
 
-    def test_create_stich_summary_figure(self, gdef_plotter, gdef_measurement):
-        sticher_dict = {
-            # "example01": GDEFSticher([gdef_measurement, gdef_measurement, gdef_measurement]),
-            "example02": GDEFSticher([gdef_measurement, gdef_measurement])
-        }
-        fig = gdef_plotter.create_stich_summary_plot(sticher_dict)
+    def test_create_stich_summary_figure(self, data_test_cases_multiple, gdef_plotter, gdef_measurement, data_dict):
+        # sticher_dict = {
+        #     "example01": GDEFSticher([gdef_measurement]),# gdef_measurement, gdef_measurement]),
+        #     #"example02": GDEFSticher([gdef_measurement]),# gdef_measurement]),
+        #     # "example03": GDEFSticher([gdef_measurement]),
+        #     # "example04": GDEFSticher([gdef_measurement]),
+        #     # "example05": GDEFSticher([gdef_measurement]),
+        #     # "example06": GDEFSticher([gdef_measurement]),
+        #     # "example07": GDEFSticher([gdef_measurement]),
+        #     # "example08": GDEFSticher([gdef_measurement]),
+        #     # "example09": GDEFSticher([gdef_measurement]),
+        #     # "example10": GDEFSticher([gdef_measurement]),
+        #     # "example11": GDEFSticher([gdef_measurement]),
+        #     # "example12": GDEFSticher([gdef_measurement]),
+        #     # "example13": GDEFSticher([gdef_measurement]),
+        #     # "example14": GDEFSticher([gdef_measurement]),
+        #     # "example15": GDEFSticher([gdef_measurement]),
+        #     # "example16": GDEFSticher([gdef_measurement]),
+        #     # "example17": GDEFSticher([gdef_measurement]),
+        #     # "example18": GDEFSticher([gdef_measurement]),
+        #     # "example19": GDEFSticher([gdef_measurement]),
+        #     # "example20": GDEFSticher([gdef_measurement])
+        # }
+        # fig = gdef_plotter.create_stich_summary_plot(sticher_dict)
+        fig = gdef_plotter.create_stich_summary_plot(data_test_cases_multiple)
+        #fig = gdef_plotter.create_stich_summary_plot(data_dict)
 
     def test_create_plot_from_sticher(self, gdef_plotter, gdef_measurement):
         sticher = GDEFSticher([gdef_measurement, gdef_measurement])

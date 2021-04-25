@@ -17,7 +17,7 @@ from gdef_reader.utils import create_xy_rms_data, create_absolute_gradient_array
     get_mu_sigma
 from gdef_reporter._code_utils import ClassOrInstanceMethod
 from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
-from gdef_reporter.plotter_utils import plot_to_ax, create_plot, create_rms_plot
+from gdef_reporter.plotter_utils import plot_to_ax, create_plot, create_rms_plot, best_ratio_fit, create_summary_plot
 
 if TYPE_CHECKING:
     from gdef_reporter.plotter_utils import DataObject, DataObjectList
@@ -98,11 +98,11 @@ class GDEFPlotter:
     # ------------------------------------------------ 1D plots over x -------------------------------------------------
     # ------------------------------------------------------------------------------------------------------------------
     def create_rms_per_column_plot(self, data_object_list: DataObjectList, pixel_width: Optional[float] = None,
-                                   title: str = "", moving_average_n: int = 1, x_offset=0, subtract_average=True)\
+                                   title: str = "", moving_average_n: int = 1, x_offset=0, subtract_average=True) \
             -> Figure:
         """
-        Calculate root mean square roughness for each column in values and plot them over x. If moving_averag_n
-         is larger than 1, the RMS values are averaged over n columns.
+        Calculate root mean square roughness for each column in values and plot them over x. If moving_average_n
+        is larger than 1, the RMS values are averaged over n columns.
         :param data_object_list:
         :param pixel_width: in meter
         :param title: optional figure title
@@ -114,13 +114,11 @@ class GDEFPlotter:
         result = create_rms_plot(data_object_list, pixel_width, title=title, moving_average_n=moving_average_n,
                                  x_offset=x_offset, subtract_average=subtract_average,
                                  plotter_style=self.plotter_style_rms)
-
-        result.tight_layout()
         self._auto_show_figure(result)
         return result
 
-    def create_absolute_gradient_rms_plot(self, data_object: DataObject, cutoff_percent_list, pixel_width, title=None,
-                                          moving_average_n=1, x_offset=0, subtract_average=False) -> Figure:
+    def _create_absolute_gradient_rms_plot(self, data_object: DataObject, cutoff_percent_list, pixel_width, title=None,
+                                           moving_average_n=1, x_offset=0, subtract_average=False) -> Figure:
         """
         Creates a plot with a curve for each value in cutoff_percent_list, showing rms(abs(grad(z))) as
         moving average over moving_average_n columns.
@@ -132,16 +130,16 @@ class GDEFPlotter:
         :param moving_average_n:
         :return: Figure
         """
-        # for gradient:
         grad_style = copy.deepcopy(self.plotter_style_rms)
 
         grad_data_list = []
         label_list = []
         for i, percent in enumerate(cutoff_percent_list):
             grad_data_list.append(create_absolute_gradient_array(data_object, percent / 100.0))
-            label_list.append(f"{percent / 100.0}")
+            label_list.append(f"{percent}%")
 
-        result = create_rms_plot(grad_data_list, pixel_width, label_list, title=title, moving_average_n=moving_average_n,
+        result = create_rms_plot(grad_data_list, pixel_width, label_list, title=title,
+                                 moving_average_n=moving_average_n,
                                  x_offset=x_offset, subtract_average=subtract_average,
                                  plotter_style=grad_style)
 
@@ -151,61 +149,8 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-        # result, (ax_gradient_rms) = plt.subplots(1, 1, figsize=self.figure_size)
-        # ax_gradient_rms.set_xlabel("[µm]")
-        # ax_gradient_rms.set_ylabel(f"rms(abs(grad(z))) (moving avg. n = {moving_average_n} column(s))")
-        #
-        # for i, percent in enumerate(cutoff_percent_list):
-        #     absolut_gradient_array = create_absolute_gradient_array(values, percent / 100.0)
-        #     x_pos, y_gradient_rms = create_xy_rms_data(absolut_gradient_array, pixel_width, moving_average_n,
-        #                                                subtract_average=False)
-        #     ax_gradient_rms.plot(x_pos, y_gradient_rms, label=f"{percent}%")
-        # ax_gradient_rms.legend()
-        # if title:
-        #     result.suptitle(title)
-        # result.tight_layout()
-        # self._auto_show_figure(result)
-        # return result
-
-    def create_sigma_moving_average_plot_from_sticher_dict(self, sticher_dict: Dict[str, GDEFSticher],
-                                                           moving_average_n=200, step=1) -> Figure:
-        """
-
-        :param sticher_dict:
-        :param moving_average_n:
-        :param step: col step value between moving average values (default 1; moving avg. is calculated for each col)
-        :return:
-        """
-        # todo: how to make this work with [GDEFMeasurment] too? Split sticher_dict in List[ndarray] and list[label]?
-        x_pos = []
-        y_sigma = []
-        pixel_width_in_um = None
-
-        graph_styler = self.plotter_style_sigma.graph_styler.reset()
-        result, ax_sigma = self.plotter_style_sigma.create_preformated_figure()
-
-        for key, sticher in sticher_dict.items():
-            x_pos = []
-            y_sigma = []
-            pixel_width_in_um = sticher.pixel_width * 1e6
-            for i in range(0, sticher.values.shape[1] - moving_average_n, step):
-                x_pos.append((i + max(moving_average_n - 1, 0) / 2.0) * pixel_width_in_um)
-
-            _, y_sigma = get_mu_sigma_moving_average(sticher.values * 1e6, moving_average_n, step)
-
-            ax_sigma.plot(x_pos, y_sigma, **graph_styler.dict, label=key)
-            graph_styler.next_style()
-
-        ax_sigma.legend()
-        moving_window_in_um = pixel_width_in_um * moving_average_n
-        result.suptitle(f"Moving average n={moving_average_n} ({moving_window_in_um:.1f} µm)")
-
-        result.tight_layout()
-        self._auto_show_figure(result)
-        return result
-
-    def create_absolute_gradient_maps_plot(self, values: np.ndarray, cutoff_percent_list: List[int],
-                                           title=None, nan_color='red') -> Figure:
+    def _create_absolute_gradient_maps_plot(self, values: np.ndarray, cutoff_percent_list: List[int],
+                                            title=None, nan_color='red') -> Figure:
         """
         Creates a matplotlib figure, to show the influence of different cutoff values. The omitted values are represented
         in the color nan_color (default is red).
@@ -239,48 +184,28 @@ class GDEFPlotter:
         :param sticher_dict:
         :return:
         """
-        n = len(sticher_dict)
-        if n == 0:
-            return plt.subplots(1, figsize=self.figure_size, dpi=300)
-
-        # todo refactor in a seperate function
-        optimal_ratio = self.figure_size[0] / self.figure_size[1]
-        dummy_fig = create_plot(list(sticher_dict.values())[0], title='dummy',
-                                max_figure_size=self.figure_size)  # measurements[0].create_plot()
-        single_plot_ratio = dummy_fig.get_figwidth() / dummy_fig.get_figheight()
-        optimal_ratio /= single_plot_ratio
-
-        possible_ratios = []
-        for i in range(1, n + 1):
-            for j in range(1, n + 1):
-                if i * j >= n:
-                    x, y = i, j
-                    possible_ratios.append((x, y))
-                    break
-
-        # sort ratios by best fit to optimal ratio:
-        possible_ratios[:] = sorted(possible_ratios, key=lambda ratio: abs(ratio[0] / ratio[1] - optimal_ratio))
-        best_ratio = possible_ratios[0][1], possible_ratios[0][0]
-
-        result, ax_list = plt.subplots(*best_ratio, figsize=self.figure_size, dpi=300)
-        for i, key in enumerate(sticher_dict):
-            y = i // best_ratio[0]
-            x = i - (y * best_ratio[0])
-            if (best_ratio[1] > 1) and (best_ratio[0] > 1):
-                plot_to_ax(ax_list[x, y], sticher_dict[key], title=key)
-            elif best_ratio[0] > 1:
-                plot_to_ax(ax_list[x], sticher_dict[key], title=key)
-            elif best_ratio[1] > 1:
-                plot_to_ax(ax_list[y], sticher_dict[key], title=key)
-            else:
-                plot_to_ax(ax_list, sticher_dict[key], title=key)
-        i = len(sticher_dict)
-        while i < best_ratio[0] * best_ratio[1]:
-            y = i // best_ratio[0]
-            x = i - (y * best_ratio[0])
-            ax_list[x, y].set_axis_off()
-            i += 1
-        result.tight_layout()
+        # n = len(sticher_dict)
+        # if n == 0:
+        #     return plt.subplots(1, figsize=self.figure_size, dpi=300)
+        #
+        # # dummy_fig is only needed to estimate aspect ratio of a single axe
+        # dummy_fig = create_plot(list(sticher_dict.values())[0], title='dummy',
+        #                         max_figure_size=self.figure_size, cropped=True)
+        #
+        # n_cols, n_rows = best_ratio_fit(self.figure_size, dummy_fig.get_size_inches(), n)
+        # result, ax_list = plt.subplots(n_rows, n_cols, figsize=self.figure_size, dpi=300)
+        #
+        # for i, key in enumerate(sticher_dict):
+        #     if not isinstance(ax_list, np.ndarray):
+        #         plot_to_ax(ax_list, sticher_dict[key], title=key)
+        #     else:
+        #         plot_to_ax(ax_list.flatten('F')[i], sticher_dict[key], title=key)
+        #
+        # for ax in ax_list.flatten('F')[i:]:
+        #     ax.set_axis_off()
+        #
+        # result.tight_layout()
+        result = create_summary_plot(sticher_dict, figure_size=self.figure_size, dpi=self.dpi)
         self._auto_show_figure(result)
         return result
 

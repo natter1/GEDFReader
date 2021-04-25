@@ -109,20 +109,54 @@ def _get_ndarray_pixel_width_and_label_lists(data_object_list: DataObjectList, p
         data_object_list = [data_object_list]
     if not isinstance(pixel_width, list):
         pixel_width_list = [pixel_width] * len(data_object_list)
+    else:
+        pixel_width_list = pixel_width[:]
+
+    if final_label_list is None:
+        final_label_list = [None] * len(data_object_list)
+    if isinstance(final_label_list, str):
+        final_label_list = [final_label_list]
+
+    assert len(final_label_list) == len(data_object_list)
     for i, data in enumerate(data_object_list):
         ndarray2d_data, px_width = _extract_ndarray_and_pixel_width(data, pixel_width_list[i])
         ndarray2d_list.append(ndarray2d_data)
         pixel_width_list[i] = px_width
-
-    if final_label_list is None:
-        final_label_list = [None] * len(ndarray2d_list)
-
-    if isinstance(final_label_list, str):
-        final_label_list = [final_label_list]
-
-    assert len(final_label_list) == len(ndarray2d_list)
+        if final_label_list[i] is None and hasattr(data, "comment"):
+            final_label_list[i] = data.comment
 
     return ndarray2d_list, pixel_width_list, final_label_list
+
+
+def best_ratio_fit(total_size, single_size, n):
+    """
+    Find best ratio of rows and colls to show n axes of ax_size on Figure with total_size.
+    :param total_size:
+    :param single_size:
+    :param n:
+    :return:
+    """
+    # todo refactor in a seperate function
+    optimal_ratio = total_size[0] / total_size[1]
+    # dummy_fig = create_plot(list(sticher_dict.values())[0], title='dummy',
+    #                         max_figure_size=self.figure_size, cropped=True)  # measurements[0].create_plot()
+
+    single_plot_ratio = single_size[0] / single_size[1]
+    optimal_ratio /= single_plot_ratio
+
+    possible_ratios = []
+    for i in range(1, n + 1):
+        for j in range(1, n + 1):
+            if i * j >= n:
+                # x, y = i, j
+                # possible_ratios.append((x, y))
+                possible_ratios.append((i, j))
+                break
+
+    # sort ratios by best fit to optimal ratio:
+    possible_ratios[:] = sorted(possible_ratios, key=lambda ratio: abs(ratio[0] / ratio[1] - optimal_ratio))
+    # best_ratio = possible_ratios[0][1], possible_ratios[0][0]
+    return possible_ratios[0]  # [1], possible_ratios[0][0]
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -147,12 +181,15 @@ def plot_to_ax(ax: Axes, data_object: DataObject, pixel_width: float = None,
 
     z_factor, z_unit_label = unit_factor_and_label(z_unit)
     ndarray2d_data, pixel_width = _extract_ndarray_and_pixel_width(data_object, pixel_width)
-
+    unit = "µm"
+    if pixel_width is None:
+        pixel_width = 1
+        unit = "px"
     extent = extent_for_plot(ndarray2d_data.shape, pixel_width)
     im = ax.imshow(ndarray2d_data * z_factor, cmap=plt.cm.Reds_r, interpolation='none', extent=extent)
     ax.set_title(title)  # , pad=16)
-    ax.set_xlabel("µm", labelpad=1.0)
-    ax.set_ylabel("µm", labelpad=1.0)
+    ax.set_xlabel(unit, labelpad=1.0)
+    ax.set_ylabel(unit, labelpad=1.0)
 
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
@@ -165,7 +202,7 @@ def create_plot(data_object: DataObject,
                 title: str = '',
                 max_figure_size=(4, 4),
                 dpi=96,
-                cropped=True)\
+                cropped=True) \
         -> Figure:
     """
     Creates a matplotlib Figure using given values2d-object. If cropped is True, the returned Figure has a smaller size
@@ -198,7 +235,7 @@ def plot_z_histogram_to_ax(ax: Axes,
                            title: Optional[str] = "",
                            n_bins: int = 200,
                            units: Literal["µm", "nm"] = "µm",
-                           add_norm: bool = False)\
+                           add_norm: bool = False) \
         -> None:
     """
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
@@ -291,7 +328,7 @@ def create_z_histogram_plot(data_object_list: DataObjectList,
 
 def plot_rms_to_ax(ax_rms: Axes,
                    data_object_list: DataObjectList,
-                   pixel_width = None,
+                   pixel_width=None,
                    label_list: Union[str, list[str]] = None,
                    title: Optional[str] = "",
                    moving_average_n: int = 200,
@@ -299,7 +336,7 @@ def plot_rms_to_ax(ax_rms: Axes,
                    x_units: Literal["µm", "nm"] = "µm",
                    subtract_average=True,  # <- todo:should this be True or False?
                    plotter_style=None
-                   )\
+                   ) \
         -> None:
     """ ... """
     _, x_unit_label = unit_factor_and_label(x_units)
@@ -339,7 +376,7 @@ def create_rms_plot(data_object_list: DataObjectList,
                     x_offset=0,
                     units: Literal["µm", "nm"] = "µm",
                     subtract_average=True,
-                    plotter_style: PlotterStyle = None)\
+                    plotter_style: PlotterStyle = None) \
         -> Figure:
     """
     Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
@@ -361,7 +398,11 @@ def create_rms_plot(data_object_list: DataObjectList,
         plotter_style = deepcopy(plotter_style)  # do not change input parameter!
 
     if title:
-        info = f"moving average n={moving_average_n} ({moving_average_n * pixel_width * 1e6:.1f} µm)"
+        info = f"moving average n={moving_average_n}"
+        try:
+            info = info + f" ({moving_average_n * pixel_width * 1e6:.1f} µm)"
+        except TypeError:  # pixel_width is None or list or ...
+            pass
         title = f'{title}\n{info}'
 
     plotter_style.set(fig_title=title)
@@ -371,6 +412,49 @@ def create_rms_plot(data_object_list: DataObjectList,
     plot_rms_to_ax(ax, data_object_list, pixel_width=pixel_width, label_list=label_list,
                    moving_average_n=moving_average_n, x_offset=x_offset, subtract_average=subtract_average,
                    x_units=units, plotter_style=plotter_style)
+    return result
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------- misc -----------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+def create_summary_plot(data_object_list: DataObjectList,
+                        pixel_width=None,
+                        title_list: Union[str, list[str]] = None,
+                        title: Optional[str] = "",
+                        figure_size=(16, 10),
+                        dpi=96):
+    """
+    Creates a Figure with stiched maps for each GDEFSticher in sticher_dict. The keys in sticher_dict
+    are used as titles for the corresponding Axes.
+    :param sticher_dict:
+    :return:
+    """
+    ndarray2d_list, pixel_width_list, title_list = _get_ndarray_pixel_width_and_label_lists(data_object_list,
+                                                                                            pixel_width=pixel_width,
+                                                                                            label_list=title_list)
+    n = len(ndarray2d_list)
+    if n == 0:
+        result, _ = plt.subplots(1, figsize=figure_size, dpi=dpi)
+        return result
+
+    # dummy_fig is only needed to estimate aspect ratio of a single axe
+    dummy_fig = create_plot(ndarray2d_list[0], pixel_width_list[0], title='dummy',
+                            max_figure_size=figure_size, cropped=True)
+
+    n_cols, n_rows = best_ratio_fit(figure_size, dummy_fig.get_size_inches(), n)
+    result, ax_list = plt.subplots(n_rows, n_cols, figsize=figure_size, dpi=dpi)
+
+    if not isinstance(ax_list, np.ndarray):
+        ax_list = np.asarray([ax_list])
+
+    for i, data_object in enumerate(ndarray2d_list):
+        plot_to_ax(ax_list.flatten('F')[i], data_object, pixel_width_list[i], title=title_list[i])
+
+    for ax in ax_list.flatten('F')[n:]:
+        ax.set_axis_off()
+
+    result.tight_layout()
     return result
 
 
@@ -424,7 +508,6 @@ def _create_image_data(data_object: DataObject):
     array2d = (ndarray2d_data - min(0, data_min)) / (np.nanmax(ndarray2d_data) - min(0, data_min))
     array2d = 255 * array2d  # Now scale by 255
     return array2d.astype(np.uint8)
-
 
 # def get_compare_gradient_rms_figure(cls, sticher_dict, cutoff_percent=8, moving_average_n=1, figsize=(8, 4),
 #                                     x_offset=0):
@@ -486,4 +569,3 @@ def _create_image_data(data_object: DataObject):
 #
 #
 #
-

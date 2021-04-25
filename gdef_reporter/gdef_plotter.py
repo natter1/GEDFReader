@@ -119,34 +119,53 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def create_absolute_gradient_rms_plot(self, values: np.ndarray, cutoff_percent_list, pixel_width, title=None,
-                                          moving_average_n=1) -> Figure:
+    def create_absolute_gradient_rms_plot(self, data_object: DataObject, cutoff_percent_list, pixel_width, title=None,
+                                          moving_average_n=1, x_offset=0, subtract_average=False) -> Figure:
         """
         Creates a plot with a curve for each value in cutoff_percent_list, showing rms(abs(grad(z))) as
         moving average over moving_average_n columns.
         Candidate to become deprecated!
-        :param values:
+        :param data_object:
         :param cutoff_percent_list:
         :param pixel_width:
         :param title:
         :param moving_average_n:
         :return: Figure
         """
-        result, (ax_gradient_rms) = plt.subplots(1, 1, figsize=self.figure_size)
-        ax_gradient_rms.set_xlabel("[µm]")
-        ax_gradient_rms.set_ylabel(f"rms(abs(grad(z))) (moving avg. n = {moving_average_n} column(s))")
+        # for gradient:
+        grad_style = copy.deepcopy(self.plotter_style_rms)
 
+        grad_data_list = []
+        label_list = []
         for i, percent in enumerate(cutoff_percent_list):
-            absolut_gradient_array = create_absolute_gradient_array(values, percent / 100.0)
-            x_pos, y_gradient_rms = create_xy_rms_data(absolut_gradient_array, pixel_width, moving_average_n,
-                                                       subtract_average=False)
-            ax_gradient_rms.plot(x_pos, y_gradient_rms, label=f"{percent}%")
-        ax_gradient_rms.legend()
-        if title:
-            result.suptitle(title)
+            grad_data_list.append(create_absolute_gradient_array(data_object, percent / 100.0))
+            label_list.append(f"{percent / 100.0}")
+
+        result = create_rms_plot(grad_data_list, pixel_width, label_list, title=title, moving_average_n=moving_average_n,
+                                 x_offset=x_offset, subtract_average=subtract_average,
+                                 plotter_style=grad_style)
+
+        grad_style.set(y_label=f"rms(abs(grad(z)))\n(moving avg. n = {moving_average_n} column(s))", y_unit="")
+        grad_style.set_format_to_ax(result.axes[0])
         result.tight_layout()
         self._auto_show_figure(result)
         return result
+
+        # result, (ax_gradient_rms) = plt.subplots(1, 1, figsize=self.figure_size)
+        # ax_gradient_rms.set_xlabel("[µm]")
+        # ax_gradient_rms.set_ylabel(f"rms(abs(grad(z))) (moving avg. n = {moving_average_n} column(s))")
+        #
+        # for i, percent in enumerate(cutoff_percent_list):
+        #     absolut_gradient_array = create_absolute_gradient_array(values, percent / 100.0)
+        #     x_pos, y_gradient_rms = create_xy_rms_data(absolut_gradient_array, pixel_width, moving_average_n,
+        #                                                subtract_average=False)
+        #     ax_gradient_rms.plot(x_pos, y_gradient_rms, label=f"{percent}%")
+        # ax_gradient_rms.legend()
+        # if title:
+        #     result.suptitle(title)
+        # result.tight_layout()
+        # self._auto_show_figure(result)
+        # return result
 
     def create_sigma_moving_average_plot_from_sticher_dict(self, sticher_dict: Dict[str, GDEFSticher],
                                                            moving_average_n=200, step=1) -> Figure:

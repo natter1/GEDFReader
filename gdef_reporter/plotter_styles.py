@@ -42,7 +42,7 @@ class PlotterStyle:
         result = ""
         if self._y_label:
             result += self._y_label
-        if self._y_unit is not None:
+        if self._y_unit:
             result += f" [{self._y_unit}]"
         return result
 

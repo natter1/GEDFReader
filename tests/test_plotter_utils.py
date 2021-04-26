@@ -2,63 +2,22 @@
 This file contains tests for plotter_utils.py.
 @author: Nathanael Jöhrmann
 """
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pytest
 from matplotlib.figure import Figure
 
-from afm_tools.gdef_sticher import GDEFSticher
-from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reporter.plotter_utils import plot_to_ax, create_plot, plot_z_histogram_to_ax, create_z_histogram_plot, \
     _extract_ndarray_and_pixel_width, save_figure, create_rms_plot
+from tests.conftest import AUTO_SHOW
 
 ORIGINAL_FIGURE_SIZE = (4, 3.5)
 ORIGINAL_DPI = 300
-AUTO_SHOW = True
 
 
 def auto_show(fig):
     if AUTO_SHOW:
         fig.show()
-
-
-@pytest.fixture(scope='session')
-def random_ndarray2d_data():
-    # np.random.seed(1)
-    rs = np.random.RandomState(np.random.MT19937(np.random.SeedSequence(1)))
-    yield rs.random((256, 256)) * 1e-6 - 0.5e-6
-
-
-@pytest.fixture(scope='session')
-def gdef_measurement():
-    example_01_path = Path.cwd().parent.joinpath("resources").joinpath("example_01.gdf")
-    importer = GDEFImporter(example_01_path)
-    gdef_measurement = importer.export_measurements()[0]
-    yield gdef_measurement
-
-
-@pytest.fixture(scope='session')
-def gdef_sticher(gdef_measurement):
-    sticher = GDEFSticher([gdef_measurement, gdef_measurement])
-    yield sticher
-
-
-@pytest.fixture(scope="function", params=["GDEFMeasurement", "random_ndarray", "GDEFSticher"])
-def data_test_cases(request, gdef_measurement, random_ndarray2d_data, gdef_sticher):
-    case_dict = {
-        "GDEFMeasurement": gdef_measurement,
-        "random_ndarray": random_ndarray2d_data,
-        "GDEFSticher": gdef_sticher
-    }
-    yield case_dict[request.param]
-
-
-# @pytest.fixture()
-# def figure_and_ax():
-#     fig, ax = plt.subplots(1, 1, dpi=ORIGINAL_DPI, figsize=ORIGINAL_FIGURE_SIZE)
-#     yield fig, ax
 
 
 # tests for functions to plot a 2D area map

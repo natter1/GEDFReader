@@ -2,29 +2,18 @@
 This file contains tests for gdef_measurement.py.
 @author: Nathanael Jöhrmann
 """
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
 from afm_tools.background_correction import BGCorrectionType
-from gdef_reader.gdef_importer import GDEFImporter
-
-example_01_path = Path.cwd().parent.joinpath("resources").joinpath("example_01.gdf")
 
 
 def auto_show_fig(fig):
     flag = False  # set True to control created Figures visually
     if flag:
         fig.show()
-
-
-@pytest.fixture(scope='session')
-def gdef_measurement():
-    importer = GDEFImporter(example_01_path)
-    gdef_measurement = importer.export_measurements()[0]
-    yield gdef_measurement
 
 
 @pytest.fixture(scope='session')
@@ -56,7 +45,7 @@ class TestGDEFSettings:
 
 class TestGDEFMeasurement:
     def test_name_property(self, gdef_measurement):
-        assert gdef_measurement.name == "example_01_block_0002"
+        assert gdef_measurement.name.startswith("example_01_block_")
         with pytest.raises(AttributeError):
             gdef_measurement.name = "name should be a read-only-property"
 
@@ -85,7 +74,7 @@ class TestGDEFMeasurement:
         gdef_measurement.set_topography_to_axes(axes[0])
         assert fig.axes[0].get_title() == "topography"
         gdef_measurement.set_topography_to_axes(axes[1], add_id=True)
-        assert fig.axes[1].get_title() == "2: topography"
+        assert fig.axes[1].get_title().endswith(": topography")  # ID depends on how many data was imported -> endswith
         auto_show_fig(fig)
 
     def test_create_plot(self, gdef_measurement):
@@ -134,7 +123,7 @@ class TestGDEFMeasurement:
             ['max width [m]', '5.00e-05'],
             ['max height [m]', '1.25e-05'],
             ['scan speed [µm/s]', '50'],
-            ['name', 'example_01_block_002']
+            ['name', 'example_01_block_002']  # can't test block_id - ID depends on gdef_import history
         ]
 
-        assert gdef_measurement.get_summary_table_data() == table_data
+        assert gdef_measurement.get_summary_table_data()[:6] == table_data[:6]

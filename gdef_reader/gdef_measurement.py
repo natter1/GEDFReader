@@ -278,7 +278,7 @@ class GDEFMeasurement:
             print(f"GDEFMeasurement {self.name} has values==None")
             return
 
-        plot_to_ax(ax, self.values, self.settings.pixel_width, title, z_unit, z_factor)
+        plot_to_ax(ax, self.values, self.settings.pixel_width, title, z_unit)
 
     def create_plot(self, max_figure_size=(4, 4), dpi=96, add_id: bool = False, trim: bool = True) -> Figure:
         """

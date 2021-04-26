@@ -2,49 +2,16 @@
 This file contains tests for gdef_plotter.py.
 @author: Nathanael Jöhrmann
 """
-from pathlib import Path
 
-import numpy as np
 import pytest
 from matplotlib.figure import Figure
 
 from afm_tools.gdef_sticher import GDEFSticher
-from gdef_reader.gdef_importer import GDEFImporter
 from gdef_reporter.gdef_plotter import GDEFPlotter
+from tests.conftest import AUTO_SHOW
 
 ORIGINAL_FIGURE_SIZE = (4, 3.5)
 ORIGINAL_DPI = 300
-AUTO_SHOW = True
-
-
-@pytest.fixture(scope='session')
-def random_ndarray2d_data():
-    # np.random.seed(1)
-    rs = np.random.RandomState(np.random.MT19937(np.random.SeedSequence(1)))
-    yield rs.random((256, 256)) * 1e-6
-
-
-@pytest.fixture(scope='session')
-def gdef_measurement():
-    example_01_path = Path.cwd().parent.joinpath("resources").joinpath("example_01.gdf")
-    importer = GDEFImporter(example_01_path)
-    gdef_measurement = importer.export_measurements()[0]
-    yield gdef_measurement
-
-
-@pytest.fixture(scope='session')
-def gdef_measurements():
-    example_01_path = Path.cwd().parent.joinpath("resources").joinpath("example_01.gdf")
-    importer = GDEFImporter(example_01_path)
-    gdef_measurements = importer.export_measurements()
-    yield gdef_measurements
-
-@pytest.fixture(scope='session')
-def gdef_measurements():
-    example_01_path = Path.cwd().parent.joinpath("resources").joinpath("example_01.gdf")
-    importer = GDEFImporter(example_01_path)
-    gdef_measurements = importer.export_measurements()
-    yield gdef_measurements
 
 
 @pytest.fixture(scope='session')
@@ -167,29 +134,7 @@ class TestGDEFPlotter:
             random_ndarray2d_data, cutoff_list)
 
     def test_create_stich_summary_figure(self, data_test_cases_multiple, gdef_plotter, gdef_measurement, data_dict):
-        # sticher_dict = {
-        #     "example01": GDEFSticher([gdef_measurement]),# gdef_measurement, gdef_measurement]),
-        #     #"example02": GDEFSticher([gdef_measurement]),# gdef_measurement]),
-        #     # "example03": GDEFSticher([gdef_measurement]),
-        #     # "example04": GDEFSticher([gdef_measurement]),
-        #     # "example05": GDEFSticher([gdef_measurement]),
-        #     # "example06": GDEFSticher([gdef_measurement]),
-        #     # "example07": GDEFSticher([gdef_measurement]),
-        #     # "example08": GDEFSticher([gdef_measurement]),
-        #     # "example09": GDEFSticher([gdef_measurement]),
-        #     # "example10": GDEFSticher([gdef_measurement]),
-        #     # "example11": GDEFSticher([gdef_measurement]),
-        #     # "example12": GDEFSticher([gdef_measurement]),
-        #     # "example13": GDEFSticher([gdef_measurement]),
-        #     # "example14": GDEFSticher([gdef_measurement]),
-        #     # "example15": GDEFSticher([gdef_measurement]),
-        #     # "example16": GDEFSticher([gdef_measurement]),
-        #     # "example17": GDEFSticher([gdef_measurement]),
-        #     # "example18": GDEFSticher([gdef_measurement]),
-        #     # "example19": GDEFSticher([gdef_measurement]),
-        #     # "example20": GDEFSticher([gdef_measurement])
-        # }
-        # fig = gdef_plotter.create_stich_summary_plot(sticher_dict)
+
         fig = gdef_plotter.create_stich_summary_plot(data_test_cases_multiple)
         #fig = gdef_plotter.create_stich_summary_plot(data_dict)
 
@@ -197,9 +142,3 @@ class TestGDEFPlotter:
         sticher = GDEFSticher([gdef_measurement, gdef_measurement])
         fig = gdef_plotter.create_plot(sticher)
         assert type(fig) is Figure
-
-    # def test_plot_sticher_to_axes(self, gdef_measurement):
-    #     sticher = GDEFSticher([gdef_measurement, gdef_measurement])
-    #     fig, ax = plt.subplots(figsize=(4, 3), dpi=96)
-    #     GDEFPlotter.plot_sticher_to_axes(sticher, ax)
-    #     fig.show()

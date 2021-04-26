@@ -50,7 +50,7 @@ This class is used to read data from a \*.gdf file (DME AFM) into python. This c
 
     .. code:: python
 
-        __init__(self, filename: Union[pathlib.Path, NoneType] = None)
+        __init__(self, filename: Optional[pathlib.Path] = None)
 
 
     :filename: Path to \*.gdf file. If it is None (default), a file has to be loaded via GDEFImporter.load().
@@ -64,7 +64,7 @@ This class is used to read data from a \*.gdf file (DME AFM) into python. This c
     Create a list of GDEFMeasurement-Objects from imported data. The optional parameter create_images
     can be used to show a matplotlib Figure for each GDEFMeasurement (default value is False).
 
-    :path: Save path for GDEFMeasurement-objects. No saved files, if None.
+    :path: Save path for GDEFMeasurement-objects (and png's if create_images). No saved files, if None.
 
     :create_images: Show a matplotlib Figure for each GDEFMeasurement; used for debugging (default: False)
 
@@ -88,8 +88,8 @@ This class is used to read data from a \*.gdf file (DME AFM) into python. This c
 * bg_correction_type: BGCorrectionType for loaded measurements.
 * keep_z_offset: If False (default), z-values for each imported measurement are corrected so that mean(z) == 0.
 
-Module gdef_reader.gdef_indent_analyzer
----------------------------------------
+Module afm_tools.gdef_indent_analyzer
+-------------------------------------
 
 class GDEFIndentAnalyzer
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -180,8 +180,20 @@ Class containing data of a single measurement from \*.gdf file.
 
     .. code:: python
 
-        create_plot(self, max_figure_size=(4, 4), dpi=96, add_id: bool = True) -> Union[matplotlib.figure.Figure, NoneType]
+        create_plot(self, max_figure_size=(4, 4), dpi=96, add_id: bool = False, trim: bool = True) -> matplotlib.figure.Figure
 
+    Returns a matplotlib figure of measurment data. If GDEFMeasurement.comment is not empty,
+    the comment is used as title. Otherwise a default title with the type of measurement data is created.
+
+    :max_figure_size: Max. figure size. The actual figure size might be smaller.
+
+    :dpi: dpi value for Figure
+
+    :add_id:
+
+    :trim:
+
+    :return: Figure
 
 * **get_summary_table_data**
 
@@ -192,25 +204,25 @@ Class containing data of a single measurement from \*.gdf file.
     Create table data (list of list) summary of the measurement. The result can be used directly to fill a
     pptx-table with `python-ppxt-interface <https://github.com/natter1/python_pptx_interface/>`_.
 
-* **load**
+* **load_from_pickle**
 
     .. code:: python
 
-        load(filename: pathlib.Path) -> 'GDEFMeasurement'
+        load_from_pickle(filename: pathlib.Path) -> 'GDEFMeasurement'
 
-    Load a measurement object using pickle. Take note, that pickle is not a save module to load data.
-    Make sure to only use files from trustworthy sources.
+    Static method to load and return a measurement object using pickle. Take note, that pickle is not a save module
+    to load data. Make sure to only use files from trustworthy sources.
 
 
     :filename:
 
-    :return:
+    :return: GDEFMeasurement
 
-* **save**
+* **save_as_pickle**
 
     .. code:: python
 
-        save(self, filename)
+        save_as_pickle(self, filename)
 
     Save the measurement object using pickle. This is useful for example, if the corresponding
     \*.gdf file contains a lot of measurements, but only a few of them are needed. Take note, that pickle is not
@@ -219,7 +231,7 @@ Class containing data of a single measurement from \*.gdf file.
 
     :filename:
 
-    :return:
+    :return: None
 
 * **save_png**
 
@@ -227,7 +239,7 @@ Class containing data of a single measurement from \*.gdf file.
 
         save_png(self, filename, max_figure_size=(4, 4), dpi: int = 300, transparent: bool = False)
 
-    Save a matplotlib.Figure aof the measurement as a \*.png.
+    Save a matplotlib.Figure of the measurement as a \*.png.
 
     :filename:
 
@@ -243,16 +255,25 @@ Class containing data of a single measurement from \*.gdf file.
 
     .. code:: python
 
-        set_topography_to_axes(self, ax: matplotlib.axes._axes.Axes, add_id: bool = True)
+        set_topography_to_axes(self, ax: matplotlib.axes._axes.Axes, add_id: bool = False)
 
+    Sets the measurement data as diagram to a matplotlib Axes. If GDEFMeasurement.comment is not empty,
+    the comment is used as title. Otherwise a default title with the type of measurement data is created.
+
+    :ax: Axes object to witch the topography is written.
+
+    :add_id: Adds block_id before title text (default False)
+
+    :return: None
 
 **Instance Attributes:**
 
-* background_corrected
+* background_correction_type
 * comment: Comment text given for the measurement.
 * gdf_basename: Path.stem of the imported \*.gdf file.
 * gdf_block_id: Block ID in original \*.gdf file. Might be used to filter measurements.
-* name
+* name: Returns a name of the measurement created from original \*.gdf filename and the gdf_block_id
+* pixel_width
 * preview
 * pygdf_filename
 * settings: GDEFSettings object
@@ -318,14 +339,14 @@ Stores all the settings used during measurement.
 * invert_plane_corr
 * line_mean_order
 * line_mean_order
-* lines
+* lines: total number of scan lines (including missing lines)
 * loop_filter
 * loop_gain
 * loop_int
-* max_height
-* max_width
+* max_height: scan area height [m]
+* max_width: scan area width [m]
 * measured_amplitude
-* missing_lines
+* missing_lines: number of missing lines (e.g. due to aborted measurement)
 * offset_pos
 * offset_x
 * offset_y
@@ -339,7 +360,7 @@ Stores all the settings used during measurement.
 * retrace_type
 * scan_direction
 * scan_mode
-* scan_speed
+* scan_speed: [�m/s]
 * scanner_range
 * set_point
 * source_channel
@@ -351,8 +372,8 @@ Stores all the settings used during measurement.
 * z_unit
 * zero_scan
 
-Module gdef_reader.gdef_sticher
--------------------------------
+Module afm_tools.gdef_sticher
+-----------------------------
 
 class GDEFSticher
 ~~~~~~~~~~~~~~~~~

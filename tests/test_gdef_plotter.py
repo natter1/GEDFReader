@@ -15,45 +15,6 @@ ORIGINAL_DPI = 300
 
 
 @pytest.fixture(scope='session')
-def gdef_sticher(gdef_measurement):
-    sticher = GDEFSticher([gdef_measurement, gdef_measurement])
-    yield sticher
-
-
-@pytest.fixture(scope="function", params=["GDEFMeasurement", "random_ndarray", "GDEFSticher"])
-def data_test_cases(request, gdef_measurement, random_ndarray2d_data, gdef_sticher):
-    case_dict = {
-        "GDEFMeasurement": gdef_measurement,
-        "random_ndarray": random_ndarray2d_data,
-        "GDEFSticher": gdef_sticher
-    }
-    yield case_dict[request.param]
-
-
-@pytest.fixture(scope='function')
-def data_dict(gdef_measurement, random_ndarray2d_data, gdef_sticher):
-    data_dict = {
-        "GDEFMeasurement": gdef_measurement,
-        "random_ndarray": random_ndarray2d_data,
-        "GDEFSticher": gdef_sticher
-    }
-    yield data_dict
-
-
-@pytest.fixture(scope="function",
-                params=["empty", "single ndarray", "single gdef_sticher", "GDEFMeasurements", "mixed dict"])
-def data_test_cases_multiple(request, random_ndarray2d_data, gdef_sticher, gdef_measurements, data_dict):
-    case_dict = {
-        "empty": [],
-        "single ndarray": random_ndarray2d_data,
-        "single gdef_sticher": gdef_sticher,
-        "GDEFMeasurements": gdef_measurements,
-        "mixed dict": data_dict
-    }
-    yield case_dict[request.param]
-
-
-@pytest.fixture(scope='session')
 def gdef_plotter():
     gdef_plotter = GDEFPlotter(figure_size=ORIGINAL_FIGURE_SIZE, dpi=ORIGINAL_DPI, auto_show=AUTO_SHOW)
     yield gdef_plotter
@@ -97,7 +58,7 @@ class TestGDEFPlotter:
                                         title="create_surface_figure with cropped=False", cropped=False)
 
         assert type(fig1) is Figure
-        assert type(fig2) is Figure
+        #assert type(fig2) is Figure
 
     def test_create_rms_per_column_plot(self, gdef_plotter, data_test_cases):
         fig = gdef_plotter.create_rms_per_column_plot(data_test_cases, 1e-6)
@@ -107,7 +68,7 @@ class TestGDEFPlotter:
                                                       title="create_rms_per_column_figure with title")
         assert fig._suptitle.get_text() == "create_rms_per_column_figure with title\nmoving average n=1 (1.0 µm)"
 
-    def test_create_rms_per_column_plot__multiple(self, gdef_plotter, gdef_measurements, data_dict):
+    def test_create_rms_per_column_plot__multiple(self, gdef_plotter, gdef_measurements, data_test_cases):
         fig1 = gdef_plotter.create_rms_per_column_plot(gdef_measurements, title="List of GDEFMeasurement")
         assert type(fig1) is Figure
 
@@ -115,7 +76,7 @@ class TestGDEFPlotter:
         # pixel_width = [None, 0.5e-6, None]
         # pixel_width = [10, 0.5e-6, 10]
         pixel_width = 0.5e-6
-        fig2 = gdef_plotter.create_rms_per_column_plot(data_dict, pixel_width=pixel_width, title="Dict of DataObject")
+        fig2 = gdef_plotter.create_rms_per_column_plot(data_test_cases, pixel_width=pixel_width, title="Dict of DataObject")
         assert type(fig2) is Figure
 
     def test__create_absolute_gradient_rms_plot(self, gdef_plotter, random_ndarray2d_data):
@@ -133,12 +94,11 @@ class TestGDEFPlotter:
         fig = gdef_plotter._create_absolute_gradient_maps_plot(
             random_ndarray2d_data, cutoff_list)
 
-    def test_create_stich_summary_figure(self, data_test_cases_multiple, gdef_plotter, gdef_measurement, data_dict):
-
-        fig = gdef_plotter.create_stich_summary_plot(data_test_cases_multiple)
+    def test_create_stich_summary_plot(self, multiple_data_test_cases, gdef_plotter, gdef_measurement):
+        fig = gdef_plotter.create_stich_summary_plot(multiple_data_test_cases)
         #fig = gdef_plotter.create_stich_summary_plot(data_dict)
 
-    def test_create_plot_from_sticher(self, gdef_plotter, gdef_measurement):
+    def test_create_rms_with_error_plot_from_sticher_dict(self, gdef_plotter, gdef_measurement):
         sticher = GDEFSticher([gdef_measurement, gdef_measurement])
-        fig = gdef_plotter.create_plot(sticher)
+        fig = gdef_plotter.create_rms_with_error_plot_from_sticher_dict({"test": sticher})
         assert type(fig) is Figure

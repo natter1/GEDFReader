@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
+from afm_tools.gdef_sticher import GDEFSticher
 from gdef_reporter.plotter_utils import plot_to_ax, create_plot, plot_z_histogram_to_ax, create_z_histogram_plot, \
     _extract_ndarray_and_pixel_width, save_figure, create_rms_plot
 from tests.conftest import AUTO_SHOW
@@ -56,10 +57,10 @@ class TestAreaPlots:
 
 
 class Test1DPlots:
-    def test_plot_z_histogram_to_ax__defaults(self, data_test_cases):
+    def test_plot_z_histogram_to_ax__defaults(self, multiple_data_test_cases):
         # first, check default behaviour of parameters title, , n_bins, units and add_norm
         fig1, ax1 = plt.subplots(1, 1, dpi=ORIGINAL_DPI, figsize=ORIGINAL_FIGURE_SIZE, constrained_layout=True)
-        plot_z_histogram_to_ax(ax1, data_test_cases, title="")
+        plot_z_histogram_to_ax(ax1, multiple_data_test_cases, title="")
         auto_show(fig1)
         assert len(ax1.lines) == 0  # no Gauss fit (expected default behaviour)
         assert ax1.get_title().startswith("\u03BC=")  # default title starts with mu=...
@@ -85,13 +86,18 @@ class Test1DPlots:
         auto_show(fig2)
         assert ax2.get_title() == ""  # expected for title=None
 
-    def test_plot_z_histogram_to_ax__multiple_datas(self, gdef_measurement, random_ndarray2d_data):
-        data_list = [gdef_measurement, random_ndarray2d_data]
+    def test_plot_z_histogram_to_ax__multiple_datas(self, multiple_data_test_cases):  # gdef_measurement, random_ndarray2d_data):
+        multiple_data_case = multiple_data_test_cases  # [gdef_measurement, random_ndarray2d_data]
         fig1, ax1 = plt.subplots(1, 1, dpi=ORIGINAL_DPI, figsize=ORIGINAL_FIGURE_SIZE, constrained_layout=True)
-        plot_z_histogram_to_ax(ax1, data_list, title="", add_norm=True)
+        plot_z_histogram_to_ax(ax1, multiple_data_case, title="", add_norm=True)
         auto_show(fig1)
-        assert len(fig1.axes[0].containers) == len(data_list)
-        assert len(fig1.axes[0].lines) == 2  # Gauss fits (add_norm=True)
+        assert isinstance(fig1, Figure)
+        if isinstance(multiple_data_case, np.ndarray) or isinstance(multiple_data_case, GDEFSticher):
+            assert len(fig1.axes[0].containers) == 1
+            assert len(fig1.axes[0].lines) == 1
+        else:
+            assert len(fig1.axes[0].containers) == len(multiple_data_case)
+            assert len(fig1.axes[0].lines) != 2  # Gauss fits (add_norm=True)
 
     def test_create_z_histogram_plot__defaults(self, data_test_cases):
         # check setting figure_size and dpi and also default of parameters title, n_bins, units and add_norm

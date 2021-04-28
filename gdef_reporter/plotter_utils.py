@@ -31,8 +31,8 @@ from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import norm
 
-from gdef_reader.utils import create_xy_rms_data, unit_factor_and_label
-from gdef_reporter.plotter_styles import get_plotter_style_rms, PlotterStyle
+from gdef_reader.utils import create_xy_rms_data, unit_factor_and_label, get_mu_sigma
+from gdef_reporter.plotter_styles import get_plotter_style_rms, PlotterStyle, get_plotter_style_sigma
 
 if TYPE_CHECKING:
     from afm_tools.gdef_sticher import GDEFSticher
@@ -251,7 +251,8 @@ def plot_z_histogram_to_ax(ax: Axes,
     unit_factor, unit_label = unit_factor_and_label(units)
     ndarray2d_list, _, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list, label_list=label_list)
 
-    colors = []
+    colors = ["black", "red", "blue", "green", "cyan", "magenta", "yellow"]
+    colors_list = []
     z_values_list = []
     norm_fit_lines = []
     norm_x_values_list = []
@@ -267,19 +268,16 @@ def plot_z_histogram_to_ax(ax: Axes,
         norm_fit_lines.append(norm_fit_line)
         norm_x_values_list.append(norm_x_values)
         # todo: implement proper solution for colors
-        if len(colors) % 2 > 0:
-            colors.append("red")
-        else:
-            colors.append("black")
+        colors_list.append(colors[len(colors_list) % len(colors)])
 
     for i in range(len(z_values_list)):
-        _, _, patch = ax.hist(z_values_list[i], density=True, bins=n_bins, edgecolor=colors[i], lw=1,
+        _, _, patch = ax.hist(z_values_list[i], density=True, bins=n_bins, edgecolor=colors_list[i], lw=1,
                               label=label_list[i],
-                              fc=to_rgba(colors[i], alpha=0.3), rwidth=1, histtype="bar", fill=True)
+                              fc=to_rgba(colors_list[i], alpha=0.3), rwidth=1, histtype="bar", fill=True)
 
     if add_norm:
         for i, line in enumerate(norm_fit_lines):
-            ax.plot(norm_x_values_list[i], line, c=colors[i])
+            ax.plot(norm_x_values_list[i], line, c=colors_list[i])
 
     # todo: consider a PlotterStyle instead
     ax.set_xlabel(f'z [{unit_label}]')
@@ -412,6 +410,72 @@ def create_rms_plot(data_object_list: DataObjectList,
     plot_rms_to_ax(ax, data_object_list, pixel_width=pixel_width, label_list=label_list,
                    moving_average_n=moving_average_n, x_offset=x_offset, subtract_average=subtract_average,
                    x_units=units, plotter_style=plotter_style)
+    return result
+
+
+def create_rms_with_error_plot_from_sticher_dict(data_object_list: DataObjectList,
+                                                 pixel_width=None,
+                                                 label_list: Union[str, list[str]] = None,
+                                                 average_n: int = 8,
+                                                 plotter_style: PlotterStyle= None)\
+        -> Figure:
+    """
+
+    :param self:
+    :param data_object_list:
+    :param pixel_width:
+    :param label_list:
+    :param average_n:
+    :return:
+    """
+    if plotter_style is None:
+        plotter_style = get_plotter_style_sigma()
+    graph_styler = plotter_style.graph_styler.reset()
+    result, ax_rms = plotter_style.create_preformated_figure()
+
+    ndarray2d_list, pixel_width_list, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list,
+                                                                                            pixel_width=pixel_width,
+                                                                                            label_list=label_list)
+
+    for i, data in enumerate(ndarray2d_list):
+        z_data = data
+
+        # get mu for every column first:
+        sigma_col_list = []
+        for j in range(0, z_data.shape[1]):
+            _, sigma_col = get_mu_sigma(z_data[:, j:j + 1])
+            sigma_col_list.append(sigma_col)
+
+        x_pos = []
+        y_rms = []
+        y_error = []
+        pixel_width_in_um = pixel_width_list[i] * 1e6
+        for j in range(0, z_data.shape[1] - average_n, average_n):  # step):
+            x_pos.append((j + max(average_n - 1, 0) / 2.0) * pixel_width_in_um)
+
+            mu_rms, sigma_rms = get_mu_sigma(np.array(sigma_col_list[j:j + average_n]))
+            y_rms.append(mu_rms * 1e6)
+            y_error.append(sigma_rms * 1e6)
+        style_dict = {
+            "fmt": 'o',
+            "elinewidth": 0.6,
+            "capsize": 2.0,
+            "markersize": 5,
+            "color": graph_styler.dict["color"]
+        }
+        ax_rms.errorbar(x_pos, y_rms, yerr=y_error, label=label_list[i],
+                        **style_dict)  # **graph_styler.dict, label=key)  #fmt='-o')  # **graph_styler.dict
+        graph_styler.next_style()
+    # ax_rms.set_title(f"window width = {moving_average_n*pixel_width_in_um:.1f}")
+
+    # name = list(sticher_dict.keys())[0]
+    # name.replace(",", "").replace(" ", "_")
+    result.tight_layout()
+
+    ax_rms.legend()
+    # legend_handles, legend_labels = ax_rms.get_legend_handles_labels()
+    # order = [2, 0, 1]
+    # ax_rms.legend([legend_handles[idx] for idx in order], [legend_labels[idx] for idx in order], fontsize=8)
     return result
 
 

@@ -21,7 +21,7 @@ import pytest
 from afm_tools.gdef_sticher import GDEFSticher
 from gdef_reader.gdef_importer import GDEFImporter
 
-AUTO_SHOW = False
+AUTO_SHOW = True  # False
 
 @pytest.fixture(scope='session')
 def gdf_example_01_path():
@@ -53,6 +53,12 @@ def gdef_sticher(gdef_measurement):
     yield sticher
 
 
+@pytest.fixture(scope='session')
+def gdef_measurements(gdef_importer):
+    gdef_measurements = gdef_importer.export_measurements()
+    yield gdef_measurements
+
+
 @pytest.fixture(scope="session", params=["GDEFMeasurement", "random_ndarray", "GDEFSticher"])
 def data_test_cases(request, gdef_measurement, random_ndarray2d_data, gdef_sticher):
     case_dict = {
@@ -64,6 +70,22 @@ def data_test_cases(request, gdef_measurement, random_ndarray2d_data, gdef_stich
 
 
 @pytest.fixture(scope='session')
-def gdef_measurements(gdef_importer):
-    gdef_measurements = gdef_importer.export_measurements()
-    yield gdef_measurements
+def data_mixed_dict(gdef_measurement, random_ndarray2d_data, gdef_sticher):
+    case_dict = {
+        "GDEFMeasurement": gdef_measurement,
+        "random_ndarray": random_ndarray2d_data,
+        "GDEFSticher": gdef_sticher
+    }
+    yield case_dict
+
+@pytest.fixture(scope="function",
+                params=["empty", "single ndarray", "single gdef_sticher", "GDEFMeasurements", "mixed dict"])
+def multiple_data_test_cases(request, random_ndarray2d_data, gdef_sticher, gdef_measurements, data_mixed_dict):
+    case_dict = {
+        "empty": [],
+        "single ndarray": random_ndarray2d_data,
+        "single gdef_sticher": gdef_sticher,
+        "GDEFMeasurements": gdef_measurements,
+        "mixed dict": data_mixed_dict
+    }
+    yield case_dict[request.param]

@@ -5,19 +5,17 @@ GDEFPlotter is used to create matplotlib Figures for AFM measurements.
 from __future__ import annotations
 
 import copy
-from typing import Optional, Dict, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
 # from afm_tools.gdef_sticher import GDEFSticher
-from afm_tools.gdef_sticher import GDEFSticher
-from gdef_reader.utils import create_xy_rms_data, create_absolute_gradient_array, get_mu_sigma_moving_average, \
-    get_mu_sigma
-from gdef_reporter._code_utils import ClassOrInstanceMethod
+from gdef_reader.utils import create_absolute_gradient_array, get_mu_sigma
 from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
-from gdef_reporter.plotter_utils import plot_to_ax, create_plot, create_rms_plot, best_ratio_fit, create_summary_plot
+from gdef_reporter.plotter_utils import create_plot, create_rms_plot, create_summary_plot, \
+    create_rms_with_error_plot_from_sticher_dict
 
 if TYPE_CHECKING:
     from gdef_reporter.plotter_utils import DataObject, DataObjectList
@@ -177,110 +175,23 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def create_stich_summary_plot(self, sticher_dict):  # , figure_size=(16, 10)):
+    def create_stich_summary_plot(self, data_object_list: DataObjectList):  # , figure_size=(16, 10)):
         """
         Creates a Figure with stiched maps for each GDEFSticher in sticher_dict. The keys in sticher_dict
         are used as titles for the corresponding Axes.
-        :param sticher_dict:
+        :param data_object_list:
         :return:
         """
-        # n = len(sticher_dict)
-        # if n == 0:
-        #     return plt.subplots(1, figsize=self.figure_size, dpi=300)
-        #
-        # # dummy_fig is only needed to estimate aspect ratio of a single axe
-        # dummy_fig = create_plot(list(sticher_dict.values())[0], title='dummy',
-        #                         max_figure_size=self.figure_size, cropped=True)
-        #
-        # n_cols, n_rows = best_ratio_fit(self.figure_size, dummy_fig.get_size_inches(), n)
-        # result, ax_list = plt.subplots(n_rows, n_cols, figsize=self.figure_size, dpi=300)
-        #
-        # for i, key in enumerate(sticher_dict):
-        #     if not isinstance(ax_list, np.ndarray):
-        #         plot_to_ax(ax_list, sticher_dict[key], title=key)
-        #     else:
-        #         plot_to_ax(ax_list.flatten('F')[i], sticher_dict[key], title=key)
-        #
-        # for ax in ax_list.flatten('F')[i:]:
-        #     ax.set_axis_off()
-        #
-        # result.tight_layout()
-        result = create_summary_plot(sticher_dict, figure_size=self.figure_size, dpi=self.dpi)
+        result = create_summary_plot(data_object_list, figure_size=self.figure_size, dpi=self.dpi)
         self._auto_show_figure(result)
         return result
 
-    def create_rms_with_error_plot_from_sticher_dict(self, sticher_dict, average_n=8 * 160, step=1):
-        graph_styler = self.plotter_style_sigma.graph_styler.reset()
-        result, ax_rms = self.plotter_style_sigma.create_preformated_figure()
-
-        for key, sticher in sticher_dict.items():
-            z_data = sticher.values
-
-            # get mu for every column first:
-            sigma_col_list = []
-            for i in range(0, z_data.shape[1]):
-                _, sigma_col = get_mu_sigma(z_data[:, i:i + 1])
-                sigma_col_list.append(sigma_col)
-
-            x_pos = []
-            y_rms = []
-            y_error = []
-            pixel_width_in_um = sticher.pixel_width * 1e6
-            for i in range(0, z_data.shape[1] - average_n, average_n):  # step):
-                x_pos.append((i + max(average_n - 1, 0) / 2.0) * pixel_width_in_um)
-
-                mu_rms, sigma_rms = get_mu_sigma(np.array(sigma_col_list[i:i + average_n]))
-                y_rms.append(mu_rms * 1e6)
-                y_error.append(sigma_rms * 1e6)
-            style_dict = {
-                "fmt": 'o',
-                "elinewidth": 0.6,
-                "capsize": 2.0,
-                "markersize": 5,
-                "color": graph_styler.dict["color"]
-            }
-            ax_rms.errorbar(x_pos, y_rms, yerr=y_error, label=key,
-                            **style_dict)  # **graph_styler.dict, label=key)  #fmt='-o')  # **graph_styler.dict
-            graph_styler.next_style()
-        # ax_rms.set_title(f"window width = {moving_average_n*pixel_width_in_um:.1f}")
-
-        name = list(sticher_dict.keys())[0]
-        name.replace(",", "").replace(" ", "_")
-        result.tight_layout()
-
-        ax_rms.legend()
-        # legend_handles, legend_labels = ax_rms.get_legend_handles_labels()
-        # order = [2, 0, 1]
-        # ax_rms.legend([legend_handles[idx] for idx in order], [legend_labels[idx] for idx in order], fontsize=8)
+    def create_rms_with_error_plot_from_sticher_dict(self, sticher_dict, average_n=8):
+        result = create_rms_with_error_plot_from_sticher_dict(sticher_dict, average_n)
         if self.auto_show:
             result.show()
         return result
 
-    # @ClassOrInstanceMethod
-    # def _auto_show_figure(cls, instance, fig):
-    #     """Parameters cls and instance are set via decorator ClassOrInstance. So first parameter when calling is fig."""
-    #     auto_show = instance.auto_show if instance else cls.auto_show
-    #     if auto_show:
-    #         fig.show()
-
     def _auto_show_figure(self, fig):
         if self.auto_show:
             fig.show()
-
-    # @classmethod
-    # def plot_sticher_to_axes(cls, sticher: GDEFSticher, ax: Axes, title=''):
-    #     """
-    #     Deprecated - please use plot_surface_to_axes() from plotter_utils.
-    #     """
-    #     print("GDEFPlotter.set_topography_to_axes is deprecated. Please use plot_surface_to_axes() from plotter_utils.")
-    #     plot_surface_to_axes(ax=ax, values=sticher.stiched_data, pixel_width=sticher.pixel_width, title=title)
-
-    # @classmethod
-    # def plot_surface_to_axes(cls, ax: Axes, values: np.ndarray, pixel_width: float,
-    #                          title="", z_unit="nm", z_factor=1e9):
-    #     """
-    #     Deprecated - please use plot_surface_to_axes() from plotter_utils.
-    #     """
-    #     print("GDEFPlotter.plot_surface_to_axes is deprecated. Please use plot_surface_to_axes() from plotter_utils.")
-    #     plot_surface_to_axes(ax=ax, values=values, pixel_width=pixel_width,
-    #                          title=title, z_unit=z_unit, z_factor=z_factor)

@@ -337,6 +337,15 @@ def plot_rms_to_ax(ax_rms: Axes,
                    ) \
         -> None:
     """ ... """
+    ndarray2d_list, pixel_width_list, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list,
+                                                                                            pixel_width=pixel_width,
+                                                                                            label_list=label_list)
+    if None in pixel_width_list:
+        assert all([x is None for x in pixel_width_list]) or x_units == "px", \
+            "Cannot mix data with unit [px] with other data"
+        x_units = "px"
+        pixel_width_list = [1] * len(pixel_width_list)
+
     _, x_unit_label = unit_factor_and_label(x_units)
 
     if plotter_style is None:
@@ -350,9 +359,6 @@ def plot_rms_to_ax(ax_rms: Axes,
 
     ax_rms.set_title(title)
 
-    ndarray2d_list, pixel_width_list, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list,
-                                                                                            pixel_width=pixel_width,
-                                                                                            label_list=label_list)
     for i, ndarray_data in enumerate(ndarray2d_list):
         x_pos, y_rms = create_xy_rms_data(ndarray_data, pixel_width_list[i], moving_average_n,
                                           subtract_average=subtract_average, x_units=x_units,
@@ -377,7 +383,7 @@ def create_rms_plot(data_object_list: DataObjectList,
                     plotter_style: PlotterStyle = None) \
         -> Figure:
     """
-    Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
+    Creates a matplotlib figure, showing a graph of the root mean square of the gradient of the GDEFSticher objects in
     data_dict. The key value in data_dict is used as label in the legend.
     :param data_object_list:
     :param pixel_width: has to be set, if data_object_list contains 1 or more np.ndarry (for varying values, use a list)

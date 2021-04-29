@@ -61,6 +61,7 @@ def gdef_measurements(gdef_importer):
 
 @pytest.fixture(scope="session", params=["GDEFMeasurement", "random_ndarray", "GDEFSticher"])
 def data_test_cases(request, gdef_measurement, random_ndarray2d_data, gdef_sticher):
+    """types representing exactly one data set"""
     case_dict = {
         "GDEFMeasurement": gdef_measurement,
         "random_ndarray": random_ndarray2d_data,
@@ -78,13 +79,11 @@ def data_mixed_dict(gdef_measurement, random_ndarray2d_data, gdef_sticher):
     }
     yield case_dict
 
-@pytest.fixture(scope="function",
-                params=["empty", "single ndarray", "single gdef_sticher", "GDEFMeasurements", "mixed dict"])
-def multiple_data_test_cases(request, random_ndarray2d_data, gdef_sticher, gdef_measurements, data_mixed_dict):
+@pytest.fixture(scope="function", params=["empty", "GDEFMeasurements", "mixed dict"])
+def multiple_data_test_cases(request, gdef_measurements, data_mixed_dict):
+    """0 or more than 1 data sets in a container like list, dict, ..."""
     case_dict = {
         "empty": [],
-        "single ndarray": random_ndarray2d_data,
-        "single gdef_sticher": gdef_sticher,
         "GDEFMeasurements": gdef_measurements,
         "mixed dict": data_mixed_dict
     }

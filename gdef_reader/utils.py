@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
 def unit_factor_and_label(units: Literal["µm", "nm"]) -> tuple[float, str]:
     units_dict = {
+        "px": (1, "px"),
         "nm": (1e9, "nm"),
         "µm": (1e6, "\u03BCm")
     }
@@ -134,7 +135,7 @@ def create_absolute_gradient_array(array2d, cutoff=1.0):
 
 
 def create_xy_rms_data(values: np.ndarray, pixel_width, moving_average_n=1, subtract_average=True,
-                       x_units: Literal["µm", "nm"] = "µm", y_units: Literal["µm", "nm"] = "Nm") -> tuple[list, list]:
+                       x_units: Literal["px", "µm", "nm"] = "µm", y_units: Literal["µm", "nm"] = "Nm") -> tuple[list, list]:
     """
     :param values: 2D array
     :param pixel_width:

@@ -2,12 +2,15 @@
 This file contains tests for plotter_utils.py.
 @author: Nathanael Jöhrmann
 """
+from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 from matplotlib.figure import Figure
 
 from afm_tools.gdef_sticher import GDEFSticher
+from gdef_reader.gdef_measurement import GDEFMeasurement
 from gdef_reporter.plotter_utils import plot_to_ax, create_plot, plot_z_histogram_to_ax, create_z_histogram_plot, \
     _extract_ndarray_and_pixel_width, save_figure, create_rms_plot
 from tests.conftest import AUTO_SHOW
@@ -57,15 +60,31 @@ class TestAreaPlots:
 
 
 class Test1DPlots:
-    def test_plot_z_histogram_to_ax__defaults(self, multiple_data_test_cases):
+    def test_plot_z_histogram_to_ax__defaults(self, data_test_cases):
         # first, check default behaviour of parameters title, , n_bins, units and add_norm
         fig1, ax1 = plt.subplots(1, 1, dpi=ORIGINAL_DPI, figsize=ORIGINAL_FIGURE_SIZE, constrained_layout=True)
-        plot_z_histogram_to_ax(ax1, multiple_data_test_cases, title="")
+        plot_z_histogram_to_ax(ax1, data_test_cases, title="")
         auto_show(fig1)
         assert len(ax1.lines) == 0  # no Gauss fit (expected default behaviour)
         assert ax1.get_title().startswith("\u03BC=")  # default title starts with mu=...
         assert ax1.get_xlabel() == "z [\u03BCm]"  # default units should be µm; note:  µ == \u03BC is False!
         assert len(ax1.containers[0]) == 200  # default n_bins should be 200
+
+    def test_plot_z_histogram_to_ax__defaults_multiple(self, multiple_data_test_cases):
+        # first, check default behaviour of parameters title, , n_bins, units and add_norm
+        fig1, ax1 = plt.subplots(1, 1, dpi=ORIGINAL_DPI, figsize=ORIGINAL_FIGURE_SIZE, constrained_layout=True)
+        plot_z_histogram_to_ax(ax1, multiple_data_test_cases, title="")
+        auto_show(fig1)
+        assert len(ax1.lines) == 0  # no Gauss fit (expected default behaviour)
+
+        if len(multiple_data_test_cases) == 1:
+            assert ax1.get_title().startswith("\u03BC=")  # default title for one data set shows mu=...
+        else:
+            assert ax1.get_title() == ""  # no title if no data or more than one dataset
+
+        assert ax1.get_xlabel() == "z [\u03BCm]"  # default units should be µm; note:  µ == \u03BC is False!
+        for container in ax1.containers:
+            assert len(container.patches) == 200  # default n_bins should be 200
 
     def test_plot_z_histogram_to_ax__set_parameters(self, data_test_cases):
         # first, check setting a title, selecting units µm, set n_bins and draw normal distribution fit
@@ -144,17 +163,35 @@ class Test1DPlots:
     def test_plot_rms_to_ax(self):
         pass
 
-    def test_create_rms_plot(self, gdef_measurement, random_ndarray2d_data, gdef_sticher):
-        data_list = [gdef_measurement, gdef_sticher, random_ndarray2d_data*0.07]
-        pixel_width = gdef_measurement.pixel_width
-        labels = [f"{type(data).__name__}" for data in data_list]
-        fig = create_rms_plot(data_list, label_list=labels, pixel_width=pixel_width, moving_average_n=1,
+    def test_create_rms_plot(self, data_test_cases):  # gdef_measurement, random_ndarray2d_data, gdef_sticher):
+        #data_list = [gdef_measurement, gdef_measurement,gdef_measurement, gdef_measurement,gdef_measurement, gdef_measurement, gdef_measurement, gdef_sticher, random_ndarray2d_data*0.07]
+        #pixel_width = gdef_measurement.pixel_width
+        #labels = [f"{type(data).__name__}" for data in data_list]
+        pixel_width = None
+        labels = None
+        fig = create_rms_plot(data_test_cases, label_list=labels, pixel_width=pixel_width, moving_average_n=1,
                               subtract_average=True, units="nm")
         auto_show(fig)
-        fig = create_rms_plot(data_list, label_list=labels, pixel_width=pixel_width, moving_average_n=1,
+        fig = create_rms_plot(data_test_cases, label_list=labels, pixel_width=pixel_width, moving_average_n=1,
                               subtract_average=True)
         auto_show(fig)
 
+    def test_create_rms_plot_multiple(self, multiple_data_test_cases):  # gdef_measurement, random_ndarray2d_data, gdef_sticher):
+        #data_list = [gdef_measurement, gdef_measurement,gdef_measurement, gdef_measurement,gdef_measurement, gdef_measurement, gdef_measurement, gdef_sticher, random_ndarray2d_data*0.07]
+        #pixel_width = gdef_measurement.pixel_width
+        #labels = [f"{type(data).__name__}" for data in data_list]
+        pixel_width = None
+        labels = None
+
+        if isinstance(multiple_data_test_cases, dict):
+            pixel_width = 0.5e-6  # provide a default pixel width, in case dict contains ndarray
+
+        fig = create_rms_plot(multiple_data_test_cases, label_list=labels, pixel_width=pixel_width, moving_average_n=1,
+                              subtract_average=True, units="nm")
+        auto_show(fig)
+        fig = create_rms_plot(multiple_data_test_cases, label_list=labels, pixel_width=pixel_width, moving_average_n=1,
+                              subtract_average=True)
+        auto_show(fig)
 
 class TestSpecialFunctions:
     def test_extract_ndarray_and_pixel_width(self, data_test_cases):

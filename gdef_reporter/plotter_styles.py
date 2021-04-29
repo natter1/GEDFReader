@@ -191,12 +191,19 @@ class GraphStyler:
 def get_curve_style_bernhard_4(marker_size=5) -> GraphStyler:
     result = GraphStyler()
     result.linestyle_map = [""]
-    result.marker_map = ["o", "s", "<", ">"]  # ["x", "+", "1"]
+    result.marker_map = ["o", "s", "<", ">", "D", "P", "X", "*"]  # , "x", "+", "1"]
     result.marker_size = marker_size
-    result.cmap = [[0, 0, 0],  # black
-                   [1, 0, 0],  # red
-                   [0, 0, 1],  # blue
-                   [0, 1, 0]  # green
+    result.cmap = ["black",
+                   "red",
+                   "blue",
+                   "limegreen",
+                   "aqua",
+                   "magenta",
+                   "orange",
+                   "sienna",
+                   "gold",
+                   "purple",
+                   #[0, 1, 1]  # define color by float rgb value
                    ]
     result.graph_styler = result
     return result

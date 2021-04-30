@@ -253,16 +253,11 @@ def get_plotter_style_xy_data(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
 
 def get_plotter_style_rms(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
     result = get_plotter_style_xy_data(dpi=dpi, figure_size=figure_size)
-    result._x_label = "x"  # "[µm]"
-    result._x_unit = "µm"
-    result._y_label = "rms roughness"  # "[µm]"
-    result._y_unit = "nm"
-
+    result.set(x_label="x", x_unit="µm", y_label="rms roughness", y_unit="nm")
     return result
 
 
 def get_plotter_style_sigma(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
     result = get_plotter_style_xy_data(dpi=dpi, figure_size=figure_size)
-    result._x_label = "[µm]"
-    result._y_label = "standard deviation \u03C3 [µm]"
+    result.set(x_label="x", x_unit="µm", y_label="standard deviation \u03C3", y_unit="µm")
     return result

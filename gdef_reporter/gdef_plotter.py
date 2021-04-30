@@ -15,7 +15,7 @@ from matplotlib.figure import Figure
 from gdef_reader.utils import create_absolute_gradient_array, get_mu_sigma
 from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
 from gdef_reporter.plotter_utils import create_plot, create_rms_plot, create_summary_plot, \
-    create_rms_with_error_plot_from_sticher_dict
+    create_rms_with_error_plot
 
 if TYPE_CHECKING:
     from gdef_reporter.plotter_utils import DataObject, DataObjectList
@@ -175,19 +175,21 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def create_stich_summary_plot(self, data_object_list: DataObjectList):  # , figure_size=(16, 10)):
+    def create_stich_summary_plot(self, data_object_list: DataObjectList, pixel_width=None):  # , figure_size=(16, 10)):
         """
         Creates a Figure with stiched maps for each GDEFSticher in sticher_dict. The keys in sticher_dict
         are used as titles for the corresponding Axes.
         :param data_object_list:
         :return:
         """
-        result = create_summary_plot(data_object_list, figure_size=self.figure_size, dpi=self.dpi)
+
+        result = create_summary_plot(data_object_list, pixel_width=pixel_width,
+                                     figure_size=self.figure_size, dpi=self.dpi)
         self._auto_show_figure(result)
         return result
 
     def create_rms_with_error_plot_from_sticher_dict(self, sticher_dict, average_n=8):
-        result = create_rms_with_error_plot_from_sticher_dict(sticher_dict, average_n)
+        result = create_rms_with_error_plot(sticher_dict, average_n)
         if self.auto_show:
             result.show()
         return result

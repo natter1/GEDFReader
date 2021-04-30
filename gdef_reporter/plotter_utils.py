@@ -90,7 +90,8 @@ def _extract_ndarray_and_pixel_width(data_object: DataObject,
     return data_object.values, data_object.pixel_width
 
 
-def _get_ndarray_pixel_width_and_label_lists(data_object_list: DataObjectList, pixel_width=None, label_list=None) \
+def _get_ax_data_lists(data_object_list: DataObjectList, pixel_width=None, label_list=None,
+                       x_units=None) \
         -> (list[np.ndarray], list[float], list[str]):
     """
     Tries to extract a np.ndarray list and a pixel_width list from given values_object_list,
@@ -125,7 +126,17 @@ def _get_ndarray_pixel_width_and_label_lists(data_object_list: DataObjectList, p
         if final_label_list[i] is None and hasattr(data, "comment"):
             final_label_list[i] = data.comment
 
-    return ndarray2d_list, pixel_width_list, final_label_list
+    pixel_width_list, x_units = _check_pixel_width_list(pixel_width_list, x_units)
+    return ndarray2d_list, pixel_width_list, final_label_list, x_units
+
+
+def _check_pixel_width_list(pixel_width_list, x_units):
+    if None in pixel_width_list:
+        assert all([x is None for x in pixel_width_list]) or x_units == "px", \
+            "Cannot mix data with unit [px] with other data"
+        x_units = "px"
+        pixel_width_list = [1] * len(pixel_width_list)
+    return pixel_width_list, x_units
 
 
 def best_ratio_fit(total_size, single_size, n):
@@ -231,6 +242,7 @@ def create_plot(data_object: DataObject,
 # ----------------------------------------------------------------------------------------------------------------------
 def plot_z_histogram_to_ax(ax: Axes,
                            data_object_list: DataObjectList,
+                           pixel_width=None,
                            label_list: Union[str, list[str]] = None,
                            title: Optional[str] = "",
                            n_bins: int = 200,
@@ -249,7 +261,8 @@ def plot_z_histogram_to_ax(ax: Axes,
     :return: None
     """
     unit_factor, unit_label = unit_factor_and_label(units)
-    ndarray2d_list, _, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list, label_list=label_list)
+    ndarray2d_list, _, label_list, _ = _get_ax_data_lists(
+        data_object_list, pixel_width=pixel_width, label_list=label_list)
 
     colors = ["black", "red", "blue", "green", "cyan", "magenta", "yellow"]
     colors_list = []
@@ -295,6 +308,7 @@ def plot_z_histogram_to_ax(ax: Axes,
 
 
 def create_z_histogram_plot(data_object_list: DataObjectList,
+                            pixel_width=None,
                             labels: Union[str, list[str]] = None,
                             title: Optional[str] = "",
                             n_bins: int = 200,
@@ -320,7 +334,7 @@ def create_z_histogram_plot(data_object_list: DataObjectList,
         result.suptitle(title)
         title = None
 
-    plot_z_histogram_to_ax(ax, data_object_list, labels, title, n_bins, units, add_norm)
+    plot_z_histogram_to_ax(ax, data_object_list, pixel_width, labels, title, n_bins, units, add_norm)
     return result
 
 
@@ -337,14 +351,13 @@ def plot_rms_to_ax(ax_rms: Axes,
                    ) \
         -> None:
     """ ... """
-    ndarray2d_list, pixel_width_list, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list,
-                                                                                            pixel_width=pixel_width,
-                                                                                            label_list=label_list)
-    if None in pixel_width_list:
-        assert all([x is None for x in pixel_width_list]) or x_units == "px", \
-            "Cannot mix data with unit [px] with other data"
-        x_units = "px"
-        pixel_width_list = [1] * len(pixel_width_list)
+    ndarray2d_list, pixel_width_list, label_list, x_units = _get_ax_data_lists(
+        data_object_list, pixel_width=pixel_width, label_list=label_list, x_units=x_units)
+    # if None in pixel_width_list:
+    #     assert all([x is None for x in pixel_width_list]) or x_units == "px", \
+    #         "Cannot mix data with unit [px] with other data"
+    #     x_units = "px"
+    #     pixel_width_list = [1] * len(pixel_width_list)
 
     _, x_unit_label = unit_factor_and_label(x_units)
 
@@ -419,29 +432,42 @@ def create_rms_plot(data_object_list: DataObjectList,
     return result
 
 
-def create_rms_with_error_plot_from_sticher_dict(data_object_list: DataObjectList,
-                                                 pixel_width=None,
-                                                 label_list: Union[str, list[str]] = None,
-                                                 average_n: int = 8,
-                                                 plotter_style: PlotterStyle= None)\
-        -> Figure:
+def plot_rms_with_error_to_ax(ax: Axes,
+                              data_object_list: DataObjectList,
+                              pixel_width=None,
+                              label_list: Union[str, list[str]] = None,
+                              average_n: int = 8,
+                              x_units: Literal["px", "µm", "nm"] = "µm",
+                              y_units: Literal["µm", "nm"] = "µm",
+                              plotter_style: PlotterStyle = None):
     """
 
-    :param self:
+    :param ax:
     :param data_object_list:
     :param pixel_width:
     :param label_list:
     :param average_n:
+    :param x_units:
+    :param y_units:
+    :param plotter_style:
     :return:
     """
+    ndarray2d_list, pixel_width_list, label_list, x_units = _get_ax_data_lists(
+        data_object_list, pixel_width=pixel_width, label_list=label_list, x_units=x_units)
+
+    pixel_width_list, x_units = _check_pixel_width_list(pixel_width_list, x_units)
+
+    x_factor, x_unit_label = unit_factor_and_label(x_units)
+    y_factor, y_unit_label = unit_factor_and_label(y_units)
+
     if plotter_style is None:
         plotter_style = get_plotter_style_sigma()
-    graph_styler = plotter_style.graph_styler.reset()
-    result, ax_rms = plotter_style.create_preformated_figure()
+    else:
+        plotter_style = deepcopy(plotter_style)  # do not change input parameter!
 
-    ndarray2d_list, pixel_width_list, label_list = _get_ndarray_pixel_width_and_label_lists(data_object_list,
-                                                                                            pixel_width=pixel_width,
-                                                                                            label_list=label_list)
+    plotter_style.set(x_unit=x_unit_label, y_unit=y_unit_label)
+    graph_styler = plotter_style.graph_styler.reset()
+    plotter_style.set_format_to_ax(ax)
 
     for i, data in enumerate(ndarray2d_list):
         z_data = data
@@ -455,13 +481,13 @@ def create_rms_with_error_plot_from_sticher_dict(data_object_list: DataObjectLis
         x_pos = []
         y_rms = []
         y_error = []
-        pixel_width_in_um = pixel_width_list[i] * 1e6
+        pixel_width = pixel_width_list[i] * x_factor
         for j in range(0, z_data.shape[1] - average_n, average_n):  # step):
-            x_pos.append((j + max(average_n - 1, 0) / 2.0) * pixel_width_in_um)
+            x_pos.append((j + max(average_n - 1, 0) / 2.0) * pixel_width)
 
             mu_rms, sigma_rms = get_mu_sigma(np.array(sigma_col_list[j:j + average_n]))
-            y_rms.append(mu_rms * 1e6)
-            y_error.append(sigma_rms * 1e6)
+            y_rms.append(mu_rms * y_factor)
+            y_error.append(sigma_rms * y_factor)
         style_dict = {
             "fmt": 'o',
             "elinewidth": 0.6,
@@ -469,19 +495,41 @@ def create_rms_with_error_plot_from_sticher_dict(data_object_list: DataObjectLis
             "markersize": 5,
             "color": graph_styler.dict["color"]
         }
-        ax_rms.errorbar(x_pos, y_rms, yerr=y_error, label=label_list[i],
-                        **style_dict)  # **graph_styler.dict, label=key)  #fmt='-o')  # **graph_styler.dict
+        ax.errorbar(x_pos, y_rms, yerr=y_error, label=label_list[i],
+                    **style_dict)  # **graph_styler.dict, label=key)  #fmt='-o')  # **graph_styler.dict
         graph_styler.next_style()
     # ax_rms.set_title(f"window width = {moving_average_n*pixel_width_in_um:.1f}")
+    ax.legend()
 
-    # name = list(sticher_dict.keys())[0]
-    # name.replace(",", "").replace(" ", "_")
+
+def create_rms_with_error_plot(data_object_list: DataObjectList,
+                               pixel_width=None,
+                               label_list: Union[str, list[str]] = None,
+                               average_n: int = 8,
+                               x_units: Literal["px", "µm", "nm"] = "µm",
+                               y_units: Literal["µm", "nm"] = "µm",
+                               plotter_style: PlotterStyle = None) \
+        -> Figure:
+    """
+
+    :param data_object_list:
+    :param pixel_width:
+    :param label_list:
+    :param average_n:
+    :param x_units:
+    :param y_units:
+    :param plotter_style:
+    :return:
+    """
+    if plotter_style is None:
+        plotter_style = get_plotter_style_sigma()
+    else:
+        plotter_style = deepcopy(plotter_style)  # do not change input parameter!
+
+    result, ax_rms = plotter_style.create_preformated_figure()
+    plot_rms_with_error_to_ax(ax_rms, data_object_list, pixel_width=pixel_width, label_list=label_list,
+                              average_n=average_n, x_units=x_units, y_units=y_units, plotter_style=plotter_style)
     result.tight_layout()
-
-    ax_rms.legend()
-    # legend_handles, legend_labels = ax_rms.get_legend_handles_labels()
-    # order = [2, 0, 1]
-    # ax_rms.legend([legend_handles[idx] for idx in order], [legend_labels[idx] for idx in order], fontsize=8)
     return result
 
 
@@ -500,9 +548,9 @@ def create_summary_plot(data_object_list: DataObjectList,
     :param sticher_dict:
     :return:
     """
-    ndarray2d_list, pixel_width_list, title_list = _get_ndarray_pixel_width_and_label_lists(data_object_list,
-                                                                                            pixel_width=pixel_width,
-                                                                                            label_list=title_list)
+    ndarray2d_list, pixel_width_list, title_list, _ = _get_ax_data_lists(data_object_list,
+                                                                         pixel_width=pixel_width,
+                                                                         label_list=title_list)
     n = len(ndarray2d_list)
     if n == 0:
         result, _ = plt.subplots(1, figsize=figure_size, dpi=dpi)

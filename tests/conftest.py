@@ -59,7 +59,7 @@ def gdef_measurements(gdef_importer):
     yield gdef_measurements
 
 
-@pytest.fixture(scope="session", params=["GDEFMeasurement", "random_ndarray", "GDEFSticher"])
+@pytest.fixture(scope="function", params=["GDEFMeasurement", "random_ndarray", "GDEFSticher"])
 def data_test_cases(request, gdef_measurement, random_ndarray2d_data, gdef_sticher):
     """types representing exactly one data set"""
     case_dict = {

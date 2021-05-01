@@ -10,7 +10,7 @@ from matplotlib.figure import Figure
 
 from afm_tools.gdef_sticher import GDEFSticher
 from gdef_reporter.plotter_utils import plot_to_ax, create_plot, plot_z_histogram_to_ax, create_z_histogram_plot, \
-    _extract_ndarray_and_pixel_width, save_figure, create_rms_plot, create_rms_with_error_plot
+    _extract_ndarray_and_pixel_width, save_figure, create_rms_plot, create_rms_with_error_plot, create_summary_plot
 from tests.conftest import AUTO_SHOW
 
 ORIGINAL_FIGURE_SIZE = (4, 3.5)
@@ -86,7 +86,7 @@ class Test1DPlotZHistogram:
         if len(multiple_data_test_cases) == 1:
             assert ax1.get_title().startswith("\u03BC=")  # default title for one data set shows mu=...
         else:
-            assert ax1.get_title() == ""  # no title if no data or more than one dataset
+            assert ax1.get_title() == ""  # no default title if no data or more than one dataset
 
         assert ax1.get_xlabel() == "z [\u03BCm]"  # default units should be µm; note:  µ == \u03BC is False!
         for container in ax1.containers:
@@ -116,21 +116,13 @@ class Test1DPlotZHistogram:
         pixel_width = None
         if isinstance(multiple_data_test_cases, dict):
             pixel_width = 0.5e-6
-            # if (_list := len([data for data in multiple_data_test_cases.values() if isinstance(data, np.ndarray)]) > 0)\
-            #         and _list < len(multiple_data_test_cases):
-            #     with pytest.raises(AssertionError):
-            #         plot_z_histogram_to_ax(ax1, multiple_data_test_cases)
-            #     return
 
         plot_z_histogram_to_ax(ax1, multiple_data_test_cases, pixel_width=pixel_width, title="", add_norm=True)
         auto_show(fig1)
         assert isinstance(fig1, Figure)
-        if isinstance(multiple_data_test_cases, np.ndarray) or isinstance(multiple_data_test_cases, GDEFSticher):
-            assert len(fig1.axes[0].containers) == 1
-            assert len(fig1.axes[0].lines) == 1
-        else:
-            assert len(fig1.axes[0].containers) == len(multiple_data_test_cases)
-            assert len(fig1.axes[0].lines) != 2  # Gauss fits (add_norm=True)
+
+        assert len(fig1.axes[0].containers) == len(multiple_data_test_cases)
+        assert len(fig1.axes[0].lines) == len(multiple_data_test_cases)  # Gauss fits (add_norm=True)
 
     def test_create_z_histogram_plot__defaults(self, data_test_cases):
         # check setting figure_size and dpi and also default of parameters title, n_bins, units and add_norm
@@ -216,12 +208,13 @@ class Test1DPlotRMS:
         auto_show(fig)
 
     def test_create_rms_plot__multiple_set_parameter(self, multiple_data_test_cases):
-        labels=None
+        labels = None
         pixel_width = 0.5e-6
+        title = type(multiple_data_test_cases).__name__
         if isinstance(multiple_data_test_cases, list):
             labels = [f"{type(data).__name__}" for data in multiple_data_test_cases]
         fig = create_rms_plot(multiple_data_test_cases, label_list=labels, pixel_width=pixel_width, moving_average_n=1,
-                              subtract_average=False, units="nm")
+                              subtract_average=False, units="nm", title=title)
         assert fig.axes[0].legend_ is not None or len(multiple_data_test_cases) == 0
         assert len(multiple_data_test_cases) == len(fig.axes[0].lines)
         assert fig.axes[0].get_xlabel() == "x [nm]"
@@ -238,15 +231,25 @@ class Test1DPlotRMSWithError:
         auto_show(fig)
 
     def test_create_rms_with_error_plot__multiple(self, multiple_data_test_cases):
+        pixel_width = None
         if isinstance(multiple_data_test_cases, dict):
             if (_list := len([data for data in multiple_data_test_cases.values() if isinstance(data, np.ndarray)]) > 0)\
                     and _list < len(multiple_data_test_cases):
                 with pytest.raises(AssertionError):
                     create_rms_with_error_plot(multiple_data_test_cases)
-                return
+                pixel_width = 0.5e-6  # setting a pixel_width, np.ndarray has a length scale -> no AssertionError
 
-        fig = create_rms_with_error_plot(multiple_data_test_cases)
+        fig = create_rms_with_error_plot(multiple_data_test_cases, pixel_width=pixel_width)
         assert fig.axes[0].get_xlabel() == "x [\u03BCm]"
+        auto_show(fig)
+
+
+class TestSummaryPlot:
+    def test_create_summary_plot(self, multiple_data_test_cases):
+        pixel_width = 0.5e-6
+        title = f"{type(multiple_data_test_cases).__name__}"
+        fig = create_summary_plot(multiple_data_test_cases, pixel_width=pixel_width, title=title)
+        assert isinstance(fig, Figure)
         auto_show(fig)
 
 

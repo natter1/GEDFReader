@@ -188,7 +188,7 @@ class GraphStyler:
 # ----------------------------------------------------------------------------------------------------------------------
 # ---------------------------------------------------- graph styles ----------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
-def get_curve_style_bernhard_4(marker_size=5) -> GraphStyler:
+def get_graph_style_bernhard(marker_size=5) -> GraphStyler:
     result = GraphStyler()
     result.linestyle_map = [""]
     result.marker_map = ["o", "s", "<", ">", "D", "P", "X", "*"]  # , "x", "+", "1"]
@@ -226,28 +226,28 @@ def get_plotter_style_default(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
     return result
 
 
-def get_plotter_style_bernhard_4(dpi=300, figure_size=(5.6, 5.0), marker_size=5) -> PlotterStyle:
+def get_plotter_style_bernhard(dpi=300, figure_size=(5.6, 5.0), marker_size=5) -> PlotterStyle:
     """
-    Max. 4 different graphs (black, red, blue, green)
+   "black", "red", "blue", "limegreen", "aqua", "magenta", "orange", "sienna", "gold", "purple"
     """
     result = PlotterStyle()
     result.set(dpi=dpi, figure_size=figure_size)
-    graph_styler = GraphStyler()
-    graph_styler.linestyle_map = [""]
-    graph_styler.marker_map = ["o", "s", "<", ">"]  # ["x", "+", "1"]
-    graph_styler.marker_size = marker_size
-    graph_styler.cmap = [[0, 0, 0],  # black
-                         [1, 0, 0],  # red
-                         [0, 0, 1],  # blue
-                         [0, 1, 0]  # green
-                         ]
-    result.graph_styler = graph_styler
+    # graph_styler = GraphStyler()
+    # graph_styler.linestyle_map = [""]
+    # graph_styler.marker_map = ["o", "s", "<", ">"]  # ["x", "+", "1"]
+    # graph_styler.marker_size = marker_size
+    # graph_styler.cmap = [[0, 0, 0],  # black
+    #                      [1, 0, 0],  # red
+    #                      [0, 0, 1],  # blue
+    #                      [0, 1, 0]  # green
+    #                      ]
+    result.graph_styler = get_graph_style_bernhard()
     return result
 
 
 def get_plotter_style_xy_data(dpi=300, figure_size=(5.6, 5.0)) -> PlotterStyle:
     result = get_plotter_style_default(dpi=dpi, figure_size=figure_size)
-    result.graph_styler = get_curve_style_bernhard_4()
+    result.graph_styler = get_graph_style_bernhard()
     return result
 
 

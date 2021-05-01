@@ -139,18 +139,30 @@ def _check_pixel_width_list(pixel_width_list, x_units):
     return pixel_width_list, x_units
 
 
-def best_ratio_fit(total_size, single_size, n):
+def _copy_plotter_style(plotter_style: PlotterStyle, default: callable) -> PlotterStyle:
     """
-    Find best ratio of rows and colls to show n axes of ax_size on Figure with total_size.
+    Creates a copy of plotter_style to prevent changing the original data given as parameter.
+    If plotter_style is None, creates a new PlotterStyle-object using the callable given to default.
+    :param plotter_style: PlotterStyle instance that is copied
+    :param default: callable that returns a PlotterStyle - used if plotter_style is None
+    :return: PlotterStyle
+    """
+    if plotter_style is None:
+        plotter_style = default()
+    else:
+        plotter_style = deepcopy(plotter_style)  # do not change input parameter!
+    return plotter_style
+
+
+def best_ratio_fit(total_size: tuple[float, float], single_size: tuple[float, float], n: int):
+    """
+    Find best ratio of rows and cols to show n axes of ax_size on Figure with total_size.
     :param total_size:
     :param single_size:
     :param n:
     :return:
     """
-    # todo refactor in a seperate function
     optimal_ratio = total_size[0] / total_size[1]
-    # dummy_fig = create_plot(list(sticher_dict.values())[0], title='dummy',
-    #                         max_figure_size=self.figure_size, cropped=True)  # measurements[0].create_plot()
 
     single_plot_ratio = single_size[0] / single_size[1]
     optimal_ratio /= single_plot_ratio
@@ -159,15 +171,12 @@ def best_ratio_fit(total_size, single_size, n):
     for i in range(1, n + 1):
         for j in range(1, n + 1):
             if i * j >= n:
-                # x, y = i, j
-                # possible_ratios.append((x, y))
                 possible_ratios.append((i, j))
                 break
 
     # sort ratios by best fit to optimal ratio:
     possible_ratios[:] = sorted(possible_ratios, key=lambda ratio: abs(ratio[0] / ratio[1] - optimal_ratio))
-    # best_ratio = possible_ratios[0][1], possible_ratios[0][0]
-    return possible_ratios[0]  # [1], possible_ratios[0][0]
+    return possible_ratios[0]
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -176,10 +185,10 @@ def best_ratio_fit(total_size, single_size, n):
 def plot_to_ax(ax: Axes, data_object: DataObject, pixel_width: float = None,
                title: str = "", z_unit: Literal["nm", "µm"] = "nm") -> None:
     """
-    Plot values in values2d to given ax.
+    Plot values in data_object to given ax.
     :param ax: Axes object to which the surface should be written
     :param data_object: DataObject with surface data
-    :param pixel_width: Pixel width/height in [m]
+    :param pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
     :param title: Axes title (if '' -> shows mu and sigma (default); for no title set None)
     :param z_unit: Units for z-Axis (color coded)
     :return: None
@@ -211,16 +220,15 @@ def plot_to_ax(ax: Axes, data_object: DataObject, pixel_width: float = None,
 def create_plot(data_object: DataObject,
                 pixel_width: float = None,
                 title: str = '',
-                max_figure_size=(4, 4),
-                dpi=96,
-                cropped=True) \
+                max_figure_size: tuple[float, float] =(4, 4),
+                dpi: int = 96,
+                cropped: bool = True) \
         -> Figure:
     """
-    Creates a matplotlib Figure using given values2d-object. If cropped is True, the returned Figure has a smaller size
+    Creates a matplotlib Figure using given data_object. If cropped is True, the returned Figure has a smaller size
     than specified in max_figure_size.
-    :rtype: object
     :param data_object: DataObject with surface data
-    :param pixel_width: Pixel width/height in [m]
+    :param pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
     :param title: optional title (implemented as Figure suptitle)
     :param max_figure_size: Max. figure size of returned Figure (actual size might be smaller if cropped).
     :param dpi: dpi value of returned Figure
@@ -242,7 +250,7 @@ def create_plot(data_object: DataObject,
 # ----------------------------------------------------------------------------------------------------------------------
 def plot_z_histogram_to_ax(ax: Axes,
                            data_object_list: DataObjectList,
-                           pixel_width=None,
+                           pixel_width: Optional[Union[float, list[float]]] = None,
                            label_list: Union[str, list[str]] = None,
                            title: Optional[str] = "",
                            n_bins: int = 200,
@@ -253,6 +261,7 @@ def plot_z_histogram_to_ax(ax: Axes,
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
     :param ax: Axes object to which the surface should be written
     :param data_object_list: DataObject or list[DataObject] with surface data
+    :param pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
     :param label_list: labels for plotted data from values2d
     :param title: Axes title; if empty, mu and sigma will be shown; to prevent any subtitle, set title=None
     :param n_bins: number of equally spaced bins for histogram
@@ -353,24 +362,14 @@ def plot_rms_to_ax(ax_rms: Axes,
     """ ... """
     ndarray2d_list, pixel_width_list, label_list, x_units = _get_ax_data_lists(
         data_object_list, pixel_width=pixel_width, label_list=label_list, x_units=x_units)
-    # if None in pixel_width_list:
-    #     assert all([x is None for x in pixel_width_list]) or x_units == "px", \
-    #         "Cannot mix data with unit [px] with other data"
-    #     x_units = "px"
-    #     pixel_width_list = [1] * len(pixel_width_list)
 
     _, x_unit_label = unit_factor_and_label(x_units)
 
-    if plotter_style is None:
-        plotter_style = get_plotter_style_rms()
-    else:
-        plotter_style = deepcopy(plotter_style)
+    plotter_style = _copy_plotter_style(plotter_style, default=get_plotter_style_rms)
     plotter_style.set(x_unit=x_unit_label, ax_title=title)
-    graph_styler = plotter_style.graph_styler
-
     plotter_style.set_format_to_ax(ax_rms)
 
-    ax_rms.set_title(title)
+    graph_styler = plotter_style.graph_styler
 
     for i, ndarray_data in enumerate(ndarray2d_list):
         x_pos, y_rms = create_xy_rms_data(ndarray_data, pixel_width_list[i], moving_average_n,
@@ -409,10 +408,7 @@ def create_rms_plot(data_object_list: DataObjectList,
     :param plotter_style:
     :return:
     """
-    if plotter_style is None:
-        plotter_style = get_plotter_style_rms()
-    else:
-        plotter_style = deepcopy(plotter_style)  # do not change input parameter!
+    plotter_style = _copy_plotter_style(plotter_style, default=get_plotter_style_rms)
 
     if title:
         info = f"moving average n={moving_average_n}"
@@ -436,6 +432,7 @@ def plot_rms_with_error_to_ax(ax: Axes,
                               data_object_list: DataObjectList,
                               pixel_width=None,
                               label_list: Union[str, list[str]] = None,
+                              title: Optional[str] = "",
                               average_n: int = 8,
                               x_units: Literal["px", "µm", "nm"] = "µm",
                               y_units: Literal["µm", "nm"] = "µm",
@@ -460,12 +457,9 @@ def plot_rms_with_error_to_ax(ax: Axes,
     x_factor, x_unit_label = unit_factor_and_label(x_units)
     y_factor, y_unit_label = unit_factor_and_label(y_units)
 
-    if plotter_style is None:
-        plotter_style = get_plotter_style_sigma()
-    else:
-        plotter_style = deepcopy(plotter_style)  # do not change input parameter!
+    plotter_style = _copy_plotter_style(plotter_style, default=get_plotter_style_sigma)
 
-    plotter_style.set(x_unit=x_unit_label, y_unit=y_unit_label)
+    plotter_style.set(x_unit=x_unit_label, y_unit=y_unit_label, ax_title=title)
     graph_styler = plotter_style.graph_styler.reset()
     plotter_style.set_format_to_ax(ax)
 
@@ -499,12 +493,15 @@ def plot_rms_with_error_to_ax(ax: Axes,
                     **style_dict)  # **graph_styler.dict, label=key)  #fmt='-o')  # **graph_styler.dict
         graph_styler.next_style()
     # ax_rms.set_title(f"window width = {moving_average_n*pixel_width_in_um:.1f}")
+    if any(label for label in label_list if label is None):
+        ax.legend()
     ax.legend()
 
 
 def create_rms_with_error_plot(data_object_list: DataObjectList,
                                pixel_width=None,
                                label_list: Union[str, list[str]] = None,
+                               title: Optional[str] = "",
                                average_n: int = 8,
                                x_units: Literal["px", "µm", "nm"] = "µm",
                                y_units: Literal["µm", "nm"] = "µm",
@@ -515,17 +512,16 @@ def create_rms_with_error_plot(data_object_list: DataObjectList,
     :param data_object_list:
     :param pixel_width:
     :param label_list:
+    :param title:
     :param average_n:
     :param x_units:
     :param y_units:
     :param plotter_style:
     :return:
     """
-    if plotter_style is None:
-        plotter_style = get_plotter_style_sigma()
-    else:
-        plotter_style = deepcopy(plotter_style)  # do not change input parameter!
+    plotter_style = _copy_plotter_style(plotter_style, default=get_plotter_style_sigma)
 
+    plotter_style.set(fig_title=title)
     result, ax_rms = plotter_style.create_preformated_figure()
     plot_rms_with_error_to_ax(ax_rms, data_object_list, pixel_width=pixel_width, label_list=label_list,
                               average_n=average_n, x_units=x_units, y_units=y_units, plotter_style=plotter_style)
@@ -537,20 +533,26 @@ def create_rms_with_error_plot(data_object_list: DataObjectList,
 # ----------------------------------------------------- misc -----------------------------------------------------------
 # ----------------------------------------------------------------------------------------------------------------------
 def create_summary_plot(data_object_list: DataObjectList,
-                        pixel_width=None,
-                        title_list: Union[str, list[str]] = None,
+                        pixel_width: Optional[float] = None,
+                        ax_title_list: Union[str, list[str]] = None,
                         title: Optional[str] = "",
-                        figure_size=(16, 10),
-                        dpi=96):
+                        figure_size: tuple[float, float] = (16, 10),
+                        dpi: int = 96):
     """
     Creates a Figure with stiched maps for each GDEFSticher in sticher_dict. The keys in sticher_dict
     are used as titles for the corresponding Axes.
-    :param sticher_dict:
+
+    :param data_object_list:
+    :param pixel_width:
+    :param ax_title_list:
+    :param title:
+    :param figure_size:
+    :param dpi:
     :return:
     """
-    ndarray2d_list, pixel_width_list, title_list, _ = _get_ax_data_lists(data_object_list,
-                                                                         pixel_width=pixel_width,
-                                                                         label_list=title_list)
+    ndarray2d_list, pixel_width_list, ax_title_list, _ = _get_ax_data_lists(data_object_list,
+                                                                            pixel_width=pixel_width,
+                                                                            label_list=ax_title_list)
     n = len(ndarray2d_list)
     if n == 0:
         result, _ = plt.subplots(1, figsize=figure_size, dpi=dpi)
@@ -567,10 +569,13 @@ def create_summary_plot(data_object_list: DataObjectList,
         ax_list = np.asarray([ax_list])
 
     for i, data_object in enumerate(ndarray2d_list):
-        plot_to_ax(ax_list.flatten('F')[i], data_object, pixel_width_list[i], title=title_list[i])
+        plot_to_ax(ax_list.flatten('F')[i], data_object, pixel_width_list[i], title=ax_title_list[i])
 
     for ax in ax_list.flatten('F')[n:]:
         ax.set_axis_off()
+
+    if title:
+        result.suptitle(title)
 
     result.tight_layout()
     return result

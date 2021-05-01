@@ -11,8 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.figure import Figure
 
-# from afm_tools.gdef_sticher import GDEFSticher
-from gdef_reader.utils import create_absolute_gradient_array, get_mu_sigma
+from gdef_reader.utils import create_absolute_gradient_array
 from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
 from gdef_reporter.plotter_utils import create_plot, create_rms_plot, create_summary_plot, \
     create_rms_with_error_plot
@@ -35,7 +34,7 @@ class GDEFPlotter:
         self.plotter_style_sigma: PlotterStyle = get_plotter_style_sigma(dpi=dpi, figure_size=figure_size)
         self.auto_show = auto_show
 
-        # todo: iplement auto save functionality
+        # todo: implement auto save functionality
         self.auto_save = False
         self.save_path = None
         # method to save figures as pdf or png

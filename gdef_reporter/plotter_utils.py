@@ -32,7 +32,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import norm
 
 from gdef_reader.utils import create_xy_rms_data, unit_factor_and_label, get_mu_sigma
-from gdef_reporter.plotter_styles import get_plotter_style_rms, PlotterStyle, get_plotter_style_sigma
+from gdef_reporter.plotter_styles import get_plotter_style_rms, PlotterStyle, get_plotter_style_sigma, \
+    get_histogram_style_bernhard, get_plotter_style_bernhard, get_plotter_style_histogram
 
 if TYPE_CHECKING:
     from afm_tools.gdef_sticher import GDEFSticher
@@ -255,7 +256,8 @@ def plot_z_histogram_to_ax(ax: Axes,
                            title: Optional[str] = "",
                            n_bins: int = 200,
                            units: Literal["µm", "nm"] = "µm",
-                           add_norm: bool = False) \
+                           add_norm: bool = False,
+                           plotter_style=None) \
         -> None:
     """
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
@@ -267,14 +269,19 @@ def plot_z_histogram_to_ax(ax: Axes,
     :param n_bins: number of equally spaced bins for histogram
     :param units: Can be set to µm or nm (default is µm).
     :param add_norm: if True (default), show normal/gaussian probability density function for each distribution
+    :param plotter_style:
     :return: None
     """
     unit_factor, unit_label = unit_factor_and_label(units)
     ndarray2d_list, _, label_list, _ = _get_ax_data_lists(
         data_object_list, pixel_width=pixel_width, label_list=label_list)
 
-    colors = ["black", "red", "blue", "green", "cyan", "magenta", "yellow"]
-    colors_list = []
+    if plotter_style is None:
+        plotter_style = get_plotter_style_histogram(nbins=n_bins)
+    else:
+        plotter_style = deepcopy(plotter_style)
+    histogram_styler = plotter_style.hist_styler
+
     z_values_list = []
     norm_fit_lines = []
     norm_x_values_list = []
@@ -289,26 +296,22 @@ def plot_z_histogram_to_ax(ax: Axes,
         z_values_list.append(z_values)
         norm_fit_lines.append(norm_fit_line)
         norm_x_values_list.append(norm_x_values)
-        # todo: implement proper solution for colors
-        colors_list.append(colors[len(colors_list) % len(colors)])
 
     for i in range(len(z_values_list)):
-        _, _, patch = ax.hist(z_values_list[i], density=True, bins=n_bins, edgecolor=colors_list[i], lw=1,
-                              label=label_list[i],
-                              fc=to_rgba(colors_list[i], alpha=0.3), rwidth=1, histtype="bar", fill=True)
+        _, _, patch = ax.hist(z_values_list[i], label=label_list[i], **histogram_styler.dict)
+        histogram_styler.next_style()
 
     if add_norm:
+        histogram_styler.reset()
         for i, line in enumerate(norm_fit_lines):
-            ax.plot(norm_x_values_list[i], line, c=colors_list[i])
+            ax.plot(norm_x_values_list[i], line, c=histogram_styler._color())
+            histogram_styler.next_style()
 
-    # todo: consider a PlotterStyle instead
-    ax.set_xlabel(f'z [{unit_label}]')
-    ax.set_ylabel('Normalized counts')
-    # ax.grid(True)
-    if title:
-        ax.set_title(f"{title}")
-    elif title is not None and len(ndarray2d_list) == 1:
-        ax.set_title(f"\u03BC={mu:.2f}, \u03C3={sigma:.2f}")
+    if title == "" and len(ndarray2d_list) == 1:
+        title = f"\u03BC={mu:.2f}, \u03C3={sigma:.2f}"
+
+    plotter_style.set(x_unit=unit_label, ax_title=title)
+    plotter_style.set_format_to_ax(ax)
 
     if any(label_list):
         ax.legend()
@@ -323,8 +326,7 @@ def create_z_histogram_plot(data_object_list: DataObjectList,
                             n_bins: int = 200,
                             units: Literal["µm", "nm"] = "µm",
                             add_norm: bool = False,
-                            figure_size: tuple[float, float] = (6, 3),
-                            dpi: int = 96) \
+                            plotter_style: PlotterStyle = None) \
         -> Figure:
     """
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
@@ -336,12 +338,19 @@ def create_z_histogram_plot(data_object_list: DataObjectList,
     :param add_norm: if True (default), show normal/gaussian probability density function for each distribution
     :param figure_size:
     :param dpi:
+    :param plotter_style:
     :return: Figure
     """
-    result, ax = plt.subplots(1, 1, figsize=figure_size, tight_layout=True, dpi=dpi)
+    if plotter_style is None:
+        plotter_style = get_plotter_style_histogram(nbins=n_bins)
+    else:
+        plotter_style = deepcopy(plotter_style)
+
     if title:
-        result.suptitle(title)
+        plotter_style.set(fig_title=title)
         title = None
+
+    result, ax = plotter_style.create_preformated_figure()
 
     plot_z_histogram_to_ax(ax, data_object_list, pixel_width, labels, title, n_bins, units, add_norm)
     return result

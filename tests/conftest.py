@@ -21,7 +21,7 @@ import pytest
 from afm_tools.gdef_sticher import GDEFSticher
 from gdef_reader.gdef_importer import GDEFImporter
 
-AUTO_SHOW = True  # False
+AUTO_SHOW = True
 
 @pytest.fixture(scope='session')
 def gdf_example_01_path():

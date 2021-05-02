@@ -9,6 +9,7 @@ import pytest
 from matplotlib.figure import Figure
 
 from afm_tools.gdef_sticher import GDEFSticher
+from gdef_reporter.plotter_styles import get_plotter_style_histogram
 from gdef_reporter.plotter_utils import plot_to_ax, create_plot, plot_z_histogram_to_ax, create_z_histogram_plot, \
     _extract_ndarray_and_pixel_width, save_figure, create_rms_plot, create_rms_with_error_plot, create_summary_plot
 from tests.conftest import AUTO_SHOW
@@ -126,11 +127,9 @@ class Test1DPlotZHistogram:
 
     def test_create_z_histogram_plot__defaults(self, data_test_cases):
         # check setting figure_size and dpi and also default of parameters title, n_bins, units and add_norm
-        fig1 = create_z_histogram_plot(data_test_cases, figure_size=ORIGINAL_FIGURE_SIZE, dpi=ORIGINAL_DPI)
+        fig1 = create_z_histogram_plot(data_test_cases)
         auto_show(fig1)
         assert type(fig1) is Figure
-        assert np.any(fig1.get_size_inches() == ORIGINAL_FIGURE_SIZE)
-        assert fig1.dpi == ORIGINAL_DPI
         assert len(fig1.axes[0].lines) == 0  # no Gauss fit (expected default behaviour)
         assert fig1.axes[0].get_title().startswith("\u03BC=")  # default title starts with mu=...
         assert fig1.axes[0].get_xlabel() == "z [\u03BCm]"  # default units should be µm; note:  µ == \u03BC is False!
@@ -141,17 +140,20 @@ class Test1DPlotZHistogram:
         labels = type(data_test_cases).__name__
         title = "Use [nm] and Gauss fit"
         n_bins = 20
-        fig1 = create_z_histogram_plot(data_test_cases, labels, n_bins=n_bins, title=title, units="nm",
-                                       add_norm=True, figure_size=ORIGINAL_FIGURE_SIZE, dpi=ORIGINAL_DPI)
+        plotter_style = get_plotter_style_histogram(ORIGINAL_DPI, ORIGINAL_FIGURE_SIZE)
+        fig1 = create_z_histogram_plot(data_test_cases, labels, n_bins=n_bins, title=title, units="nm", add_norm=True,
+                                       plotter_style=plotter_style)
         auto_show(fig1)
         assert len(fig1.axes[0].lines) == 1  # Gauss fit (add_norm=True)
+        assert np.any(fig1.get_size_inches() == ORIGINAL_FIGURE_SIZE)
+        assert fig1.dpi == ORIGINAL_DPI
         assert fig1._suptitle.get_text() == title
         assert fig1.axes[0].get_title() == ""
         assert str(fig1.axes[0].get_xlabel()) == str(f"z [nm]")  # note: comparison between µ and \u03BC is False!
         assert len(fig1.axes[0].containers[0]) == n_bins  # default n_bins should be 200
 
         # second, check no title via title=None
-        fig2 = create_z_histogram_plot(data_test_cases, title=None, figure_size=ORIGINAL_FIGURE_SIZE, dpi=ORIGINAL_DPI)
+        fig2 = create_z_histogram_plot(data_test_cases, title=None)
         auto_show(fig2)
         assert fig2._suptitle is None
         assert fig2.axes[0].get_title() == ""

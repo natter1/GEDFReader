@@ -26,14 +26,13 @@ from typing import TYPE_CHECKING, Union, Literal, Optional
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
-from matplotlib.colors import to_rgba
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import norm
 
 from gdef_reader.utils import create_xy_rms_data, unit_factor_and_label, get_mu_sigma
 from gdef_reporter.plotter_styles import get_plotter_style_rms, PlotterStyle, get_plotter_style_sigma, \
-    get_histogram_style_bernhard, get_plotter_style_bernhard, get_plotter_style_histogram
+    get_plotter_style_histogram
 
 if TYPE_CHECKING:
     from afm_tools.gdef_sticher import GDEFSticher
@@ -155,13 +154,13 @@ def _copy_plotter_style(plotter_style: PlotterStyle, default: callable) -> Plott
     return plotter_style
 
 
-def best_ratio_fit(total_size: tuple[float, float], single_size: tuple[float, float], n: int):
+def best_ratio_fit(total_size: tuple[float, float], single_size: tuple[float, float], n: int) -> tuple[int, int]:
     """
     Find best ratio of rows and cols to show n axes of ax_size on Figure with total_size.
-    :param total_size:
-    :param single_size:
-    :param n:
-    :return:
+    :param total_size: total size available for n axes
+    :param single_size: size of one axes
+    :param n: number of axes to plot on total size
+    :return: best ratio (rows and cols)
     """
     optimal_ratio = total_size[0] / total_size[1]
 
@@ -269,7 +268,7 @@ def plot_z_histogram_to_ax(ax: Axes,
     :param n_bins: number of equally spaced bins for histogram
     :param units: Can be set to µm or nm (default is µm).
     :param add_norm: if True (default), show normal/gaussian probability density function for each distribution
-    :param plotter_style:
+    :param plotter_style: PlotterStyle to format Axes-object (default: None -> use default format)
     :return: None
     """
     unit_factor, unit_label = unit_factor_and_label(units)
@@ -330,15 +329,13 @@ def create_z_histogram_plot(data_object_list: DataObjectList,
         -> Figure:
     """
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
-    :param data_object_list:DataObjectList
+    :param data_object_list: DataObjectList
     :param labels: labels for plotted data from values2d
     :param title: Figure title; if empty, mu and sigma will be shown as axes subtitle(use title=None to prevent this)
     :param n_bins: number of equally spaced bins for histogram
     :param units: Can be set to µm or nm (default is µm).
     :param add_norm: if True (default), show normal/gaussian probability density function for each distribution
-    :param figure_size:
-    :param dpi:
-    :param plotter_style:
+    :param plotter_style: PlotterStyle to format Figure-object (default: None -> use default format)
     :return: Figure
     """
     if plotter_style is None:
@@ -356,7 +353,7 @@ def create_z_histogram_plot(data_object_list: DataObjectList,
     return result
 
 
-def plot_rms_to_ax(ax_rms: Axes,
+def plot_rms_to_ax(ax: Axes,
                    data_object_list: DataObjectList,
                    pixel_width=None,
                    label_list: Union[str, list[str]] = None,
@@ -364,11 +361,24 @@ def plot_rms_to_ax(ax_rms: Axes,
                    moving_average_n: int = 200,
                    x_offset=0,
                    x_units: Literal["µm", "nm"] = "µm",
-                   subtract_average=True,  # <- todo:should this be True or False?
+                   subtract_average=True,  # <- todo:should this be True or False by default?
                    plotter_style=None
                    ) \
         -> None:
-    """ ... """
+    """
+    Plot a diagram to ax, showing a the root mean square roughness per column in for data in data_object_list.
+    :param ax: Axes object to which the surface should be written
+    :param data_object_list: DataObjectList
+    :param pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
+    :param label_list: List with labels (str) for legend entries. If data_object_list is a dict, the keys are used.
+    :param title: Optional axes title
+    :param moving_average_n: Number of columns to average over
+    :param x_offset: move data along x-axis
+    :param x_units: unit for x-axis (µm or nm)
+    :param subtract_average: Subtract average for each average_window (it might be better to subtract a global average)
+    :param plotter_style: PlotterStyle to format Figure-object (default: None -> use default format)
+    :return: None
+    """
     ndarray2d_list, pixel_width_list, label_list, x_units = _get_ax_data_lists(
         data_object_list, pixel_width=pixel_width, label_list=label_list, x_units=x_units)
 
@@ -376,7 +386,7 @@ def plot_rms_to_ax(ax_rms: Axes,
 
     plotter_style = _copy_plotter_style(plotter_style, default=get_plotter_style_rms)
     plotter_style.set(x_unit=x_unit_label, ax_title=title)
-    plotter_style.set_format_to_ax(ax_rms)
+    plotter_style.set_format_to_ax(ax)
 
     graph_styler = plotter_style.graph_styler
 
@@ -386,11 +396,11 @@ def plot_rms_to_ax(ax_rms: Axes,
                                           y_units=plotter_style.y_unit)
 
         x_pos = [x + x_offset for x in x_pos]
-        ax_rms.plot(x_pos, y_rms, **graph_styler.dict, label=label_list[i])
+        ax.plot(x_pos, y_rms, **graph_styler.dict, label=label_list[i])
         graph_styler.next_style()
 
         if any(label_list):
-            ax_rms.legend()
+            ax.legend()
 
 
 def create_rms_plot(data_object_list: DataObjectList,
@@ -399,23 +409,22 @@ def create_rms_plot(data_object_list: DataObjectList,
                     title: str = "",
                     moving_average_n: int = 200,
                     x_offset=0,
-                    units: Literal["µm", "nm"] = "µm",
+                    x_units: Literal["µm", "nm"] = "µm",
                     subtract_average=True,
                     plotter_style: PlotterStyle = None) \
         -> Figure:
     """
-    Creates a matplotlib figure, showing a graph of the root mean square of the gradient of the GDEFSticher objects in
-    data_dict. The key value in data_dict is used as label in the legend.
-    :param data_object_list:
+    Creates a matplotlib figure, showing a graph of the root mean square roughness per column.
+    :param data_object_list: DataObjectList
     :param pixel_width: has to be set, if data_object_list contains 1 or more np.ndarry (for varying values, use a list)
-    :param label_list:
-    :param title:
-    :param moving_average_n:
-    :param x_offset:
-    :param units:
-    :param subtract_average:
-    :param plotter_style:
-    :return:
+    :param label_list: List with labels (str) for legend entries. If data_object_list is a dict, the keys are used.
+    :param title: Optional Figure title
+    :param moving_average_n: Number of columns to average over
+    :param x_offset: move data along x-axis
+    :param x_units: unit for x-axis (µm or nm)
+    :param subtract_average: Subtract average for each average_window (it might be better to subtract a global average)
+    :param plotter_style: PlotterStyle to format Figure-object (default: None -> use default format)
+    :return: Figure
     """
     plotter_style = _copy_plotter_style(plotter_style, default=get_plotter_style_rms)
 
@@ -433,7 +442,7 @@ def create_rms_plot(data_object_list: DataObjectList,
 
     plot_rms_to_ax(ax, data_object_list, pixel_width=pixel_width, label_list=label_list,
                    moving_average_n=moving_average_n, x_offset=x_offset, subtract_average=subtract_average,
-                   x_units=units, plotter_style=plotter_style)
+                   x_units=x_units, plotter_style=plotter_style)
     return result
 
 
@@ -447,16 +456,17 @@ def plot_rms_with_error_to_ax(ax: Axes,
                               y_units: Literal["µm", "nm"] = "µm",
                               plotter_style: PlotterStyle = None):
     """
-
-    :param ax:
-    :param data_object_list:
-    :param pixel_width:
-    :param label_list:
-    :param average_n:
-    :param x_units:
+    Plot a diagram to ax, showing the root mean square roughness per column in for data in data_object_list.
+    The error-bars are calculated as standard deviation of columns (average_n) used per data point.
+    :param ax: Axes object to which the surface should be written
+    :param data_object_list: DataObjectList
+    :param pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
+    :param label_list: List with labels (str) for legend entries. If data_object_list is a dict, the keys are used.
+    :param average_n: Number of columns to average over
+    :param x_units: unit for x-axis (µm or nm)
     :param y_units:
-    :param plotter_style:
-    :return:
+    :param plotter_style: PlotterStyle to format Figure-object (default: None -> use default format)
+    :return: None
     """
     ndarray2d_list, pixel_width_list, label_list, x_units = _get_ax_data_lists(
         data_object_list, pixel_width=pixel_width, label_list=label_list, x_units=x_units)
@@ -517,16 +527,17 @@ def create_rms_with_error_plot(data_object_list: DataObjectList,
                                plotter_style: PlotterStyle = None) \
         -> Figure:
     """
-
-    :param data_object_list:
-    :param pixel_width:
-    :param label_list:
-    :param title:
-    :param average_n:
-    :param x_units:
+    Create a diagram, showing the root mean square roughness per column in for data in data_object_list.
+    The error-bars are calculated as standard deviation of columns (average_n) used per data point.
+    :param data_object_list: DataObjectList
+    :param pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
+    :param label_list: List with labels (str) for legend entries. If data_object_list is a dict, the keys are used.
+    :param title: Optional Figure title
+    :param average_n: Number of columns to average over
+    :param x_units: unit for x-axis (µm or nm)
     :param y_units:
-    :param plotter_style:
-    :return:
+    :param plotter_style: PlotterStyle to format Figure-object (default: None -> use default format)
+    :return: None
     """
     plotter_style = _copy_plotter_style(plotter_style, default=get_plotter_style_sigma)
 
@@ -546,18 +557,18 @@ def create_summary_plot(data_object_list: DataObjectList,
                         ax_title_list: Union[str, list[str]] = None,
                         title: Optional[str] = "",
                         figure_size: tuple[float, float] = (16, 10),
-                        dpi: int = 96):
+                        dpi: int = 96)\
+        -> Figure:
     """
-    Creates a Figure with stiched maps for each GDEFSticher in sticher_dict. The keys in sticher_dict
-    are used as titles for the corresponding Axes.
-
-    :param data_object_list:
-    :param pixel_width:
-    :param ax_title_list:
-    :param title:
+    Creates a Figure with area-plots for each DataObject in data_object_list. Automatically determines best number of
+    rows and cols. Works best, if all area-plots have the same aspect ratio.
+    :param data_object_list: DataObjectList
+    :param pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
+    :param ax_title_list: Optional tiles for subplots
+    :param title: Figure title
     :param figure_size:
     :param dpi:
-    :return:
+    :return: Figure
     """
     ndarray2d_list, pixel_width_list, ax_title_list, _ = _get_ax_data_lists(data_object_list,
                                                                             pixel_width=pixel_width,
@@ -591,6 +602,7 @@ def create_summary_plot(data_object_list: DataObjectList,
 
 
 def split_dict_in_data_and_label_list(data_dict_list: dict[str: DataObject]):
+    """deprecated"""
     label_list = []
     data_object_list = []
     for key, value in data_dict_list.items():

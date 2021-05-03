@@ -53,8 +53,8 @@ def subtract_mean_gradient_plane(array2d: np.ndarray, keep_offset: bool = False)
     """
     Returns 2d numpy.ndarray with subtracted mean gradient plane from given array2d. Using the gradient might give
      better results, when the measurement has asymmetric structures like large objects on a surface.
-                                  ____________________
-    example: ____________________|                   |__
+                                  _ _ _ _ _ _ _ _ _ _
+    example: ____________________|                  |__
     """
     # result = array2d[:] # !!! slicing of np.ndarray only cretes viw, not copy !!!
     result = array2d.copy()  # !!! slicing of np.ndarray only cretes viw, not copy !!!

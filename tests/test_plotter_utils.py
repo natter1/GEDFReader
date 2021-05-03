@@ -191,7 +191,7 @@ class Test1DPlotRMS:
         pixel_width = 0.5e-9  # define a length scale for np.ndarray
         labels = f"{type(data_test_cases).__name__}"
         fig = create_rms_plot(data_test_cases, label_list=labels, pixel_width=pixel_width, moving_average_n=1,
-                              subtract_average=True, units="nm")
+                              subtract_average=True, x_units="nm")
         assert isinstance(fig, Figure)
         assert fig.axes[0].get_xlabel() == "x [nm]"
         assert fig.axes[0].legend_ is not None
@@ -216,7 +216,7 @@ class Test1DPlotRMS:
         if isinstance(multiple_data_test_cases, list):
             labels = [f"{type(data).__name__}" for data in multiple_data_test_cases]
         fig = create_rms_plot(multiple_data_test_cases, label_list=labels, pixel_width=pixel_width, moving_average_n=1,
-                              subtract_average=False, units="nm", title=title)
+                              subtract_average=False, x_units="nm", title=title)
         assert fig.axes[0].legend_ is not None or len(multiple_data_test_cases) == 0
         assert len(multiple_data_test_cases) == len(fig.axes[0].lines)
         assert fig.axes[0].get_xlabel() == "x [nm]"

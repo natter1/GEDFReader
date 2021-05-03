@@ -416,6 +416,61 @@ for each stiching step (using matplotlib plt.show()).
 Module afm_tools.background_correction
 --------------------------------------
 
+**Functions:**
+
+* **correct_background**
+
+    .. code:: python
+
+        correct_background(array2d: numpy.ndarray, correction_type: afm_tools.background_correction.BGCorrectionType, keep_offset: bool = False) -> Optional[numpy.ndarray]
+
+    Returns a numpy.ndarray with corrections given by parameters. Input array2d is not changed.
+
+
+    :array2d:
+
+    :correction_type:
+
+    :keep_offset:
+
+    :return: ndarray
+
+* **subtract_legendre_fit**
+
+    .. code:: python
+
+        subtract_legendre_fit(array2d: numpy.ndarray, keep_offset: bool = False, deg: int = 1) -> Optional[numpy.ndarray]
+
+    Use a legendre polynomial fit of degree legendre_deg in X and Y direction to correct background.
+    legendre_deg = 0 ... subtract mean value
+    legendre_deg = 1 ... subtract mean plane
+    legendre_deg = 2 ... subtract simple curved mean surface
+    legendre_deg = 3 ... also corrects "s-shaped" distortion
+    ...
+
+* **subtract_mean_gradient_plane**
+
+    .. code:: python
+
+        subtract_mean_gradient_plane(array2d: numpy.ndarray, keep_offset: bool = False) -> Optional[numpy.ndarray]
+
+    Returns 2d numpy.ndarray with subtracted mean gradient plane from given array2d. Using the gradient might give
+     better results, when the measurement has asymmetric structures like large objects on a surface.
+                                  _ _ _ _ _ _ _ _ _ _
+    example: ____________________|                  |__
+
+* **subtract_mean_level**
+
+    .. code:: python
+
+        subtract_mean_level(array2d: numpy.ndarray) -> numpy.ndarray
+
+    Correct an offset in the array2d by subtracting the mean level.
+
+    :array2d:
+
+    :return: ndarray
+
 class BGCorrectionType
 ~~~~~~~~~~~~~~~~~~~~~~
 .. figure:: https://github.com/natter1/gdef_reader/raw/master/docs/images/BGCorrectionType_example01.png
@@ -429,3 +484,271 @@ class BGCorrectionType
 * legendre_2
 * legendre_3
 * raw_data
+
+Module gdef_reporter.plotter_utils
+----------------------------------
+
+**Functions:**
+
+* **best_ratio_fit**
+
+    .. code:: python
+
+        best_ratio_fit(total_size: 'tuple[float, float]', single_size: 'tuple[float, float]', n: 'int') -> 'tuple[int, int]'
+
+    Find best ratio of rows and cols to show n axes of ax_size on Figure with total_size.
+
+    :total_size: total size available for n axes
+
+    :single_size: size of one axes
+
+    :n: number of axes to plot on total size
+
+    :return: best ratio (rows and cols)
+
+* **create_plot**
+
+    .. code:: python
+
+        create_plot(data_object: 'DataObject', pixel_width: 'float' = None, title: 'str' = '', max_figure_size: 'tuple[float, float]' = (4, 4), dpi: 'int' = 96, cropped: 'bool' = True) -> 'Figure'
+
+    Creates a matplotlib Figure using given data_object. If cropped is True, the returned Figure has a smaller size
+    than specified in max_figure_size.
+
+    :data_object: DataObject with surface data
+
+    :pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
+
+    :title: optional title (implemented as Figure suptitle)
+
+    :max_figure_size: Max. figure size of returned Figure (actual size might be smaller if cropped).
+
+    :dpi: dpi value of returned Figure
+
+    :cropped: Crop the result Figure (default is True). Useful if aspect ratio of Figure and plot differ.
+
+    :return: Figure
+
+* **create_rms_plot**
+
+    .. code:: python
+
+        create_rms_plot(data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'str' = '', moving_average_n: 'int' = 200, x_offset=0, x_units: "Literal['�m', 'nm']" = '�m', subtract_average=True, plotter_style: 'PlotterStyle' = None) -> 'Figure'
+
+    Creates a matplotlib figure, showing a graph of the root mean square roughness per column.
+
+    :data_object_list: DataObjectList
+
+    :pixel_width: has to be set, if data_object_list contains 1 or more np.ndarry (for varying values, use a list)
+
+    :label_list: List with labels (str) for legend entries. If data_object_list is a dict, the keys are used.
+
+    :title: Optional Figure title
+
+    :moving_average_n: Number of columns to average over
+
+    :x_offset: move data along x-axis
+
+    :x_units: unit for x-axis (�m or nm)
+
+    :subtract_average: Subtract average for each average_window (it might be better to subtract a global average)
+
+    :plotter_style: PlotterStyle to format Figure-object (default: None -> use default format)
+
+    :return: Figure
+
+* **create_rms_with_error_plot**
+
+    .. code:: python
+
+        create_rms_with_error_plot(data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', average_n: 'int' = 8, x_units: "Literal['px', '�m', 'nm']" = '�m', y_units: "Literal['�m', 'nm']" = '�m', plotter_style: 'PlotterStyle' = None) -> 'Figure'
+
+    Create a diagram, showing the root mean square roughness per column in for data in data_object_list.
+    The error-bars are calculated as standard deviation of columns (average_n) used per data point.
+
+    :data_object_list: DataObjectList
+
+    :pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
+
+    :label_list: List with labels (str) for legend entries. If data_object_list is a dict, the keys are used.
+
+    :title: Optional Figure title
+
+    :average_n: Number of columns to average over
+
+    :x_units: unit for x-axis (�m or nm)
+
+    :y_units:
+
+    :plotter_style: PlotterStyle to format Figure-object (default: None -> use default format)
+
+    :return: None
+
+* **create_summary_plot**
+
+    .. code:: python
+
+        create_summary_plot(data_object_list: 'DataObjectList', pixel_width: 'Optional[float]' = None, ax_title_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', figure_size: 'tuple[float, float]' = (16, 10), dpi: 'int' = 96) -> 'Figure'
+
+    Creates a Figure with area-plots for each DataObject in data_object_list. Automatically determines best number of
+    rows and cols. Works best, if all area-plots have the same aspect ratio.
+
+    :data_object_list: DataObjectList
+
+    :pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
+
+    :ax_title_list: Optional tiles for subplots
+
+    :title: Figure title
+
+    :figure_size:
+
+    :dpi:
+
+    :return: Figure
+
+* **create_z_histogram_plot**
+
+    .. code:: python
+
+        create_z_histogram_plot(data_object_list: 'DataObjectList', pixel_width=None, labels: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', n_bins: 'int' = 200, units: "Literal['�m', 'nm']" = '�m', add_norm: 'bool' = False, plotter_style: 'PlotterStyle' = None) -> 'Figure'
+
+    Also accepts a list of np.ndarray data (for plotting several histograms stacked)
+
+    :data_object_list: DataObjectList
+
+    :labels: labels for plotted data from values2d
+
+    :title: Figure title; if empty, mu and sigma will be shown as axes subtitle(use title=None to prevent this)
+
+    :n_bins: number of equally spaced bins for histogram
+
+    :units: Can be set to �m or nm (default is �m).
+
+    :add_norm: if True (default), show normal/gaussian probability density function for each distribution
+
+    :plotter_style: PlotterStyle to format Figure-object (default: None -> use default format)
+
+    :return: Figure
+
+* **plot_rms_to_ax**
+
+    .. code:: python
+
+        plot_rms_to_ax(ax: 'Axes', data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', moving_average_n: 'int' = 200, x_offset=0, x_units: "Literal['�m', 'nm']" = '�m', subtract_average=True, plotter_style=None) -> 'None'
+
+    Plot a diagram to ax, showing a the root mean square roughness per column in for data in data_object_list.
+
+    :ax: Axes object to which the surface should be written
+
+    :data_object_list: DataObjectList
+
+    :pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
+
+    :label_list: List with labels (str) for legend entries. If data_object_list is a dict, the keys are used.
+
+    :title: Optional axes title
+
+    :moving_average_n: Number of columns to average over
+
+    :x_offset: move data along x-axis
+
+    :x_units: unit for x-axis (�m or nm)
+
+    :subtract_average: Subtract average for each average_window (it might be better to subtract a global average)
+
+    :plotter_style: PlotterStyle to format Figure-object (default: None -> use default format)
+
+    :return: None
+
+* **plot_rms_with_error_to_ax**
+
+    .. code:: python
+
+        plot_rms_with_error_to_ax(ax: 'Axes', data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', average_n: 'int' = 8, x_units: "Literal['px', '�m', 'nm']" = '�m', y_units: "Literal['�m', 'nm']" = '�m', plotter_style: 'PlotterStyle' = None)
+
+    Plot a diagram to ax, showing the root mean square roughness per column in for data in data_object_list.
+    The error-bars are calculated as standard deviation of columns (average_n) used per data point.
+
+    :ax: Axes object to which the surface should be written
+
+    :data_object_list: DataObjectList
+
+    :pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
+
+    :label_list: List with labels (str) for legend entries. If data_object_list is a dict, the keys are used.
+
+    :average_n: Number of columns to average over
+
+    :x_units: unit for x-axis (�m or nm)
+
+    :y_units:
+
+    :plotter_style: PlotterStyle to format Figure-object (default: None -> use default format)
+
+    :return: None
+
+* **plot_to_ax**
+
+    .. code:: python
+
+        plot_to_ax(ax: 'Axes', data_object: 'DataObject', pixel_width: 'float' = None, title: 'str' = '', z_unit: "Literal['nm', '�m']" = 'nm') -> 'None'
+
+    Plot values in data_object to given ax.
+
+    :ax: Axes object to which the surface should be written
+
+    :data_object: DataObject with surface data
+
+    :pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
+
+    :title: Axes title (if '' -> shows mu and sigma (default); for no title set None)
+
+    :z_unit: Units for z-Axis (color coded)
+
+    :return: None
+
+* **plot_z_histogram_to_ax**
+
+    .. code:: python
+
+        plot_z_histogram_to_ax(ax: 'Axes', data_object_list: 'DataObjectList', pixel_width: 'Optional[Union[float, list[float]]]' = None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', n_bins: 'int' = 200, units: "Literal['�m', 'nm']" = '�m', add_norm: 'bool' = False, plotter_style=None) -> 'None'
+
+    Also accepts a list of np.ndarray data (for plotting several histograms stacked)
+
+    :ax: Axes object to which the surface should be written
+
+    :data_object_list: DataObject or list[DataObject] with surface data
+
+    :pixel_width: Pixel width/height in [m] (only used, if data_object has no pixel_width attribute)
+
+    :label_list: labels for plotted data from values2d
+
+    :title: Axes title; if empty, mu and sigma will be shown; to prevent any subtitle, set title=None
+
+    :n_bins: number of equally spaced bins for histogram
+
+    :units: Can be set to �m or nm (default is �m).
+
+    :add_norm: if True (default), show normal/gaussian probability density function for each distribution
+
+    :plotter_style: PlotterStyle to format Axes-object (default: None -> use default format)
+
+    :return: None
+
+* **save_figure**
+
+    .. code:: python
+
+        save_figure(figure: 'Figure', output_path: 'Path', filename: 'str', png: 'bool' = True, pdf: 'bool' = False) -> 'None'
+
+    Helper function to save a matplotlib figure as png and or pdf. Automatically creates output_path, if necessary.
+    Does nothing if given output_path is None.
+
+* **split_dict_in_data_and_label_list**
+
+    .. code:: python
+
+        split_dict_in_data_and_label_list(data_dict_list: 'dict[str:DataObject]')
+
+    deprecated

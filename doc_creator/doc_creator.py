@@ -11,13 +11,15 @@ from typing import Tuple
 import gdef_reader.gdef_importer as gdef_importer
 from afm_tools import background_correction, gdef_sticher, gdef_indent_analyzer
 from gdef_reader import gdef_measurement
+from gdef_reporter import plotter_utils
 
 module_list = [
     gdef_importer,
     gdef_indent_analyzer,
     gdef_measurement,
     gdef_sticher,
-    background_correction
+    background_correction,
+    plotter_utils
 ]
 
 
@@ -160,18 +162,43 @@ def get_class_doc(cl: Tuple[str, type]) -> str:
 #     ' checks that func is a function defined in module mod '
 #     return inspect.isfunction(func) and inspect.getmodule(func) == mod
 
-def get_module_doc(module: ModuleType):
-    result = [get_python_module_header(module)]
 
+def get_functions_doc(module):
+    result = []
     for func in inspect.getmembers(module, inspect.isfunction):
-        # print(f"module: {module}")
-        # print(f"func: {func}")
-        # print(f"get_module: {inspect.getmodule(func)}")
         if func[0].startswith("_"):  # Consider anything that starts with _ private and don't document it.
             continue
         if inspect.getmodule(func[1]) != module:
             continue
-        result.append(get_methods_from_class_doc(func))
+
+        if func[0].startswith("_") and not func[0] == '__init__':  # Consider anything that starts with _ private and don't document it.
+            return result
+        result.append('\n* **' + func[0] + '**\n')  # Get the signature
+
+        result.append(create_python_block(func[0] + str(inspect.signature(func[1])), n_indent=1))
+        doc = inspect.getdoc(func[1])
+        if doc:
+            doc = doc.replace(':param ', '\n:').replace(':return:', '\n:return:')
+            doc = textwrap.indent(doc, '    ')
+            result.append(doc + "\n")
+    if len(result) > 0:
+        result.insert(0, f"\n{'**Functions:**'}\n")
+    return result  # "".join(result)
+
+
+def get_module_doc(module: ModuleType):
+    result = [get_python_module_header(module)]
+
+    result.extend(get_functions_doc(module))
+    # for func in inspect.getmembers(module, inspect.isfunction):
+    #     # print(f"module: {module}")
+    #     # print(f"func: {func}")
+    #     # print(f"get_module: {inspect.getmodule(func)}")
+    #     if func[0].startswith("_"):  # Consider anything that starts with _ private and don't document it.
+    #         continue
+    #     if inspect.getmodule(func[1]) != module:
+    #         continue
+    #     result.extend(get_function_doc(func))
 
     for cl in inspect.getmembers(module, inspect.isclass):
         if not cl[1].__module__ == module.__name__:  # skip imported classes

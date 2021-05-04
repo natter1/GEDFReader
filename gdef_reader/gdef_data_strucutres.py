@@ -32,7 +32,13 @@ class GDEFHeader:
 
 
 class GDEFControlBlock:
+    """
+    Class attribute _counter is used to generate an ID for each measurement. Has to be reset again, when importing
+    a new file, or ids become ambiguous. To prevent unwanted behavior, lock_counter should be set true until imprting
+    one file is finished.
+    """
     _counter = 0  # total number of created _blocks
+    lock_counter = False  # don't allow counter reset
 
     def __init__(self):
         GDEFControlBlock._counter += 1
@@ -43,6 +49,11 @@ class GDEFControlBlock:
 
         self.variables: List[GDEFVariable] = []
         self.next_byte = None
+
+    @classmethod
+    def reset_counter(cls):
+        assert not cls.lock_counter, "Can't reset _counter while lock_counter is nit released"
+        cls._counter = 0
 
 
 class GDEFVariable:

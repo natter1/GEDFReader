@@ -40,7 +40,7 @@ This class is used to read data from a \*.gdf file (DME AFM) into python. This c
 .. code:: python
 
     from gdef_reader.gdef_importer import GDEFImporter
-    impported_data = GDEFImporter(gdf_path)  # gdf_path should be a pathlib.Path to a *.gdf file
+    imported_data = GDEFImporter(gdf_path)  # gdf_path should be a pathlib.Path to a *.gdf file
 
 
 
@@ -360,7 +360,7 @@ Stores all the settings used during measurement.
 * retrace_type
 * scan_direction
 * scan_mode
-* scan_speed: [�m/s]
+* scan_speed: [µm/s]
 * scanner_range
 * set_point
 * source_channel
@@ -456,8 +456,6 @@ Module afm_tools.background_correction
 
     Returns 2d numpy.ndarray with subtracted mean gradient plane from given array2d. Using the gradient might give
      better results, when the measurement has asymmetric structures like large objects on a surface.
-                                  _ _ _ _ _ _ _ _ _ _
-    example: ____________________|                  |__
 
 * **subtract_mean_level**
 
@@ -533,7 +531,7 @@ Module gdef_reporter.plotter_utils
 
     .. code:: python
 
-        create_rms_plot(data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'str' = '', moving_average_n: 'int' = 200, x_offset=0, x_units: "Literal['�m', 'nm']" = '�m', subtract_average=True, plotter_style: 'PlotterStyle' = None) -> 'Figure'
+        create_rms_plot(data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'str' = '', moving_average_n: 'int' = 200, x_offset=0, x_units: "Literal['µm', 'nm']" = 'µm', subtract_average=True, plotter_style: 'PlotterStyle' = None) -> 'Figure'
 
     Creates a matplotlib figure, showing a graph of the root mean square roughness per column.
 
@@ -549,7 +547,7 @@ Module gdef_reporter.plotter_utils
 
     :x_offset: move data along x-axis
 
-    :x_units: unit for x-axis (�m or nm)
+    :x_units: unit for x-axis (µm or nm)
 
     :subtract_average: Subtract average for each average_window (it might be better to subtract a global average)
 
@@ -561,7 +559,7 @@ Module gdef_reporter.plotter_utils
 
     .. code:: python
 
-        create_rms_with_error_plot(data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', average_n: 'int' = 8, x_units: "Literal['px', '�m', 'nm']" = '�m', y_units: "Literal['�m', 'nm']" = '�m', plotter_style: 'PlotterStyle' = None) -> 'Figure'
+        create_rms_with_error_plot(data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', average_n: 'int' = 8, x_units: "Literal['px', 'µm', 'nm']" = 'µm', y_units: "Literal['µm', 'nm']" = 'µm', plotter_style: 'PlotterStyle' = None) -> 'Figure'
 
     Create a diagram, showing the root mean square roughness per column in for data in data_object_list.
     The error-bars are calculated as standard deviation of columns (average_n) used per data point.
@@ -576,7 +574,7 @@ Module gdef_reporter.plotter_utils
 
     :average_n: Number of columns to average over
 
-    :x_units: unit for x-axis (�m or nm)
+    :x_units: unit for x-axis (µm or nm)
 
     :y_units:
 
@@ -611,7 +609,7 @@ Module gdef_reporter.plotter_utils
 
     .. code:: python
 
-        create_z_histogram_plot(data_object_list: 'DataObjectList', pixel_width=None, labels: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', n_bins: 'int' = 200, units: "Literal['�m', 'nm']" = '�m', add_norm: 'bool' = False, plotter_style: 'PlotterStyle' = None) -> 'Figure'
+        create_z_histogram_plot(data_object_list: 'DataObjectList', pixel_width=None, labels: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', n_bins: 'int' = 200, units: "Literal['µm', 'nm']" = 'µm', add_norm: 'bool' = False, plotter_style: 'PlotterStyle' = None) -> 'Figure'
 
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
 
@@ -623,7 +621,7 @@ Module gdef_reporter.plotter_utils
 
     :n_bins: number of equally spaced bins for histogram
 
-    :units: Can be set to �m or nm (default is �m).
+    :units: Can be set to µm or nm (default is µm).
 
     :add_norm: if True (default), show normal/gaussian probability density function for each distribution
 
@@ -635,7 +633,7 @@ Module gdef_reporter.plotter_utils
 
     .. code:: python
 
-        plot_rms_to_ax(ax: 'Axes', data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', moving_average_n: 'int' = 200, x_offset=0, x_units: "Literal['�m', 'nm']" = '�m', subtract_average=True, plotter_style=None) -> 'None'
+        plot_rms_to_ax(ax: 'Axes', data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', moving_average_n: 'int' = 200, x_offset=0, x_units: "Literal['µm', 'nm']" = 'µm', subtract_average=True, plotter_style=None) -> 'None'
 
     Plot a diagram to ax, showing a the root mean square roughness per column in for data in data_object_list.
 
@@ -653,7 +651,7 @@ Module gdef_reporter.plotter_utils
 
     :x_offset: move data along x-axis
 
-    :x_units: unit for x-axis (�m or nm)
+    :x_units: unit for x-axis (µm or nm)
 
     :subtract_average: Subtract average for each average_window (it might be better to subtract a global average)
 
@@ -665,7 +663,7 @@ Module gdef_reporter.plotter_utils
 
     .. code:: python
 
-        plot_rms_with_error_to_ax(ax: 'Axes', data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', average_n: 'int' = 8, x_units: "Literal['px', '�m', 'nm']" = '�m', y_units: "Literal['�m', 'nm']" = '�m', plotter_style: 'PlotterStyle' = None)
+        plot_rms_with_error_to_ax(ax: 'Axes', data_object_list: 'DataObjectList', pixel_width=None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', average_n: 'int' = 8, x_units: "Literal['px', 'µm', 'nm']" = 'µm', y_units: "Literal['µm', 'nm']" = 'µm', plotter_style: 'PlotterStyle' = None)
 
     Plot a diagram to ax, showing the root mean square roughness per column in for data in data_object_list.
     The error-bars are calculated as standard deviation of columns (average_n) used per data point.
@@ -680,7 +678,7 @@ Module gdef_reporter.plotter_utils
 
     :average_n: Number of columns to average over
 
-    :x_units: unit for x-axis (�m or nm)
+    :x_units: unit for x-axis (µm or nm)
 
     :y_units:
 
@@ -692,7 +690,7 @@ Module gdef_reporter.plotter_utils
 
     .. code:: python
 
-        plot_to_ax(ax: 'Axes', data_object: 'DataObject', pixel_width: 'float' = None, title: 'str' = '', z_unit: "Literal['nm', '�m']" = 'nm') -> 'None'
+        plot_to_ax(ax: 'Axes', data_object: 'DataObject', pixel_width: 'float' = None, title: 'str' = '', z_unit: "Literal['nm', 'µm']" = 'nm') -> 'None'
 
     Plot values in data_object to given ax.
 
@@ -712,7 +710,7 @@ Module gdef_reporter.plotter_utils
 
     .. code:: python
 
-        plot_z_histogram_to_ax(ax: 'Axes', data_object_list: 'DataObjectList', pixel_width: 'Optional[Union[float, list[float]]]' = None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', n_bins: 'int' = 200, units: "Literal['�m', 'nm']" = '�m', add_norm: 'bool' = False, plotter_style=None) -> 'None'
+        plot_z_histogram_to_ax(ax: 'Axes', data_object_list: 'DataObjectList', pixel_width: 'Optional[Union[float, list[float]]]' = None, label_list: 'Union[str, list[str]]' = None, title: 'Optional[str]' = '', n_bins: 'int' = 200, units: "Literal['µm', 'nm']" = 'µm', add_norm: 'bool' = False, plotter_style=None) -> 'None'
 
     Also accepts a list of np.ndarray data (for plotting several histograms stacked)
 
@@ -728,7 +726,7 @@ Module gdef_reporter.plotter_utils
 
     :n_bins: number of equally spaced bins for histogram
 
-    :units: Can be set to �m or nm (default is �m).
+    :units: Can be set to µm or nm (default is µm).
 
     :add_norm: if True (default), show normal/gaussian probability density function for each distribution
 

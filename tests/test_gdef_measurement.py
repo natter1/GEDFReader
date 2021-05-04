@@ -126,4 +126,4 @@ class TestGDEFMeasurement:
             ['name', 'example_01_block_002']  # can't test block_id - ID depends on gdef_import history
         ]
 
-        assert gdef_measurement.get_summary_table_data()[:6] == table_data[:6]
+        assert gdef_measurement.get_summary_table_data() == table_data  #[:6]

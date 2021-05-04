@@ -24,7 +24,7 @@ class GDEFImporter:
     .. code:: python
 
         from gdef_reader.gdef_importer import GDEFImporter
-        impported_data = GDEFImporter(gdf_path)  # gdf_path should be a pathlib.Path to a *.gdf file
+        imported_data = GDEFImporter(gdf_path)  # gdf_path should be a pathlib.Path to a *.gdf file
 
     :InstanceAttributes:
     basename: Path.stem of the imported \*.gdf file.
@@ -91,7 +91,10 @@ class GDEFImporter:
         self._eof = self._buffer.seek(0, 2)
         self._buffer.seek(0)
         self._read_header()
+        GDEFControlBlock.reset_counter()
+        GDEFControlBlock.lock_counter = True  # prevent call of GDEFControlBlock.reset_counter() (assertion)
         self._read_variable_lists()
+        GDEFControlBlock.lock_counter = False  # release blocking of reset_counter
         return None
 
     def _read_header(self):

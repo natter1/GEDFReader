@@ -8,7 +8,6 @@ import numpy as np
 import pytest
 from matplotlib.figure import Figure
 
-from afm_tools.gdef_sticher import GDEFSticher
 from gdef_reporter.plotter_styles import get_plotter_style_histogram
 from gdef_reporter.plotter_utils import plot_to_ax, create_plot, plot_z_histogram_to_ax, create_z_histogram_plot, \
     _extract_ndarray_and_pixel_width, save_figure, create_rms_plot, create_rms_with_error_plot, create_summary_plot

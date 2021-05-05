@@ -24,13 +24,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Union, Literal, Optional
 
 import numpy as np
+import png
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.stats import norm
 
-from gdef_reader.utils import create_xy_rms_data, unit_factor_and_label, get_mu_sigma
+from gdef_reader.utils import create_xy_rms_data, unit_factor_and_label, get_mu_sigma, create_absolute_gradient_array
 from gdef_reporter.plotter_styles import get_plotter_style_rms, PlotterStyle, get_plotter_style_sigma, \
     get_plotter_style_histogram
 
@@ -646,12 +647,31 @@ def _get_greyscale_data(data_object: DataObject, alpha=0):
 
 # todo: used/intended for what?
 def _create_image_data(data_object: DataObject):
+    """
+    Transform given data array into a n array with uint8 values between 0 and 255.
+    :param data_object: DataObject
+    :return:
+    """
     ndarray2d_data, _ = _extract_ndarray_and_pixel_width(data_object)
     data_min = np.nanmin(ndarray2d_data)
     # normalize the data to 0 - 1:
     array2d = (ndarray2d_data - min(0, data_min)) / (np.nanmax(ndarray2d_data) - min(0, data_min))
     array2d = 255 * array2d  # Now scale by 255
     return array2d.astype(np.uint8)
+
+
+def data_to_png_object(data_object: DataObject, mode='L'):
+    """
+    Can be used to get a png-object for pptx or to save to hard disc.
+    Mode 'L' means greyscale. Mode'LA' is greyscale with alpha channel.
+    """
+    ndarray2d_data, _ = _extract_ndarray_and_pixel_width(data_object)
+    data_min = np.nanmin(ndarray2d_data)
+    # normalize the data to 0 - 1:
+    image_data = (ndarray2d_data - min(0, data_min)) / (np.nanmax(ndarray2d_data) - min(0, data_min))
+    image_data = 255 * image_data  # Now scale by 255
+    return png.from_array(image_data.astype(np.uint8), mode=mode)  # .save(f"{samplename}_stiched.png")
+
 
 # def get_compare_gradient_rms_figure(cls, sticher_dict, cutoff_percent=8, moving_average_n=1, figsize=(8, 4),
 #                                     x_offset=0):
@@ -686,30 +706,36 @@ def _create_image_data(data_object: DataObject):
 #
 #
 #
-# def create_gradient_rms_figure(sticher_dict: Dict[str, GDEFSticher], cutoff_percent=8, moving_average_n=1,
-#                                x_offset=0, plotter_style: PlotterStyle = None) -> Figure:
-#     """
-#     Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
-#     data_dict. The key value in data_dict is used as label in the legend.
-#     :param sticher_dict:
-#     :param cutoff_percent:
-#     :param moving_average_n:
-#     :param x_offset:
-#     :param plotter_style:
-#     :return:
-#     """
-#     if plotter_style is None:
-#         plotter_style = PlotterStyle(300, (8, 4))
-#     y_label = f"roughness(gradient) (moving average n = {moving_average_n})"
-#
-#     data_dict = {}
-#     for key, sticher in sticher_dict.items():
-#         gradient_data = create_absolute_gradient_array(sticher.stiched_data, cutoff_percent / 100.0)
-#         data_dict[key] = {"pixel_width": sticher.pixel_width, "data": gradient_data}
-#     result = _create_rms_figure(data_dict, moving_average_n, x_offset, plotter_style, y_label)
-#     return result
-#
-#
-#
-#
-#
+def create_gradient_rms_plot(sticher_dict: dict[str, GDEFSticher], cutoff_percent=8, moving_average_n=1,
+                               x_offset=0, plotter_style: PlotterStyle = None) -> Figure:
+    """
+    Creates a matplotlib figure, showing a graph of the root meean square of the gradient of the GDEFSticher objects in
+    data_dict. The key value in data_dict is used as label in the legend.
+    :param sticher_dict:
+    :param cutoff_percent:
+    :param moving_average_n:
+    :param x_offset:
+    :param plotter_style:
+    :return:
+    """
+    if plotter_style is None:
+        plotter_style = PlotterStyle(300, (8, 4))
+    y_label = f"roughness(gradient) (moving average n = {moving_average_n})"
+    plotter_style.set(y_label=y_label)
+    data_list = []
+    pixel_width_list = []
+    label_list = []
+    for key, sticher in sticher_dict.items():
+        gradient_data = create_absolute_gradient_array(sticher.values, cutoff_percent / 100.0)
+        data_list.append(gradient_data)
+        pixel_width_list.append(sticher.pixel_width)
+        label_list.append(key)
+    result = create_rms_plot(data_list, pixel_width=pixel_width_list, label_list=label_list,
+                             moving_average_n=moving_average_n, x_offset=x_offset,
+                             plotter_style=plotter_style)
+    return result
+
+
+
+
+

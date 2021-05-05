@@ -96,7 +96,7 @@ class TestGDEFPlotter:
 
     def test_create_stich_summary_plot(self, multiple_data_test_cases, gdef_plotter, gdef_measurement):
         pixel_width=0.5e-6
-        fig = gdef_plotter.create_stich_summary_plot(multiple_data_test_cases, pixel_width=pixel_width)
+        fig = gdef_plotter.create_summary_plot(multiple_data_test_cases, pixel_width=pixel_width)
         #fig = gdef_plotter.create_stich_summary_plot(data_dict)
 
     def test_create_rms_with_error_plot_from_sticher_dict(self, gdef_plotter, gdef_measurement):

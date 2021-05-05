@@ -2,6 +2,7 @@
 @author: Nathanael Jöhrmann
 """
 import os
+from collections import UserList
 from datetime import datetime
 from pathlib import Path
 from typing import List, Union
@@ -47,29 +48,64 @@ class GDEFContainer:
             measurement.correct_background(bg_correction_type, keep_offset)
 
 
-class GDEFContainerList(list):
+class GDEFContainerList(UserList):
     """
-    List of GDEFContainer objects and some helper methods
+    List of GDEFContainer objects and some helper methods to filter measurements or correct background.
     """
     def __init__(self, containers: Union[GDEFContainer, List[GDEFContainer], None] = None):
-        # super().__init__()  # todo: is this needed/optimal?
+        super().__init__()
         if isinstance(containers, GDEFContainer):
             self.append(containers)
-        elif containers:  # make sure containers is not None; todo: better check if containers is list of GDEFContainer
+        elif containers:  # make sure containers is not None; todo: better check if containers is list of GDEFContainer?
             self.extend(containers)
+
+    def add_iterable(self, iterable):
+        for item in iterable:
+            if not isinstance(item, GDEFContainer):
+                raise ValueError("GDEFContainerList only accepts GDEFContainer as list elements")
+            else:
+                super().append(item)
+        return self
+
+    def __add__(self, items):
+        if hasattr(items, '__iter__'):
+            return self.add_iterable(items)
+        else:
+            return super().append(items)
+
+    def append(self, item: GDEFContainer):
+        if not isinstance(item, GDEFContainer):
+            raise ValueError("GDEFContainerList only accepts GDEFContainer as list elements")
+        else:
+            return super().append(item)
+
+    def extend(self, items):
+        return self.add_iterable(items)
 
     def correct_backgrounds(self, bg_correction_type: BGCorrectionType = BGCorrectionType.legendre_1,
                             keep_offset: bool = False):
+        """Correct background for all GDEFContainers in GDEFContainerList"""
         for container in self:
             container.correct_backgrounds(bg_correction_type, keep_offset)
 
     def set_filter_ids(self, filter_dict: dict):
+        """
+        Set filter_ids (used to filter out given measurements) for each GDEFContainer in GDEFContainerList.
+        :param filter_dict:
+        :return: None
+        """
         for container in self:
-            container.filter_ids = filter_dict[container.basename]
+            container.filter_ids = filter_dict.get(container.basename, [])
 
 
 class GDEFReporter:
+    """
+    Class to create *.pptx files with results from AFM-measurements (*.gdf)
+    """
     def __init__(self, gdf_containers: Union[GDEFContainer, List[GDEFContainer], None] = None):
+        """
+        :param gdf_containers: list of GDEFContainer objects, that contain measurements from a single *.gdf file each
+        """
         self.gdf_containers: GDEFContainerList = GDEFContainerList(gdf_containers)
         self.primary_gdf_folder = gdf_containers[0].path.parent  # todo: check for multiple folders
         self.title = f"AFM - {self.primary_gdf_folder.stem}"
@@ -141,11 +177,11 @@ class GDEFReporter:
             y = i // best_ratio[0]
             x = i - (y * best_ratio[0])
             if best_ratio[1] > 1:
-                measurement.set_topography_to_axes(ax_list[x, y])
+                measurement.set_topography_to_axes(ax_list[x, y], True)
             elif best_ratio[0] > 1:
-                measurement.set_topography_to_axes(ax_list[x])
+                measurement.set_topography_to_axes(ax_list[x], True)
             else:
-                measurement.set_topography_to_axes(ax_list)
+                measurement.set_topography_to_axes(ax_list, True)
         i = len(measurements)
         while i < best_ratio[0] * best_ratio[1]:
             y = i // best_ratio[0]

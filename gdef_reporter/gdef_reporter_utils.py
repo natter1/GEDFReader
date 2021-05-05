@@ -18,7 +18,7 @@ def create_gdef_reporter(gdf_paths: Union[list[Path], Path],
     Using filter_dict, it is possible to define data that should be ignored (the data is still loaded and can be used
     explicitly).
     :param gdf_paths: (optional: list of) Pathlib Path object(s) to *.gdf file or folder (load all *.gdf files in there)
-    :param filter_dict: dict with filename as kay and a list of IDs as value, which are ignored (filtered out)
+    :param filter_dict: dict with filename as kay and a list of IDs as value, used to set gdf_container_list filter
     :param bg_correction_type: define a type of background correction, that is applied to all imported measurements
     :param keep_offset: defines if z-offset is kept, or if all measurements where set to avg. z = 0 (default)
     :return: GDEFReporter

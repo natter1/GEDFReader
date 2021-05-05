@@ -14,7 +14,7 @@ from matplotlib.figure import Figure
 from gdef_reader.utils import create_absolute_gradient_array
 from gdef_reporter.plotter_styles import PlotterStyle, get_plotter_style_rms, get_plotter_style_sigma
 from gdef_reporter.plotter_utils import create_plot, create_rms_plot, create_summary_plot, \
-    create_rms_with_error_plot
+    create_rms_with_error_plot, _extract_ndarray_and_pixel_width
 
 if TYPE_CHECKING:
     from gdef_reporter.plotter_utils import DataObject, DataObjectList
@@ -114,8 +114,9 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def _create_absolute_gradient_rms_plot(self, data_object: DataObject, cutoff_percent_list, pixel_width, title=None,
-                                           moving_average_n=1, x_offset=0, subtract_average=False) -> Figure:
+    def _create_absolute_gradient_rms_plot(self, data_object: DataObject, cutoff_percent_list, pixel_width=None,
+                                           title=None, moving_average_n=1, x_offset=0, subtract_average=False)\
+            -> Figure:
         """
         Creates a plot with a curve for each value in cutoff_percent_list, showing rms(abs(grad(z))) as
         moving average over moving_average_n columns.
@@ -128,11 +129,12 @@ class GDEFPlotter:
         :return: Figure
         """
         grad_style = copy.deepcopy(self.plotter_style_rms)
+        ndarray2d_data, pixel_width = _extract_ndarray_and_pixel_width(data_object, pixel_width)
 
         grad_data_list = []
         label_list = []
         for i, percent in enumerate(cutoff_percent_list):
-            grad_data_list.append(create_absolute_gradient_array(data_object, percent / 100.0))
+            grad_data_list.append(create_absolute_gradient_array(ndarray2d_data, percent / 100.0))
             label_list.append(f"{percent}%")
 
         result = create_rms_plot(grad_data_list, pixel_width, label_list, title=title,
@@ -174,14 +176,12 @@ class GDEFPlotter:
         self._auto_show_figure(result)
         return result
 
-    def create_stich_summary_plot(self, data_object_list: DataObjectList, pixel_width=None):  # , figure_size=(16, 10)):
+    def create_summary_plot(self, data_object_list: DataObjectList, pixel_width=None):  # , figure_size=(16, 10)):
         """
-        Creates a Figure with stiched maps for each GDEFSticher in sticher_dict. The keys in sticher_dict
-        are used as titles for the corresponding Axes.
+        Creates a Figure with maps for each DataObject in data_object_list.
         :param data_object_list:
         :return:
         """
-
         result = create_summary_plot(data_object_list, pixel_width=pixel_width,
                                      figure_size=self.figure_size, dpi=self.dpi)
         self._auto_show_figure(result)

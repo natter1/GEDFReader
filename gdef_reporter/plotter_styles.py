@@ -16,6 +16,12 @@ MARKER_BERHNHARD = ["o", "s", "<", ">", "D", "P", "X", "*"]  # , "x", "+", "1"]
 
 
 class PlotterStyle:
+    dpi: int
+    figure_size: tuple[float, float]
+    fig_title: Optional[str]
+    ax_title: Optional[str]
+    grid: Optional[bool]
+
     def __init__(self, dpi: Optional[int] = None, figure_size: Optional[Tuple[float, float]] = None):
         self.dpi = dpi
         self.figure_size = figure_size
@@ -33,7 +39,7 @@ class PlotterStyle:
         self.hist_styler = None
 
     @property
-    def x_label(self):
+    def x_label(self) -> Optional[str]:
         if self._x_label is None and self._x_unit is None:
             return None
         result = ""
@@ -44,7 +50,7 @@ class PlotterStyle:
         return result
 
     @property
-    def y_label(self):
+    def y_label(self) -> Optional[str]:
         if self._y_label is None and self._y_unit is None:
             return None
         result = ""
